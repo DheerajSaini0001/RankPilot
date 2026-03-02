@@ -1,0 +1,50 @@
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import passport from 'passport';
+import { errorHandler } from './middleware/errorHandler.js';
+import { globalLimiter } from './middleware/rateLimiter.js';
+
+// Route imports
+import authRoutes from './routes/authRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
+import accountRoutes from './routes/accountRoutes.js';
+import ga4Routes from './routes/ga4Routes.js';
+import gscRoutes from './routes/gscRoutes.js';
+import googleAdsRoutes from './routes/googleAdsRoutes.js';
+import facebookAdsRoutes from './routes/facebookAdsRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
+
+const app = express();
+
+// Middleware
+app.use(helmet());
+app.use(cors({
+    origin: process.env.CLIENT_URL,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+}));
+app.use(express.json());
+app.use(morgan('dev'));
+app.use(globalLimiter);
+
+// Passport
+app.use(passport.initialize());
+
+// Health check
+app.get('/health', (req, res) => res.status(200).json({ status: 'ok', timestamp: new Date() }));
+
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/accounts', accountRoutes);
+app.use('/api/ga4', ga4Routes);
+app.use('/api/gsc', gscRoutes);
+app.use('/api/google-ads', googleAdsRoutes);
+app.use('/api/facebook-ads', facebookAdsRoutes);
+app.use('/api/ai', aiRoutes);
+
+app.use(errorHandler);
+
+export default app;

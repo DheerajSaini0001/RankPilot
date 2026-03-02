@@ -1,0 +1,148 @@
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+import User from '../models/User.js';
+import GoogleToken from '../models/GoogleToken.js';
+import FacebookToken from '../models/FacebookToken.js';
+import UserAccounts from '../models/UserAccounts.js';
+import AnalyticsCache from '../models/AnalyticsCache.js';
+import Conversation from '../models/Conversation.js';
+
+const generateToken = (userId, email) => {
+    return jwt.sign({ userId, email }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
+};
+
+export const register = async (req, res) => {
+    const { name, email, password } = req.body;
+    const userExists = await User.findOne({ email });
+
+    if (userExists) {
+        return res.status(400).json({ success: false, message: 'User already exists' });
+    }
+
+    const salt = await bcrypt.genSalt(12);
+    const passwordHash = await bcrypt.hash(password, salt);
+    const emailVerifyToken = crypto.randomUUID();
+
+    const user = await User.create({
+        displayName: name,
+        email,
+        passwordHash,
+        emailVerifyToken,
+        emailVerified: false
+    });
+
+    res.status(201).json({ message: 'Verification email sent' });
+};
+
+export const verifyEmail = async (req, res) => {
+    const { token } = req.params;
+    const user = await User.findOne({ emailVerifyToken: token });
+
+    if (!user) {
+        return res.status(400).json({ success: false, message: 'Invalid token' });
+    }
+
+    user.emailVerified = true;
+    user.emailVerifyToken = null;
+    await user.save();
+
+    res.status(200).json({ message: 'Email verified' });
+};
+
+export const login = async (req, res) => {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    if (user.lockUntil && user.lockUntil > Date.now()) {
+        return res.status(423).json({ success: false, message: 'Account locked' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+
+    if (!isMatch) {
+        user.loginAttempts += 1;
+        if (user.loginAttempts >= 5) {
+            user.lockUntil = Date.now() + 15 * 60 * 1000;
+        }
+        await user.save();
+        return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    user.loginAttempts = 0;
+    user.lockUntil = null;
+    await user.save();
+
+    res.status(200).json({
+        token: generateToken(user._id, user.email),
+        user: { id: user._id, name: user.displayName, email: user.email, avatar: user.avatar }
+    });
+};
+
+export const logout = async (req, res) => {
+    res.status(200).json({ message: 'Logged out successfully' });
+};
+
+export const forgotPassword = async (req, res) => {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (user) {
+        user.passwordResetToken = crypto.randomUUID();
+        user.passwordResetExp = Date.now() + 3600000;
+        await user.save();
+    }
+
+    res.status(200).json({ message: 'If an account with that email exists, a password reset link has been sent.' });
+};
+
+export const resetPassword = async (req, res) => {
+    const { token, newPassword } = req.body;
+    const user = await User.findOne({ passwordResetToken: token, passwordResetExp: { $gt: Date.now() } });
+
+    if (!user) {
+        return res.status(400).json({ success: false, message: 'Invalid or expired token' });
+    }
+
+    const salt = await bcrypt.genSalt(12);
+    user.passwordHash = await bcrypt.hash(newPassword, salt);
+    user.passwordResetToken = null;
+    user.passwordResetExp = null;
+    await user.save();
+
+    res.status(200).json({ message: 'Password reset successful' });
+};
+
+export const authCallback = async (req, res) => {
+    const token = generateToken(req.user._id, req.user.email);
+    res.redirect(`${process.env.CLIENT_URL}/auth/callback?token=${token}`);
+};
+
+export const getMe = async (req, res) => {
+    const googleToken = await GoogleToken.findOne({ userId: req.user._id });
+    const facebookToken = await FacebookToken.findOne({ userId: req.user._id });
+
+    let connectedSources = [];
+    if (googleToken) connectedSources.push('ga4', 'gsc', 'google-ads');
+    if (facebookToken) connectedSources.push('facebook-ads');
+
+    res.status(200).json({
+        user: { id: req.user._id, name: req.user.displayName, email: req.user.email, avatar: req.user.avatar },
+        connectedSources
+    });
+};
+
+export const deleteMe = async (req, res) => {
+    await GoogleToken.deleteMany({ userId: req.user._id });
+    await FacebookToken.deleteMany({ userId: req.user._id });
+    await UserAccounts.deleteMany({ userId: req.user._id });
+    await AnalyticsCache.deleteMany({ userId: req.user._id });
+    await Conversation.deleteMany({ userId: req.user._id });
+    await User.findByIdAndDelete(req.user._id);
+
+    res.status(200).json({ message: 'Account deleted' });
+};

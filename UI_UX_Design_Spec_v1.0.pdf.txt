@@ -1,0 +1,887 @@
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+UI/UX DESIGN SPECIFICATION
+AI-Powered Analytics Intelligence Platform
+Wireframes  +  Full Design Specification
+Professional & Corporate  |  Light + Dark Mode  |  Tailwind CSS v3
+VERSION 1.0  —  FINAL
+Field Value
+Document UI/UX Design Specification — Version 1.0 Final
+Project AI-Powered Analytics Intelligence Platform
+Stack React 18 + Vite + Tailwind CSS v3
+Style Professional & Corporate — Blues and Grays
+Color Modes Light Mode + Dark Mode (Tailwind dark: prefix)
+Screens Covered 6 screens — Auth, Connect, Dashboard, AI Chat, Admin, Settings
+Deliverables Wireframes + Color Palette + Typography + Components + Screen Specs
+Date March 2, 2026
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+1. Design Principles
+These principles govern every design decision across all screens. Every component, layout, and interaction must 
+be evaluated against them before implementation.
+Principle Description Applied As
+Clarity First Data must be immediately 
+understandable. No decorative 
+complexity.
+Clean cards, generous whitespace, clear 
+hierarchy
+Data Density Show meaningful data without 
+overwhelming. Progressive 
+disclosure for detail.
+Summary cards on top, detail tables below, 
+charts in between
+Professional Trust The platform handles business 
+data. It must feel reliable and 
+polished.
+Consistent blues, sharp corners on cards, no 
+playful elements
+Speed Perception Every data load must feel fast. 
+Never show a blank area.
+Skeleton loaders on every async section before 
+data arrives
+AI as Assistant AI panel supports, not dominates. 
+Data is primary. AI is the helper.
+AI panel is right sidebar — never fullscreen by 
+default
+Responsive First Dashboard must work on 375px 
+mobile up to 1920px desktop.
+Tailwind responsive prefixes: sm: md: lg: xl: 
+throughout
+Accessible Minimum WCAG AA contrast on all 
+text. Keyboard navigable. Screen 
+reader ready.
+4.5:1 text contrast ratio. Focus rings on all 
+interactive elements
+Dark Mode Parity Dark mode is a first-class 
+experience — not an afterthought.
+Every component defined in both light and 
+dark variants
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+2. Color Palette
+All colors are defined as Tailwind CSS custom colors in tailwind.config.js. Use ONLY these values throughout the 
+entire application. Never use arbitrary hex values in component files.
+2.1 Primary Brand Blues
+ These are the primary interactive and brand colors. Used for buttons, links, active states, borders, and key UI 📌
+elements.
+  brand-900 — Deepest Navy  #0D2137  |  Page backgrounds in dark mode
+  brand-800 — Dark Navy  #1F4E79  |  Primary headings, table headers, nav background
+  brand-700 — Mid Navy  #1A5C9A  |  Hover states on dark backgrounds
+  brand-600 — Primary Blue  #2E75B6  |  Primary buttons, active nav, links, chart primary line
+  brand-500 — Medium Blue  #3B8ED4  |  Button hover, secondary chart lines
+  brand-400 — Light Blue  #6EB2E8  |  Focus rings, badge backgrounds, light mode accents
+  brand-100 — Pale Blue  #D6E8F8  |  Card backgrounds (light), table row alt, tag backgrounds
+  brand-50  — Near White Blue  #EEF6FD  |  Subtle section backgrounds, hover states on white
+2.2 Neutral Grays
+ Neutrals form the backbone of the layout. All text, borders, and backgrounds use these values.📌
+  neutral-900 — Near Black  #111827  |  Primary body text (light mode), page bg (dark mode alt)
+  neutral-800 — Dark Gray  #1F2937  |  Secondary headings, sidebar bg (dark mode)
+  neutral-700 — Medium Dark  #374151  |  Body text secondary, icon fill
+  neutral-600 — Medium Gray  #4B5563  |  Placeholder text, disabled labels
+  neutral-400 — Light Gray  #9CA3AF  |  Border colors, dividers, input borders
+  neutral-200 — Very Light  #E5E7EB  |  Card borders (light mode), table dividers
+  neutral-100 — Off White  #F3F4F6  |  Page background (light mode), sidebar (light)
+  neutral-50  — Near White  #F9FAFB  |  Card background (light mode)
+2.3 Semantic Colors
+  semantic-success — Green  #16A34A  |  Positive % change, success toasts, connected badges
+  semantic-warning — Amber  #D97706  |  Warning toasts, expiring token alerts, caution badges
+  semantic-error — Red  #DC2626  |  Negative % change, error toasts, disconnected badges, validation errors
+  semantic-info — Blue  #2E75B6  |  Informational toasts, help tips
+2.4 Dark Mode Surface Colors
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+  dark-bg — Deepest Dark  #0F172A  |  class: dark:bg-dark-bg — main page background
+  dark-surface — Dark Surface  #1E293B  |  class: dark:bg-dark-surface — sidebar, nav
+  dark-card — Dark Card  #273549  |  class: dark:bg-dark-card — card backgrounds
+2.5 Tailwind Config — Color Tokens
+Add these exact values to tailwind.config.js theme.extend.colors:
+brand: {
+  50: '#EEF6FD',  100: '#D6E8F8',  400: '#6EB2E8',
+  500: '#3B8ED4', 600: '#2E75B6',  700: '#1A5C9A',
+  800: '#1F4E79', 900: '#0D2137'
+},
+neutral: {
+  50: '#F9FAFB',  100: '#F3F4F6',  200: '#E5E7EB',
+  400: '#9CA3AF', 600: '#4B5563',  700: '#374151',
+  800: '#1F2937', 900: '#111827'
+},
+semantic: { success:'#16A34A', warning:'#D97706', error:'#DC2626', info:'#2E75B6' },
+dark: { bg:'#0F172A', surface:'#1E293B', card:'#273549' }
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+3. Typography
+The platform uses Inter as the primary font. It is clean, highly legible at small sizes, and widely used in enterprise 
+SaaS products.
+3.1 Font Setup
+• Font family: Inter (Google Fonts)
+• Import in index.html: <link href='https://fonts.googleapis.com/css2?
+family=Inter:wght@300;400;500;600;700&display=swap' rel='stylesheet'>
+• Set in tailwind.config.js: fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] }
+• Monospace (for code/API keys): font-mono — Tailwind default
+3.2 Type Scale
+Token Size Weight Line 
+Height
+Tailwind Class Used For
+Display 36px 700 Bold 1.2 text-4xl font-bold Page titles on auth screens
+H1 30px 700 Bold 1.3 text-3xl font-bold Section headings
+H2 24px 600 SemiBold 1.4 text-2xl font-
+semibold
+Card headings, tab labels
+H3 20px 600 SemiBold 1.4 text-xl font-semibold Sub-section headings
+H4 16px 600 SemiBold 1.5 text-base font-
+semibold
+Card sub-titles, table col 
+headers
+Body-LG 16px 400 Regular 1.6 text-base font-
+normal
+Main body text, descriptions
+Body 14px 400 Regular 1.6 text-sm font-normal Table rows, labels, secondary 
+text
+Body-SM 12px 400 Regular 1.5 text-xs font-normal Captions, helper text, 
+timestamps
+KPI Value 32px 700 Bold 1.1 text-3xl font-bold KPI card main metric values
+KPI Change 13px 500 Medium 1.4 text-xs font-medium % change badges on KPI cards
+Badge 11px 600 SemiBold 1.3 text-xs font-
+semibold
+Status badges, tags
+Code 13px 400 Regular 1.6 text-sm font-mono API keys in admin, code 
+snippets
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+4. Component Library
+All reusable components are defined here. Every component must be implemented in both light and dark mode. 
+Components live in /client/src/components/ui/.
+4.1 Buttons
+Variant Light Mode Classes Dark Mode Classes Use Case
+Primary bg-brand-600 text-white 
+hover:bg-brand-700 
+focus:ring-2 focus:ring-brand-
+400
+dark:bg-brand-500 
+dark:hover:bg-brand-600
+Main actions: Save, Connect, 
+Submit
+Secondary bg-white text-brand-700 
+border border-brand-300 
+hover:bg-brand-50
+dark:bg-dark-card 
+dark:text-brand-400 
+dark:border-brand-700
+Secondary actions: Cancel, Back
+Danger bg-semantic-error text-white 
+hover:bg-red-700 focus:ring-2 
+focus:ring-red-400
+dark:bg-red-700 
+dark:hover:bg-red-800
+Destructive: Delete, Disconnect
+Ghost bg-transparent text-brand-600 
+hover:bg-brand-50 focus:ring-
+2 focus:ring-brand-200
+dark:text-brand-400 
+dark:hover:bg-dark-card
+Tertiary: Learn more, view all
+Icon-only p-2 rounded-lg text-neutral-
+600 hover:bg-neutral-100 
+focus:ring-2 focus:ring-brand-
+400
+dark:text-neutral-400 
+dark:hover:bg-dark-card
+Icon buttons in headers
+ All buttons: rounded-lg px-4 py-2 text-sm font-medium transition-colors duration-150 focus:outline-none focus:ring-📌
+offset-2. Disabled state: opacity-50 cursor-not-allowed pointer-events-none.
+4.2 Input Fields
+State Light Mode Classes Dark Mode Classes
+Default w-full px-3 py-2 border border-neutral-300 
+rounded-lg text-sm bg-white text-neutral-900 
+focus:outline-none focus:ring-2 focus:ring-brand-
+400 focus:border-brand-400
+dark:bg-dark-card dark:border-neutral-
+600 dark:text-white dark:placeholder-
+neutral-500
+Error border-semantic-error focus:ring-semantic-error dark:border-red-500
+Disabled bg-neutral-100 text-neutral-400 cursor-not-allowed 
+opacity-60
+dark:bg-dark-surface dark:text-neutral-
+600
+Password Same as Default + pr-10 for show/hide toggle 
+button
+Same dark mode as Default
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+4.3 KPI Card
+Element Light Mode Dark Mode Notes
+Card container bg-white rounded-xl border 
+border-neutral-200 p-5 shadow-
+sm
+dark:bg-dark-card 
+dark:border-neutral-
+700
+shadow-sm — subtle 
+elevation
+Icon container w-10 h-10 rounded-lg bg-brand-
+100 flex items-center justify-
+center
+dark:bg-brand-900 Icon color: text-brand-
+600
+Metric value text-3xl font-bold text-neutral-
+900 mt-3
+dark:text-white Use tabular-nums class 
+for number alignment
+Metric label text-sm font-medium text-
+neutral-500 mt-1
+dark:text-neutral-
+400
+e.g. 'Total Users'
+Positive change inline-flex items-center text-xs 
+font-medium text-semantic-
+success bg-green-50 px-2 py-0.5 
+rounded-full
+dark:bg-green-900 
+dark:text-green-400
++12.4% with arrow-up 
+icon
+Negative change inline-flex items-center text-xs 
+font-medium text-semantic-error 
+bg-red-50 px-2 py-0.5 rounded-
+full
+dark:bg-red-900 
+dark:text-red-400
+-3.2% with arrow-down 
+icon
+Skeleton loader animate-pulse bg-neutral-200 
+rounded h-8 w-24
+dark:bg-neutral-700 Show while data is 
+loading
+4.4 Data Table
+Element Classes Dark Mode
+Table wrapper w-full overflow-x-auto rounded-xl border 
+border-neutral-200
+dark:border-neutral-700
+Table w-full text-sm text-left border-collapse
+Header row bg-neutral-100 text-neutral-600 text-xs font-
+semibold uppercase tracking-wider
+dark:bg-dark-surface dark:text-
+neutral-400
+Header cell px-4 py-3 border-b border-neutral-200 cursor-
+pointer hover:bg-neutral-200 select-none
+dark:border-neutral-700 
+dark:hover:bg-neutral-700
+Sort indicator ml-1 text-brand-600 inline dark:text-brand-400
+Body row even bg-white hover:bg-brand-50 transition-colors dark:bg-dark-card dark:hover:bg-
+dark-surface
+Body row odd bg-neutral-50 hover:bg-brand-50 transition-
+colors
+dark:bg-dark-surface 
+dark:hover:bg-neutral-700
+Body cell px-4 py-3 border-b border-neutral-100 text-
+neutral-800
+dark:border-neutral-700 
+dark:text-neutral-200
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+4.5 Badge / Status Pill
+Variant Classes Use Case
+Connected / 
+Success
+bg-green-100 text-green-800 text-xs font-semibold 
+px-2.5 py-0.5 rounded-full dark:bg-green-900 
+dark:text-green-300
+Source connected, email verified
+Disconnected / 
+Error
+bg-red-100 text-red-800 text-xs font-semibold px-
+2.5 py-0.5 rounded-full dark:bg-red-900 dark:text-
+red-300
+Source not connected, error state
+Pending / 
+Warning
+bg-amber-100 text-amber-800 text-xs font-
+semibold px-2.5 py-0.5 rounded-full dark:bg-
+amber-900 dark:text-amber-300
+Token expiring soon, pending
+Neutral / Info bg-brand-100 text-brand-800 text-xs font-semibold 
+px-2.5 py-0.5 rounded-full dark:bg-brand-900 
+dark:text-brand-300
+Informational labels, source type
+4.6 Toast Notifications
+Type Icon Background Position Duration
+Success CheckCircle bg-green-600 text-white Top-right, fixed 3 seconds auto-dismiss
+Error XCircle bg-red-600 text-white Top-right, fixed 6 seconds — user must 
+dismiss or wait
+Warning AlertTriangle bg-amber-500 text-white Top-right, fixed 5 seconds auto-dismiss
+Info Info bg-brand-600 text-white Top-right, fixed 3 seconds auto-dismiss
+ Use react-hot-toast library. Configure in App.jsx: <Toaster position='top-right' toastOptions={{ duration: 3000 }} />📌
+4.7 Skeleton Loader
+• Every card, chart, and table must show a skeleton loader while data is fetching
+• Skeleton: animate-pulse bg-neutral-200 rounded dark:bg-neutral-700
+• KPI card skeleton: 3 gray bars at heights h-4, h-8, h-4 with spacing
+• Table skeleton: 5 rows of h-10 bars with full width
+• Chart skeleton: single h-48 bar filling the chart container
+• Never show empty white space — skeleton must appear within 50ms of component mount
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+5. Spacing System & Layout Grid
+5.1 Spacing Scale
+Use only Tailwind's default spacing scale. Never use arbitrary values like mt-[13px].
+Token Size Use Case
+space-1  / 4px 4px Icon inner padding, tight element gaps
+space-2  / 8px 8px Badge padding, compact list item gaps
+space-3  / 12px 12px Input padding (py), small card inner spacing
+space-4  / 16px 16px Standard gap between elements, card padding
+space-5  / 20px 20px Card padding (p-5), section gaps
+space-6  / 24px 24px Gap between cards in a row, section padding
+space-8  / 32px 32px Section top/bottom padding, large gaps
+space-10 / 40px 40px Page section separators
+space-12 / 48px 48px Major layout section spacing
+space-16 / 64px 64px Page-level top padding, hero sections
+5.2 Layout Grid
+Breakpoint Min Width Columns Gutter Max Content Width
+Mobile (default) 0px 1 col 16px 100%
+sm 640px 2 cols 16px 640px
+md 768px 2 cols 24px 768px
+lg 1024px 12 cols 24px 1024px
+xl 1280px 12 cols 24px 1280px
+2xl 1536px 12 cols 32px 1400px (max-w-7xl)
+5.3 Dashboard Layout Columns
+Viewport Left Column (Analytics) Right Column (AI Panel) Nav
+Mobile (<768px) Full width — 100% Hidden — accessible via 
+tab/button
+Bottom nav bar
+Tablet (768px) 60% width 40% width — collapsible Left sidebar, 
+collapsed to icons
+Desktop (1024px) 65% width 35% width Left sidebar, 
+expanded with 
+labels
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+Viewport Left Column (Analytics) Right Column (AI Panel) Nav
+Wide (1280px+) 70% width 30% width (min 320px) Left sidebar, 
+expanded
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+6. Wireframes — All Screens
+Wireframes below use ASCII box notation to show layout structure. These are low-fidelity — they define 
+structure, hierarchy, and component placement, not visual styling. Numbers in brackets [1] refer to design notes 
+below each wireframe.
+6.1 Login Page
+ Route: /login  |  Unauthenticated only. If user has valid JWT → redirect to /dashboard📌
+┌─────────── FULL PAGE — centered vertically + horizontally ────────────┐
+│  [LOGO]  AI Analytics Platform                  [Light/Dark Toggle]   │
+├───────────────────────────────────────────────────────────────────────┤
+│                         CARD (max-w-md, centered)                     │
+│  ┌─────────────────────────────────────────────────────────────────┐  │
+│  │  Welcome back                                      [1]          │  │
+│  │  Sign in to your account                                        │  │
+│  │                                                                  │  │
+│  │  [ Email address input                              ]            │  │
+│  │  [ Password input                          [show]   ]  [2]       │  │
+│  │                                 Forgot password?   [3]           │  │
+│  │                                                                  │  │
+│  │  [ ████████  Sign In  ████████ ]  (primary button, full width)   │  │
+│  │                                                                  │  │
+│  │  ─────────────────  or  ────────────────────────────            │  │
+│  │                                                                  │  │
+│  │  [ G  Continue with Google  ]  (full width, outlined)  [4]       │  │
+│  │                                                                  │  │
+│  │  Don't have an account?  Sign up →              [5]             │  │
+│  └─────────────────────────────────────────────────────────────────┘  │
+└───────────────────────────────────────────────────────────────────────┘
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+Ref Element Behaviour / Detail
+[1] Page heading text-3xl font-bold text-neutral-900. Subtitle: text-sm text-neutral-500
+[2] Password field type=password with eye icon toggle button (absolute right-3). Uses 
+@heroicons/react EyeIcon / EyeSlashIcon
+[3] Forgot password text-sm text-brand-600 hover:text-brand-800 float-right above Sign In button
+[4] Google button White bg, border-neutral-300, Google colored G icon SVG. Calls GET 
+/api/auth/google
+[5] Sign up link Inline link — navigates to /register via React Router Link
+BG Page background Light: bg-neutral-100. Dark: bg-dark-bg. Card: bg-white dark:bg-dark-card 
+shadow-lg rounded-2xl p-8
+6.2 Register Page
+ Route: /register  |  Same card layout as Login. On success → show 'Check your email' message📌
+│  CARD (same container as login)                                        │
+│  ┌─────────────────────────────────────────────────────────────────┐  │
+│  │  Create your account                                             │  │
+│  │                                                                  │  │
+│  │  [ Full name input                                  ]            │  │
+│  │  [ Email address input                               ]            │ 
+│
+│  │  [ Password input                           [show]   ]            │ 
+│
+│  │  [ Confirm password                         [show]   ]            │ 
+│
+│  │                                                                  │  │
+│  │  Password strength indicator: ████░░░░  Medium  [1]             │  │
+│  │                                                                  │  │
+│  │  [ ████████  Create Account  ████████ ]                          │  │
+│  │  ─────────────────  or  ────────────────────────────            │  │
+│  │  [ G  Continue with Google  ]                                   │  │
+│  │                                                                  │  │
+│  │  Already have an account?  Sign in →                            │  │
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+│  └─────────────────────────────────────────────────────────────────┘  │
+Ref Element Detail
+[1] Password strength 4-segment bar. Colors: red → amber → amber → green. Label: Weak / Fair / 
+Good / Strong. Logic: length + special chars + numbers
+Post-
+sub
+mit
+Success state Hide form, show: checkmark icon + 'Verification email sent to {email}' + 
+'Resend email' link
+Valid
+ation
+Inline errors Show below each field in text-semantic-error text-xs. Error on blur, not on 
+change
+6.3 Connect Accounts Page
+ Route: /connect-accounts  |  Shown after first login if no accounts connected. Can also be accessed from Settings.📌
+┌─ TOP NAV: Logo | 'Setup your integrations' | Step indicator (1 of 2) ─┐
+├───────────────────────────────────────────────────────────────────────┤
+│  PAGE HEADING: Connect Your Data Sources                              │
+│  SUBHEADING: Connect at least one source to get started               │
+│                                                                        │
+│  ┌──────────────────────────┐  ┌──────────────────────────┐           │
+│  │  [G logo]  Google         │  │  [FB logo] Facebook       │ 
+│
+│  │  Analytics + Search +     │  │  Ads Manager             │           │
+│  │  Google Ads               │  │                          │           │
+│  │                           │  │  Access your Facebook    │           │
+│  │  Access GA4, Search       │  │  ad campaigns, spend,    │           │
+│  │  Console, and Google      │  │  reach, ROAS, and        │           │
+│  │  Ads with one login       │  │  performance data        │           │
+│  │                           │  │                          │           │
+│  │  [ Connect Google → ]     │  │  [ Connect Facebook → ]  │           │
+│  │                           │  │                          │           │ 
+│  │  ● GA4      ○ Not yet     │  │  ● Facebook Ads ○ Not yet│           │
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+│  └──────────────────────────┘  └──────────────────────────┘           │
+│                                                                        │
+│  [ Skip for now ]           [ Continue to Dashboard → ]               │
+└───────────────────────────────────────────────────────────────────────┘
+Element Detail
+Connection cards 2-column grid on desktop, stack on mobile. Each card: rounded-2xl border-2. 
+Default: border-neutral-200. Connected: border-semantic-success bg-green-50
+Status dots Green filled circle = connected. Gray empty circle = not connected. Show which sub-
+services are active (GA4, GSC, Ads separately for Google card)
+Connect button Primary button when not connected. On connected: shows green 'Connected ' ✓
+badge + 'Disconnect' ghost button
+After Google OAuth Page refreshes OAuth status — shows which of GA4, GSC, Google Ads are available 
+from that account
+Continue button Disabled (opacity-50) if no sources connected. Enabled once at least 1 connected
+Skip link Ghost text button — bottom left. Goes directly to dashboard with empty state
+6.4 Main Dashboard
+ Route: /dashboard  |  Protected. This is the primary screen. Contains left sidebar nav, main content area with tabs, 📌
+and right AI panel.
+┌─────────────────────────────────────────────────────────────────────────
+───┐
+│ LEFT SIDEBAR (w-64)  │  TOP BAR                         │  [User Avatar 
+▼] │
+│                      │  [Date Range Picker] [Refresh]   │  [Dark Mode ]☾  
+│
+├──────────────────────┤──────────────────────────────────────────────────
+──┤
+│ [Logo]               │  SOURCE TABS: Overview│GA4│GSC│Google 
+Ads│Facebook  │
+│ 
+│──────────────────────────────────────────────────── │
+│ ● Dashboard          │  KPI CARDS ROW (4 cards per source) 
+│
+│   Connect Accounts   │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ 
+│
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+│   Settings           │  │ Users   │ │Sessions │ │Bounce % │ │Avg Time │ 
+│
+│                      │  │ 12,450  │ │ 18,230  │ │  42.3%  │  │  2m 34s │ 
+│
+│ ─────────────        │  │ +12.4%↑ │ │  +8.1%↑ │ │  -2.1%↓ │  │         │ 
+│
+│ [Admin] (super admin)│  └─────────┘ └─────────┘ └─────────┘ └─────────┘ 
+│
+│                      │──────────────────────────────────────── AI PANEL 
+──│
+│                      │  CHART (Line/Bar — 65% width)    │ Weekly Insight 
+│
+│                      │  ────────────────────────────    │ card 
+│
+│                      │                                  │ 
+─────────────── │
+│                      │  TOP TABLE (sortable, 10 rows)   │ AI Chat Panel 
+│
+│                      │  Col1  Col2  Col3  Col4  Col5    │ [chat history] 
+│
+│                      │  ....  ....  ....  ....  ....    │ 
+│
+│                      │                                  │ [Ask 
+anything…] │
+│                      │  SECOND CHART (if applicable)    │ [Suggestions] 
+│
+└──────────────────────┴──────────────────────────────────┴───────────────
+──┘
+Element Specification
+Left Sidebar w-64 fixed height. bg-brand-800 text-white. Active item: bg-brand-700 rounded-lg. 
+Hover: bg-brand-700/50. Admin link only visible to super admin email.
+Top Bar h-16 bg-white dark:bg-dark-surface border-b border-neutral-200 dark:border-
+neutral-700. Contains date range picker and user menu.
+Date Range Picker Presets: 7d, 28d, 30d, 90d, Custom. Dropdown style. On change: all dashboard data 
+refetches. Persist selection in Zustand + localStorage.
+Source Tabs Tab bar below top bar. Active tab: border-b-2 border-brand-600 text-brand-600. 
+Each tab shows connection status dot. Disconnected tab: grayed out with 'Connect' 
+chip.
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+Element Specification
+KPI Cards Row 4-column grid: grid-cols-2 md:grid-cols-4 gap-4. Responsive — 2 cols on tablet, 4 on 
+desktop.
+Main Chart Line chart for timeseries. Recharts ResponsiveContainer width=100% height=280. 
+Tooltip on hover. Legend below chart.
+Data Tables Full-width below chart. Sortable columns. Pagination: show 10 rows, 'Load more' 
+button. Sticky header on scroll.
+AI Panel Right side w-80 xl:w-96 fixed height with internal scroll. bg-white dark:bg-dark-card 
+border-l border-neutral-200 dark:border-neutral-700.
+6.4.1 Overview Tab — KPI Cards
+Card Metric Icon Change Logic
+GA4 — Users activeUsers UserGroupIcon Green if positive
+GA4 — Sessions sessions CursorArrowRaysIcon Green if positive
+GSC — Clicks clicks CursorClickIcon Green if positive
+Google Ads — Spend cost (formatted) BanknotesIcon Neutral — context dependent
+Google Ads — ROAS roas ChartBarIcon Green if > 1, red if < 1
+FB — Reach reach MegaphoneIcon Green if positive
+FB — Spend spend (formatted) BanknotesIcon Neutral
+FB — ROAS roas ChartBarIcon Green if > 1, red if < 1
+6.5 AI Chat Panel (Right Panel)
+ The AI panel is always visible on desktop as the right column. On mobile it slides up as a sheet from the bottom.📌
+┌─── AI PANEL (w-80 fixed right) ───────────────────────────────────┐
+│  PANEL HEADER                                                       │
+│  [  AI Assistant]                [New Chat] [History ▼]  [ ]        │✦ ✕
+├─────────────────────────────────────────────────────────────────────┤
+│  WEEKLY INSIGHT CARD                                                 │
+│  ┌───────────────────────────────────────────────────────────────┐  │
+│  │   Weekly Summary  — Generated today at 9:04 AM  [Refresh ]  │  │✦ ↺
+│  │  Your traffic grew 12% this week driven by organic search...  │  │
+│  │  Google Ads ROAS improved to 3.4x...                          │  │
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+│  └───────────────────────────────────────────────────────────────┘  │
+├─────────────────────────────────────────────────────────────────────┤
+│  CHAT HISTORY (scrollable)                                          │
+│                                                                      │
+│                                    ┌───────────────────────────┐    │
+│                  [User Avatar]     │ Why did traffic drop?      │    │
+│                                    └───────────────────────────┘    │
+│  ┌─────────────────────────────────────────────┐                   │
+│  │ [ ]  Traffic dropped 18% on Jan 15th due    │  [AI Avatar]       │✦
+│  │       to a Google algorithm update...        │                   │
+│  │       **Recommendation:** Review your        │                   │
+│  │       top landing pages for thin content.    │                   │
+│  └─────────────────────────────────────────────┘                   │
+├─────────────────────────────────────────────────────────────────────┤
+│  SUGGESTED QUESTIONS                                                 │
+│  [Why did bounce rate increase?]  [Which ads have best ROAS?]        │
+│  [What is our top search query?]  [Compare this week vs last]        │
+├─────────────────────────────────────────────────────────────────────┤
+│  INPUT AREA                                                          │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │ Ask anything about your analytics...                          │   │
+│  │                                                               │   │
+│  └────────────────────────────────────────────── [Send ]  ──┘   │▶
+│  Ctrl+Enter to send                                                  │
+└─────────────────────────────────────────────────────────────────────┘
+Element Specification
+Panel header h-12 border-b. Title: '  AI Assistant' in text-brand-600 font-semibold. Buttons: New ✦
+Chat (ghost), History dropdown, collapse X
+Weekly insight card bg-brand-50 dark:bg-brand-900/30 border border-brand-200 dark:border-brand-
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+Element Specification
+700 rounded-xl p-4. Prose text: text-sm. Max 5 lines shown, 'Read more' expands.
+User message Right-aligned. bg-brand-600 text-white rounded-2xl rounded-tr-none px-4 py-2.5 
+max-w-xs text-sm
+AI message Left-aligned. bg-white dark:bg-dark-surface border border-neutral-200 dark:border-
+neutral-700 rounded-2xl rounded-tl-none px-4 py-3 max-w-xs. Markdown rendered.
+AI loading state Animated 3-dot pulse bubble in AI message position: '● ● ●' with fade animation
+Suggestions Horizontal scroll row of pill chips: bg-neutral-100 dark:bg-dark-card border rounded-
+full px-3 py-1.5 text-xs font-medium. Click → prefill input
+Input textarea resize-none rows=2. Expands to rows=4 max on typing. Send button right-aligned 
+inside input container. Disabled + spinner while AI is responding.
+Markdown rendering react-markdown + remark-gfm. Styles: headings text-sm font-semibold, bold font-
+semibold, bullets list-disc list-inside, code font-mono bg-neutral-100 rounded px-1
+6.6 Super Admin Panel
+ Route: /dashboard/admin  |  Admin tab in left sidebar. Visible ONLY to super admin email. Same dashboard shell — 📌
+replaces main content area.
+┌─────────────────────────────────────────────────────────────────────┐
+│  PAGE HEADING: Platform API Configuration                            │
+│  SUBHEADING: Manage API keys for all integrations from this screen   │
+│                                                                       │
+│   Warning banner: Changes take effect immediately for all users     │⚠
+│                                                                       │
+│  ┌── GOOGLE INTEGRATION ──────────────────── [● 2/3 Configured] ──┐ │
+│  │  [▼ Collapse]                                                   │ │
+│  │                                                                  │ │
+│  │  Google OAuth Client ID                [● Configured]           │ │
+│  │  [ 123456****7890.apps.google... ]  [Show] [Edit]  [Test ]     │ │✓
+│  │  Last updated: Jan 12 2025 by admin@company.com                 │ │
+│  │                                                                  │ │
+│  │  Google OAuth Client Secret             [● Configured]          │ │
+│  │  [ GOCS****             ]  [Show] [Edit]  [Test ]              │ │✓
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+│  │                                                                  │ │
+│  │  Google Ads Developer Token             [○ Not Set]             │ │
+│  │  [ Enter Google Ads developer token...  ]  [Save]  [Test]       │ │
+│  │                                                                  │ │
+│  │                            [ Save All Google Settings ]          │ │
+│  └──────────────────────────────────────────────────────────────────┘ │
+│                                                                       │
+│  ┌── FACEBOOK INTEGRATION ─────────────── [● 2/2 Configured] ─────┐ │
+│  │  Facebook App ID + Facebook App Secret  (same row pattern)       │ │
+│  └──────────────────────────────────────────────────────────────────┘ │
+│                                                                       │
+│  ┌── AI SERVICES ──────────────────────── [● 1/2 Configured] ──────┐ │
+│  │  Anthropic Claude API Key + OpenAI API Key (fallback)            │ │
+│  └──────────────────────────────────────────────────────────────────┘ │
+│                                                                       │
+│  ┌── OTHER SERVICES ───────────────────── [● 1/1 Configured] ──────┐ │
+│  │  Resend Email API Key                                            │ │
+│  └──────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────┘
+Element Specification
+Page warning amber bg-amber-50 border-l-4 border-amber-500 rounded-lg p-4 mb-6. Icon: 
+AlertTriangle. Text in text-amber-800.
+Group sections Each group is a collapsible card. Header: flex justify-between items-center. Collapse 
+icon rotates 180deg on open. Default: all expanded.
+Group badge 'X/Y Configured' pill — green if all configured, amber if partial, red if none. Shows 
+count of configured vs total keys in group.
+Key row 3-column layout: label + status badge | masked value input | action buttons
+Masked input font-mono text-sm bg-neutral-100 dark:bg-dark-surface rounded-lg px-3 py-2. Read-
+only. 'Edit' button switches to editable password input.
+Edit mode Clicking Edit: input becomes type=password editable. Show/hide toggle appears. 
+Cancel button restores masked view. Save button calls API.
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+Element Specification
+Test button Ghost button with plug icon. On click: shows spinner → then green '  Connected' or✓  
+red '  Failed: {error}'✗
+Save All button Primary button at bottom of each group. Collects all edited values in group, calls 
+POST /api/admin/config/bulk
+Not configured Gray badge. Input shows placeholder text. Save button prominent.
+6.7 Settings Page
+ Route: /dashboard/settings  |  Accessible from left nav and user avatar menu.📌
+┌─────────────────────────────────────────────────────────────────────┐
+│  Settings                                                             │
+│                                                                       │
+│  ┌── PROFILE ──────────────────────────────────────────────────────┐ │
+│  │  [Avatar]  John Doe                                              │ │
+│  │            john@example.com  [● Email Verified]                  │ │
+│  │            [ Display Name input          ]  [ Save Changes ]     │ │
+│  └──────────────────────────────────────────────────────────────────┘ │
+│                                                                       │
+│  ┌── CONNECTED ACCOUNTS ───────────────────────────────────────────┐ │
+│  │  [G]  Google Account (GA4 + GSC + Ads)  [● Connected]  [Disconnect]│
+│  │        Connected as: john@gmail.com                              │ │
+│  │  [f]  Facebook Account (Meta Ads)        [● Connected]  [Disconnect]│
+│  │        Connected as: John Doe (Facebook) | Token expires: 45 days│ │
+│  └──────────────────────────────────────────────────────────────────┘ │
+│                                                                       │
+│  ┌── APPEARANCE ───────────────────────────────────────────────────┐ │
+│  │  Theme:  [● Light]  [  Dark]  [  System]                        │ │
+│  └──────────────────────────────────────────────────────────────────┘ │
+│                                                                       │
+│  ┌── DANGER ZONE ──────────────────────────────────────────────────┐ │
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+│  │  bg-red-50 border border-red-200                                 │ │
+│  │  Delete Account                                                  │ │
+│  │  This permanently deletes your account and ALL data.             │ │
+│  │                              [ Delete My Account ] (danger btn)  │ │
+│  └──────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────┘
+Element Specification
+Settings sections Each section is a white card rounded-xl border p-6 dark:bg-dark-card. Stacked 
+vertically with gap-6.
+Avatar w-16 h-16 rounded-full bg-brand-600 text-white text-xl font-bold flex items-center 
+justify-center. Shows initials if no Google photo.
+Disconnect button Danger variant button. Shows confirmation modal: 'Disconnect Google? This will 
+remove GA4, GSC, and Google Ads data.' with Cancel + Confirm buttons.
+Facebook token If token expires < 14 days: show amber warning: 'Token expiring in X days. 
+Reconnect now.' with Reconnect button.
+Theme toggle 3-way radio button group styled as toggle pills. Saves preference to localStorage + 
+Zustand. System option reads prefers-color-scheme.
+Delete account Danger zone card: bg-red-50 border-red-200. Delete button opens confirmation 
+modal requiring user to type their email to confirm.
+Delete modal Modal: 'Type your email address to confirm deletion: [ input ]'. Submit disabled until 
+input matches user email exactly.
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+7. Interaction Patterns & Micro-Interactions
+7.1 Loading States
+Scenario Pattern Implementation
+Initial page load Full skeleton layout — nav + 
+cards + charts all skeletonized
+Show skeleton immediately, replace with data 
+on resolve
+Tab switch Skeleton for content area only 
+— nav and header stay visible
+Zustand loading flag per source tab
+Date range change Overlay shimmer on existing 
+data — don't replace with 
+skeleton
+opacity-50 pointer-events-none on card 
+containers + spinner in top bar
+AI thinking Animated 3-dot typing 
+indicator in AI message 
+position
+CSS keyframe animation on 3 dots with 
+staggered delays
+Button submit Replace button text with 
+spinner icon — button stays 
+same size
+disabled + spinner while request is pending
+Chart data loading Gray placeholder rectangle 
+same height as chart
+animate-pulse h-64 bg-neutral-200 dark:bg-
+neutral-700 rounded-xl
+7.2 Empty States
+Scenario Display
+No data for date range Centered illustration (simple SVG) + 'No data for this period' + 'Try a wider 
+date range' suggestion
+Source not connected Card with source logo, short description, and 'Connect [Source]' primary 
+button — no error language
+No AI conversations Center of chat panel: icon + 'Ask your first question' + 3 suggested question 
+chips
+No search results In tables: 'No results found' with clear filters suggestion
+7.3 Transitions & Animations
+Element Animation Tailwind / CSS
+Page transitions Fade in on route change opacity-0 → opacity-100, duration-200
+Modal open/close Scale + fade scale-95 opacity-0 → scale-100 opacity-100, duration-
+150
+Sidebar collapse Slide left with width 
+transition
+transition-all duration-300 ease-in-out
+Toast appear Slide in from right translate-x-full → translate-x-0, duration-300
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+Element Animation Tailwind / CSS
+Tab switch Underline slides to active 
+tab
+transition-transform duration-200 on indicator bar
+Accordion expand Height animates open max-h-0 → max-h-screen, overflow-hidden, duration-
+300
+Button hover Background color shift transition-colors duration-150
+KPI card hover Subtle lift with shadow hover:shadow-md transition-shadow duration-150
+ Keep all animations under 300ms. Never animate purely decorative elements. Respect prefers-reduced-motion: 📌
+@media (prefers-reduced-motion) { * { transition: none !important; animation: none !important; } }
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+8. Dark Mode Specification
+Dark mode uses Tailwind's class strategy: add class='dark' to the <html> element when dark mode is active. 
+Controlled via Zustand themeStore + localStorage.
+8.1 Dark Mode Color Mapping
+Element Light Mode Dark Mode
+Page background bg-neutral-100 dark:bg-dark-bg (#0F172A)
+Sidebar / Nav bg-brand-800 dark:bg-dark-surface (#1E293B)
+Card background bg-white dark:bg-dark-card (#273549)
+Top bar bg-white dark:bg-dark-surface
+Primary text text-neutral-900 dark:text-white
+Secondary text text-neutral-500 dark:text-neutral-400
+Border / Divider border-neutral-200 dark:border-neutral-700
+Input background bg-white dark:bg-dark-card
+Table header bg-neutral-100 dark:bg-dark-surface
+Table row alt bg-neutral-50 dark:bg-dark-surface
+Skeleton loader bg-neutral-200 dark:bg-neutral-700
+Code / Mono bg bg-neutral-100 dark:bg-neutral-800
+AI panel bg bg-white dark:bg-dark-card
+Insight card bg bg-brand-50 dark:bg-brand-900/30
+8.2 Dark Mode Implementation
+• Set strategy in tailwind.config.js: darkMode: 'class'
+• Toggle: document.documentElement.classList.toggle('dark')
+• Persist in localStorage key: 'theme' — values: 'light' | 'dark' | 'system'
+• System: window.matchMedia('(prefers-color-scheme: dark)').matches
+• Apply on app load before render to prevent flash of wrong theme
+• All chart colors must also change in dark mode — use Recharts custom colors from Zustand theme
+8.3 Chart Colors — Light vs Dark
+Chart Element Light Mode Dark Mode
+Primary line #2E75B6 (brand-600) #6EB2E8 (brand-400)
+Secondary line #16A34A (success) #4ADE80 (green-400)
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+Chart Element Light Mode Dark Mode
+Tertiary line #D97706 (warning) #FCD34D (amber-300)
+Grid lines #E5E7EB (neutral-200) #374151 (neutral-700)
+Axis labels #6B7280 (neutral-500) #9CA3AF (neutral-400)
+Tooltip bg #FFFFFF #273549 (dark-card)
+Tooltip border #E5E7EB #4B5563 (neutral-600)
+Bar fill #2E75B6 #3B8ED4
+Pie/Donut brand-600, success, warning, 
+neutral-400
+brand-400, green-400, amber-300, neutral-600
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+9. Responsive Design Rules
+Component Mobile (<768px) Tablet (768–1023px) Desktop (1024px+)
+Left Sidebar Hidden — bottom nav 
+bar instead
+Collapsed to icons only 
+(w-16)
+Expanded with labels (w-64)
+KPI Cards 2-column grid 2-column grid 4-column grid
+Charts Full width, h-48 Full width, h-56 65% width, h-64
+AI Panel Hidden — floating 
+button to open as 
+sheet
+Collapsible — toggle 
+button in top bar
+Always visible right column
+Data Tables Horizontal scroll, sticky 
+first column
+Horizontal scroll Full width, all columns visible
+Dashboard tabs Horizontal scroll row of 
+tabs
+All tabs visible All tabs visible
+Admin panel Stacked single column 
+sections
+Stacked single column Stacked single column (wide 
+cards)
+Auth cards Full width with padding 
+px-4
+Max-w-md centered Max-w-md centered
+Settings Full width stacked 
+sections
+Max-w-2xl centered Max-w-2xl centered
+Confidential – Internal Use Only Page 
+UI/UX Design Specification  |  AI-Powered Analytics Platform  |  Version 1.0  |  FINAL
+10. Accessibility Requirements
+Requirement Standard Implementation
+Color contrast — body text WCAG AA: 4.5:1 
+minimum
+neutral-900 on white = 15:1 . neutral-600 on ✓
+white = 5.9:1 ✓
+Color contrast — large text WCAG AA: 3:1 
+minimum
+All headings pass at defined sizes
+Focus indicators Visible on all 
+interactive elements
+focus:ring-2 focus:ring-brand-400 focus:ring-
+offset-2 on all buttons/inputs
+Keyboard navigation Full keyboard support Tab order follows visual order. Modal traps focus. 
+Escape closes modal.
+Screen reader labels All inputs labelled htmlFor + id on all form fields. aria-label on icon 
+buttons.
+Error messages Programmatically 
+associated
+aria-describedby linking input to error paragraph
+Loading states Announced to screen 
+readers
+aria-live='polite' on data containers. aria-
+busy='true' while loading.
+Chart accessibility Data tables as fallback Each chart has an accessible data table hidden 
+visually but available to screen readers
+Reduced motion Respect user 
+preference
+@media (prefers-reduced-motion) disables all 
+transitions and animations
+— End of Document —
+UI/UX Design Specification  |  Version 1.0  |  Final  |  AI-Powered Analytics Platform
+Authored with Claude.ai  |  Built for Cursor Agentic Development
+Confidential – Internal Use Only Page 

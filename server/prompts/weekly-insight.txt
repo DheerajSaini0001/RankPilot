@@ -1,0 +1,1 @@
+Generate a weekly insight summary over the performance of all active marketing channels based on the provided data. Give high-level observations and actionable recommendations. format as concise markdown.

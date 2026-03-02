@@ -1,0 +1,1 @@
+Generate exactly 4 suggested questions the user could ask based on their current active integrations and data trends. Return ONLY a JSON list of strings.
