@@ -1,5 +1,5 @@
 import { callClaude } from '../services/claudeService.js';
-import { callOpenAI } from '../services/openaiService.js';
+import { callGemini } from '../services/geminiService.js';
 import promptBuilder from '../services/promptBuilder.js';
 import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
@@ -11,9 +11,9 @@ const getAiResponse = async (prompt) => {
     try {
         result = await callClaude(prompt);
     } catch (err) {
-        console.warn(`Claude failed (${err.status || err.message}). Falling back to OpenAI...`);
+        console.warn(`Claude failed (${err.status || err.message}). Falling back to Gemini...`);
         try {
-            result = await callOpenAI(prompt);
+            result = await callGemini(prompt);
         } catch (fallbackErr) {
             const error = new Error('AI service temporarily unavailable');
             error.statusCode = 503;

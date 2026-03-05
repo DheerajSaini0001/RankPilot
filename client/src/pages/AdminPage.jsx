@@ -66,7 +66,7 @@ const AdminPage = () => {
         }
     };
 
-    const groups = ['google', 'facebook', 'anthropic', 'openai', 'other'];
+    const groups = ['google', 'facebook', 'anthropic', 'gemini', 'other'];
 
     return (
         <DashboardLayout>

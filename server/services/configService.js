@@ -13,7 +13,7 @@ const defaultConfigs = [
     { key: 'FACEBOOK_APP_ID', label: 'Facebook App ID', group: 'facebook', isSecret: false },
     { key: 'FACEBOOK_APP_SECRET', label: 'Facebook App Secret', group: 'facebook', isSecret: true },
     { key: 'ANTHROPIC_API_KEY', label: 'Anthropic Claude API Key', group: 'anthropic', isSecret: true },
-    { key: 'OPENAI_API_KEY', label: 'OpenAI API Key (Fallback)', group: 'openai', isSecret: true },
+    { key: 'GEMINI_API_KEY', label: 'Google Gemini Pro API Key', group: 'gemini', isSecret: true },
     { key: 'RESEND_API_KEY', label: 'Resend Email API Key', group: 'other', isSecret: true }
 ];
 

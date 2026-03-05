@@ -100,13 +100,9 @@ export const testConfig = async (req, res) => {
                 headers: { 'x-api-key': val, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }
             });
             return res.status(200).json({ success: true, message: 'Connection successful' });
-        } else if (key === 'OPENAI_API_KEY') {
-            await axios.post('https://api.openai.com/v1/chat/completions', {
-                model: 'gpt-4o',
-                max_tokens: 5,
-                messages: [{ role: 'user', content: 'Say OK' }]
-            }, {
-                headers: { 'Authorization': `Bearer ${val}`, 'content-type': 'application/json' }
+        } else if (key === 'GEMINI_API_KEY') {
+            await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${val}`, {
+                contents: [{ parts: [{ text: "Say OK" }] }]
             });
             return res.status(200).json({ success: true, message: 'Connection successful' });
         } else if (key === 'RESEND_API_KEY') {
