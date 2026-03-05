@@ -48,9 +48,77 @@ const AIChatPage = () => {
             let overviewData = {};
             if (connectedSources.length > 0) {
                 const promises = [];
-                if (connectedSources.includes('ga4')) promises.push(api.get(`/ga4/overview?startDate=${startDate}&endDate=${endDate}`).then(r => overviewData.ga4 = r.data).catch(() => null));
-                if (connectedSources.includes('facebook-ads')) promises.push(api.get(`/facebook-ads/overview?startDate=${startDate}&endDate=${endDate}`).then(r => overviewData.fbAds = r.data?.data?.[0]).catch(() => null));
-                if (connectedSources.includes('ga4')) promises.push(api.get(`/google-ads/overview?startDate=${startDate}&endDate=${endDate}`).then(r => overviewData.gAds = r.data?.[0]?.metrics).catch(() => null));
+
+                if (connectedSources.includes('ga4')) {
+                    promises.push(api.get(`/ga4/overview?startDate=${startDate}&endDate=${endDate}`)
+                        .then(r => {
+                            const rows = r.data.rows?.[0]?.metricValues || [];
+                            overviewData.ga4 = {
+                                users: rows[0]?.value || 0,
+                                sessions: rows[1]?.value || 0,
+                                bounceRate: rows[2]?.value || 0,
+                                avgSessionDuration: rows[3]?.value || 0,
+                                screenPageViews: rows[4]?.value || 0
+                            };
+                        }).catch(() => null));
+                }
+
+                if (connectedSources.includes('gsc-site')) {
+                    promises.push(api.get(`/gsc/overview?startDate=${startDate}&endDate=${endDate}`)
+                        .then(r => {
+                            const totals = r.data.rows?.[0] || {};
+                            overviewData.gsc = {
+                                clicks: totals.clicks || 0,
+                                impressions: totals.impressions || 0,
+                                ctr: (totals.ctr * 100).toFixed(2) || 0,
+                                position: totals.position?.toFixed(1) || 0
+                            };
+                        }).catch(() => null));
+                }
+
+                if (connectedSources.includes('google-ads')) {
+                    promises.push(api.get(`/google-ads/overview?startDate=${startDate}&endDate=${endDate}`)
+                        .then(r => {
+                            // Sum up campaign metrics
+                            const totals = r.data.reduce((acc, row) => {
+                                acc.spend += (row.metrics.costMicros / 1000000);
+                                acc.impressions += parseInt(row.metrics.impressions);
+                                acc.clicks += parseInt(row.metrics.clicks);
+                                acc.conversions += parseFloat(row.metrics.conversions);
+                                return acc;
+                            }, { spend: 0, impressions: 0, clicks: 0, conversions: 0 });
+
+                            overviewData.googleAds = {
+                                currencyCode: '$', // Defaulting for now
+                                spend: totals.spend.toFixed(2),
+                                impressions: totals.impressions,
+                                clicks: totals.clicks,
+                                ctr: totals.impressions > 0 ? ((totals.clicks / totals.impressions) * 100).toFixed(2) : 0,
+                                cpc: totals.clicks > 0 ? (totals.spend / totals.clicks).toFixed(2) : 0,
+                                conversions: totals.conversions.toFixed(1),
+                                roas: totals.spend > 0 ? (totals.conversions / totals.spend).toFixed(2) : 0 // Simplified
+                            };
+                        }).catch(() => null));
+                }
+
+                if (connectedSources.includes('facebook-ads')) {
+                    promises.push(api.get(`/facebook-ads/overview?startDate=${startDate}&endDate=${endDate}`)
+                        .then(r => {
+                            const insight = r.data.data?.[0] || {};
+                            overviewData.facebookAds = {
+                                currency: insight.account_currency || '$',
+                                spend: insight.spend || 0,
+                                reach: insight.reach || 0,
+                                impressions: insight.impressions || 0,
+                                clicks: insight.clicks || 0,
+                                ctr: insight.ctr || 0,
+                                cpm: insight.cpm || 0,
+                                cpc: insight.cpc || 0,
+                                roas: insight.purchase_roas?.[0]?.value || 0
+                            };
+                        }).catch(() => null));
+                }
+
                 await Promise.all(promises);
             }
 
