@@ -7,6 +7,7 @@ import FacebookToken from '../models/FacebookToken.js';
 import UserAccounts from '../models/UserAccounts.js';
 import AnalyticsCache from '../models/AnalyticsCache.js';
 import Conversation from '../models/Conversation.js';
+import { sendPasswordResetEmail, sendVerificationEmail } from '../utils/emailService.js';
 
 const generateToken = (userId, email) => {
     return jwt.sign({ userId, email }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
@@ -32,7 +33,17 @@ export const register = async (req, res) => {
         emailVerified: false
     });
 
-    res.status(201).json({ message: 'Verification email sent' });
+    try {
+        await sendVerificationEmail(email, emailVerifyToken);
+    } catch (emailErr) {
+        console.error('Verification email failed:', emailErr.message);
+        console.log(`\n================================`);
+        console.log(`✅ VERIFY EMAIL LINK (use this locally):`);
+        console.log(`${process.env.CLIENT_URL || 'http://localhost:5173'}/verify-email?token=${emailVerifyToken}`);
+        console.log(`================================\n`);
+    }
+
+    res.status(201).json({ message: 'Account created! Please check your email to verify your account.' });
 };
 
 export const verifyEmail = async (req, res) => {
@@ -40,14 +51,46 @@ export const verifyEmail = async (req, res) => {
     const user = await User.findOne({ emailVerifyToken: token });
 
     if (!user) {
-        return res.status(400).json({ success: false, message: 'Invalid token' });
+        return res.status(400).json({ success: false, code: 'TOKEN_INVALID', message: 'Invalid or already used verification link.' });
+    }
+
+    if (user.emailVerified) {
+        user.emailVerifyToken = null;
+        await user.save();
+        return res.status(200).json({ message: 'Email already verified. You can log in.' });
     }
 
     user.emailVerified = true;
     user.emailVerifyToken = null;
     await user.save();
 
-    res.status(200).json({ message: 'Email verified' });
+    res.status(200).json({ message: 'Email verified successfully! You can now log in.' });
+};
+
+export const resendVerification = async (req, res) => {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    // Always respond generically to avoid email enumeration
+    if (!user) {
+        return res.status(200).json({ message: 'If that account exists and is unverified, a new link has been sent.' });
+    }
+
+    if (user.emailVerified) {
+        return res.status(200).json({ message: 'This account is already verified. You can log in.' });
+    }
+
+    // Generate fresh token
+    user.emailVerifyToken = crypto.randomUUID();
+    await user.save();
+
+    try {
+        await sendVerificationEmail(user.email, user.emailVerifyToken);
+    } catch (emailErr) {
+        console.error('Resend verification email failed:', emailErr.message);
+    }
+
+    res.status(200).json({ message: 'A new verification link has been sent to your email.' });
 };
 
 export const login = async (req, res) => {
@@ -77,6 +120,10 @@ export const login = async (req, res) => {
     user.lockUntil = null;
     await user.save();
 
+    if (!user.emailVerified) {
+        return res.status(403).json({ success: false, message: 'Please verify your email before logging in. Check your inbox for the verification link.' });
+    }
+
     res.status(200).json({
         token: generateToken(user._id, user.email),
         user: { id: user._id, name: user.displayName, email: user.email, avatar: user.avatar }
@@ -93,8 +140,14 @@ export const forgotPassword = async (req, res) => {
 
     if (user) {
         user.passwordResetToken = crypto.randomUUID();
-        user.passwordResetExp = Date.now() + 3600000;
+        user.passwordResetExp = Date.now() + 3600000; // 1 hour
         await user.save();
+
+        try {
+            await sendPasswordResetEmail(user.email, user.passwordResetToken);
+        } catch (emailErr) {
+            console.error('Email send failed:', emailErr.message);
+        }
     }
 
     res.status(200).json({ message: 'If an account with that email exists, a password reset link has been sent.' });

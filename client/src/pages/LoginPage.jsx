@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
-import { getMe } from '../api/authApi';
+import { getMe, resendVerification } from '../api/authApi';
 
 const LoginPage = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const [resendLoading, setResendLoading] = useState(false);
+    const [showResend, setShowResend] = useState(false);
     const { setAuth } = useAuthStore();
     const navigate = useNavigate();
 
@@ -18,6 +20,7 @@ const LoginPage = () => {
         e.preventDefault();
         if (!email || !password) return toast.error('Please enter email and password');
         setLoading(true);
+        setShowResend(false);
         try {
             const res = await axios.post(`${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/login`, { email, password });
             setAuth(res.data.token, res.data.user);
@@ -30,9 +33,27 @@ const LoginPage = () => {
                 navigate('/dashboard');
             }
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Login failed');
+            const msg = err.response?.data?.message || 'Login failed';
+            toast.error(msg);
+            // Show resend button if login failed because email is unverified
+            if (err.response?.status === 403) {
+                setShowResend(true);
+            }
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleResend = async () => {
+        setResendLoading(true);
+        try {
+            const res = await resendVerification({ email });
+            toast.success(res.data.message);
+            setShowResend(false);
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to resend verification email');
+        } finally {
+            setResendLoading(false);
         }
     };
 
@@ -44,9 +65,21 @@ const LoginPage = () => {
         window.location.href = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/facebook`;
     };
 
+
     return (
-        <div className="min-h-screen bg-brand-50 dark:bg-dark-bg font-sans flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-dark-surface w-full max-w-md rounded-2xl shadow-xl border border-neutral-100 dark:border-neutral-800 p-8">
+        <div className="min-h-screen bg-neutral-50 dark:bg-dark-bg font-sans flex items-center justify-center p-4 relative overflow-hidden">
+            {/* Background elements */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-brand-400/20 dark:bg-brand-600/10 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
+
+            <div className="relative bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl w-full max-w-md rounded-3xl shadow-2xl border border-white/20 dark:border-neutral-700/50 p-8 sm:p-10 z-10">
+                <div className="flex justify-center mb-6">
+                    <span className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-brand-600 to-brand-400">
+                        RankPilot
+                    </span>
+                    <span className="ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300 flex items-center">
+                        AI
+                    </span>
+                </div>
                 <div className="text-center mb-8">
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Welcome Back</h1>
                     <p className="text-sm text-neutral-500 dark:text-neutral-400">Log in to view your analytics.</p>
@@ -71,7 +104,7 @@ const LoginPage = () => {
                             required
                         />
                         <div className="flex justify-end mt-1">
-                            <a href="#" className="text-xs text-brand-600 hover:text-brand-500 font-medium">Forgot Password?</a>
+                            <Link to="/forgot-password" className="text-xs text-brand-600 hover:text-brand-500 font-medium">Forgot Password?</Link>
                         </div>
                     </div>
 
@@ -79,6 +112,40 @@ const LoginPage = () => {
                         Sign In
                     </Button>
                 </form>
+
+                {/* Resend verification banner - shown when login fails with 403 */}
+                {showResend && (
+                    <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-2xl">
+                        <p className="text-sm text-amber-800 dark:text-amber-300 font-medium mb-3 flex items-start gap-2">
+                            <svg className="w-4 h-4 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                            </svg>
+                            Your email isn't verified yet. Check your inbox or resend the link.
+                        </p>
+                        <button
+                            onClick={handleResend}
+                            disabled={resendLoading}
+                            className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                        >
+                            {resendLoading ? (
+                                <>
+                                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                    </svg>
+                                    Sending...
+                                </>
+                            ) : (
+                                <>
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                    </svg>
+                                    Resend Verification Email
+                                </>
+                            )}
+                        </button>
+                    </div>
+                )}
 
                 <div className="mt-6 flex items-center justify-center space-x-2">
                     <div className="h-px bg-neutral-200 dark:bg-neutral-700 w-full"></div>

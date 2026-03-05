@@ -27,8 +27,19 @@ const RegisterPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-brand-50 dark:bg-dark-bg font-sans flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-dark-surface w-full max-w-md rounded-2xl shadow-xl border border-neutral-100 dark:border-neutral-800 p-8">
+        <div className="min-h-screen bg-neutral-50 dark:bg-dark-bg font-sans flex items-center justify-center p-4 relative overflow-hidden">
+            {/* Background elements */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-brand-400/20 dark:bg-brand-600/10 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
+
+            <div className="relative bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl w-full max-w-md rounded-3xl shadow-2xl border border-white/20 dark:border-neutral-700/50 p-8 sm:p-10 z-10">
+                <div className="flex justify-center mb-6">
+                    <span className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-brand-600 to-brand-400">
+                        RankPilot
+                    </span>
+                    <span className="ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300 flex items-center">
+                        AI
+                    </span>
+                </div>
                 <div className="text-center mb-8">
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Create Account</h1>
                     <p className="text-sm text-neutral-500 dark:text-neutral-400">Join RankPilot to get started.</p>

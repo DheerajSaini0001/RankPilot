@@ -1,7 +1,7 @@
 import React from 'react';
 
 const Button = ({ variant = 'primary', children, className = '', disabled = false, loading = false, ...props }) => {
-    let baseStyles = 'rounded-lg px-4 py-2 text-sm font-medium transition-colors duration-150 focus:outline-none focus:ring-offset-2 flex justify-center items-center';
+    let baseStyles = 'rounded-xl px-5 py-2.5 text-sm font-bold transition-all duration-300 focus:outline-none focus:ring-offset-2 flex justify-center items-center shadow-sm disabled:shadow-none transform active:scale-[0.98] tracking-wide';
 
     if (disabled || loading) {
         baseStyles += ' opacity-50 cursor-not-allowed pointer-events-none';
@@ -10,19 +10,19 @@ const Button = ({ variant = 'primary', children, className = '', disabled = fals
     let variantStyles = '';
     switch (variant) {
         case 'primary':
-            variantStyles = 'bg-brand-600 text-white hover:bg-brand-700 focus:ring-2 focus:ring-brand-400 dark:bg-brand-500 dark:hover:bg-brand-600';
+            variantStyles = 'bg-brand-600 text-white hover:bg-brand-700 hover:shadow-brand-500/20 hover:shadow-lg focus:ring-2 focus:ring-brand-400 dark:bg-brand-500 dark:hover:bg-brand-600';
             break;
         case 'secondary':
-            variantStyles = 'bg-white text-brand-700 border border-brand-300 hover:bg-brand-50 dark:bg-dark-card dark:text-brand-400 dark:border-brand-700';
+            variantStyles = 'bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50 hover:border-neutral-300 dark:bg-dark-card dark:text-neutral-300 dark:border-neutral-700 dark:hover:border-neutral-600 dark:hover:bg-dark-surface';
             break;
         case 'danger':
-            variantStyles = 'bg-semantic-error text-white hover:bg-red-700 focus:ring-2 focus:ring-red-400 dark:bg-red-700 dark:hover:bg-red-800';
+            variantStyles = 'bg-red-600 text-white hover:bg-red-700 hover:shadow-red-500/20 hover:shadow-lg focus:ring-2 focus:ring-red-400 dark:bg-red-700 dark:hover:bg-red-800';
             break;
         case 'ghost':
-            variantStyles = 'bg-transparent text-brand-600 hover:bg-brand-50 focus:ring-2 focus:ring-brand-200 dark:text-brand-400 dark:hover:bg-dark-card';
+            variantStyles = 'bg-transparent text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 focus:ring-2 focus:ring-neutral-200 dark:text-neutral-400 dark:hover:bg-dark-surface shadow-none';
             break;
         case 'icon-only':
-            variantStyles = 'p-2 rounded-lg text-neutral-600 hover:bg-neutral-100 focus:ring-2 focus:ring-brand-400 dark:text-neutral-400 dark:hover:bg-dark-card';
+            variantStyles = 'p-2.5 rounded-xl text-neutral-600 hover:bg-neutral-100 focus:ring-2 focus:ring-brand-400 dark:text-neutral-400 dark:hover:bg-dark-surface shadow-none';
             break;
         default:
             break;

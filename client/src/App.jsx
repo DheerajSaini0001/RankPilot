@@ -6,8 +6,13 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ConnectAccountsPage from './pages/ConnectAccountsPage';
 import DashboardPage from './pages/DashboardPage';
+import AIChatPage from './pages/AIChatPage';
 import AdminPage from './pages/AdminPage';
 import SettingsPage from './pages/SettingsPage';
+import LandingPage from './pages/LandingPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
 import { ProtectedRoute, AuthRoute, AdminRoute } from './components/ui/RouteWrappers';
 
 const App = () => {
@@ -15,7 +20,11 @@ const App = () => {
     <BrowserRouter>
       <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
       <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={
+          <AuthRoute>
+            <LandingPage />
+          </AuthRoute>
+        } />
 
         <Route path="/login" element={
           <AuthRoute>
@@ -28,6 +37,13 @@ const App = () => {
           </AuthRoute>
         } />
 
+        {/* Password Reset Routes - public, accessible even when logged in */}
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+        {/* Email Verification - public, no auth wrapping needed */}
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+
         {/* Protected Routes */}
         <Route path="/connect-accounts" element={
           <ProtectedRoute>
@@ -38,6 +54,12 @@ const App = () => {
         <Route path="/dashboard" element={
           <ProtectedRoute>
             <DashboardPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/dashboard/ai-chat" element={
+          <ProtectedRoute>
+            <AIChatPage />
           </ProtectedRoute>
         } />
 

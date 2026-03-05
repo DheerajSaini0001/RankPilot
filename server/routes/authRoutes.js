@@ -7,6 +7,7 @@ import {
     logout,
     forgotPassword,
     resetPassword,
+    resendVerification,
     getMe,
     deleteMe,
     authCallback
@@ -22,6 +23,7 @@ router.post('/login', catchAsync(login));
 router.post('/logout', protect, catchAsync(logout));
 router.post('/forgot-password', catchAsync(forgotPassword));
 router.post('/reset-password', catchAsync(resetPassword));
+router.post('/resend-verification', catchAsync(resendVerification));
 
 // Google Auth
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email', 'https://www.googleapis.com/auth/analytics.readonly', 'https://www.googleapis.com/auth/webmasters.readonly', 'https://www.googleapis.com/auth/adwords'], accessType: 'offline', prompt: 'consent' }));
