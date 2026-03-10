@@ -106,7 +106,7 @@ const SettingsPage = () => {
                                     {connectedSources?.includes('ga4') ? (
                                         <Button variant="secondary" onClick={handleGoogleDisconnect} className="w-full text-sm hover:border-red-300 hover:text-red-500 dark:hover:border-red-700 dark:hover:text-red-400 shadow-sm bg-white dark:bg-dark-card border-neutral-200 dark:border-neutral-700 transition-colors">Disconnect Data Link</Button>
                                     ) : (
-                                        <div className="w-full text-center py-2 px-4 rounded-xl bg-neutral-100 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 text-sm font-semibold text-neutral-400 dark:text-neutral-500">Not Linked</div>
+                                        <Button onClick={() => window.location.href = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/google`} className="w-full text-sm shadow-sm shadow-brand-500/25">Connect Google</Button>
                                     )}
                                 </div>
                             </div>
@@ -124,7 +124,7 @@ const SettingsPage = () => {
                                     {connectedSources?.includes('facebook-ads') ? (
                                         <Button variant="secondary" onClick={handleFacebookDisconnect} className="w-full text-sm hover:border-red-300 hover:text-red-500 dark:hover:border-red-700 dark:hover:text-red-400 shadow-sm bg-white dark:bg-dark-card border-neutral-200 dark:border-neutral-700 transition-colors">Disconnect Data Link</Button>
                                     ) : (
-                                        <div className="w-full text-center py-2 px-4 rounded-xl bg-neutral-100 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 text-sm font-semibold text-neutral-400 dark:text-neutral-500">Not Linked</div>
+                                        <Button onClick={() => window.location.href = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/facebook`} className="w-full text-sm shadow-sm shadow-brand-500/25">Connect Meta</Button>
                                     )}
                                 </div>
                             </div>

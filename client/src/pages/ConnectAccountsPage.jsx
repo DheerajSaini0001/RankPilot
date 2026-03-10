@@ -92,7 +92,7 @@ const ConnectAccountsPage = () => {
                         <svg className="w-8 h-8 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                         </svg>
-                        Data Integrations
+                        Your Integrations
                     </h1>
                     <p className="text-neutral-500 dark:text-neutral-400 mt-2 font-medium">Link your marketing platforms to continuously sync performance metrics into the intelligence engine.</p>
                 </div>
@@ -104,9 +104,8 @@ const ConnectAccountsPage = () => {
                     </div>
                 ) : (
                     <div className="flex flex-col h-full">
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 xl:gap-8 flex-1">
-                            {/* Google Integration */}
-                            {/* Google Analytics 4 */}
+                        <div className="flex flex-col gap-6 xl:gap-8 flex-1">
+                            {/* Google Integrations (Combined) */}
                             <div className="group bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-3xl p-6 md:p-8 shadow-sm hover:shadow-2xl hover:shadow-brand-500/5 hover:border-brand-400/50 dark:hover:border-brand-500/50 transition-all duration-500 relative overflow-hidden">
                                 <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none transition-opacity duration-500 opacity-0 group-hover:opacity-100"></div>
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10 mb-2">
@@ -116,12 +115,12 @@ const ConnectAccountsPage = () => {
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-3">
-                                                <h3 className="text-xl font-extrabold text-neutral-900 dark:text-white tracking-tight">Google Analytics 4</h3>
+                                                <h3 className="text-xl font-extrabold text-neutral-900 dark:text-white tracking-tight">Google Integrations</h3>
                                                 {connectedSources.includes('ga4') && (
                                                     <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-400 rounded-md border border-green-200 dark:border-green-800/50">Active</span>
                                                 )}
                                             </div>
-                                            <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium mt-0.5">Automated sync for website traffic and events</p>
+                                            <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium mt-0.5">Automated sync for Analytics, Search Console, & Ads</p>
                                         </div>
                                     </div>
                                     <div>
@@ -133,100 +132,46 @@ const ConnectAccountsPage = () => {
 
                                 {connectedSources.includes('ga4') && (
                                     <div className="mt-8 relative z-10 pt-6 border-t border-neutral-100 dark:border-neutral-800/80">
-                                        <div className="bg-neutral-50 dark:bg-dark-surface/50 p-4 rounded-xl border border-neutral-200/50 dark:border-neutral-700/50 transition-colors focus-within:border-brand-300 dark:focus-within:border-brand-700 max-w-lg">
-                                            <label className="block text-xs font-bold text-brand-600 dark:text-brand-400 mb-2 uppercase tracking-wide">Select Primary Property</label>
-                                            <select
-                                                value={selectedGa4}
-                                                onChange={e => setSelectedGa4(e.target.value)}
-                                                className="w-full text-sm rounded-lg border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-neutral-900 dark:text-white focus:ring-brand-400 py-2.5 px-3 focus:outline-none focus:ring-2 shadow-sm font-medium"
-                                            >
-                                                <option value="">Select Property...</option>
-                                                {ga4Props.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                            </select>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Google Search Console */}
-                            <div className="group bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-3xl p-6 md:p-8 shadow-sm hover:shadow-2xl hover:shadow-brand-500/5 hover:border-brand-400/50 dark:hover:border-brand-500/50 transition-all duration-500 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none transition-opacity duration-500 opacity-0 group-hover:opacity-100"></div>
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10 mb-2">
-                                    <div className="flex items-center space-x-4">
-                                        <div className="w-16 h-16 bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-dark-surface dark:to-neutral-800/80 rounded-2xl flex items-center justify-center p-3.5 shadow-sm border border-neutral-200/50 dark:border-neutral-700/50 group-hover:scale-105 transition-transform duration-300">
-                                            <svg viewBox="0 0 24 24" className="w-full h-full drop-shadow-sm"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" /><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" /><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" /><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" /></svg>
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-3">
-                                                <h3 className="text-xl font-extrabold text-neutral-900 dark:text-white tracking-tight">Google Search Console</h3>
-                                                {connectedSources.includes('ga4') && (
-                                                    <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-400 rounded-md border border-green-200 dark:border-green-800/50">Active</span>
-                                                )}
+                                        <h4 className="text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-4 uppercase tracking-wider">Configure Services</h4>
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                            {/* GA4 */}
+                                            <div className="bg-neutral-50 dark:bg-dark-surface/50 p-4 rounded-xl border border-neutral-200/50 dark:border-neutral-700/50 transition-colors focus-within:border-brand-300 dark:focus-within:border-brand-700">
+                                                <label className="block text-xs font-bold text-brand-600 dark:text-brand-400 mb-2 uppercase tracking-wide">Property (GA4)</label>
+                                                <select
+                                                    value={selectedGa4}
+                                                    onChange={e => setSelectedGa4(e.target.value)}
+                                                    className="w-full text-sm rounded-lg border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-neutral-900 dark:text-white focus:ring-brand-400 py-2.5 px-3 focus:outline-none focus:ring-2 shadow-sm font-medium"
+                                                >
+                                                    <option value="">Select Property...</option>
+                                                    {ga4Props.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                                </select>
                                             </div>
-                                            <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium mt-0.5">Automated sync for organic search queries and impressions</p>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        {!connectedSources.includes('ga4') && (
-                                            <Button onClick={() => window.location.href = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/google`} className="shadow-lg shadow-brand-500/25">Connect Google</Button>
-                                        )}
-                                    </div>
-                                </div>
 
-                                {connectedSources.includes('ga4') && (
-                                    <div className="mt-8 relative z-10 pt-6 border-t border-neutral-100 dark:border-neutral-800/80">
-                                        <div className="bg-neutral-50 dark:bg-dark-surface/50 p-4 rounded-xl border border-neutral-200/50 dark:border-neutral-700/50 transition-colors focus-within:border-brand-300 dark:focus-within:border-brand-700 max-w-lg">
-                                            <label className="block text-xs font-bold text-brand-600 dark:text-brand-400 mb-2 uppercase tracking-wide">Select Target Site</label>
-                                            <select
-                                                value={selectedGsc}
-                                                onChange={e => setSelectedGsc(e.target.value)}
-                                                className="w-full text-sm rounded-lg border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-neutral-900 dark:text-white focus:ring-brand-400 py-2.5 px-3 focus:outline-none focus:ring-2 shadow-sm font-medium"
-                                            >
-                                                <option value="">Select Site...</option>
-                                                {gscSites.map(s => <option key={s.siteUrl} value={s.siteUrl}>{s.siteUrl}</option>)}
-                                            </select>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Google Ads */}
-                            <div className="group bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-3xl p-6 md:p-8 shadow-sm hover:shadow-2xl hover:shadow-brand-500/5 hover:border-brand-400/50 dark:hover:border-brand-500/50 transition-all duration-500 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none transition-opacity duration-500 opacity-0 group-hover:opacity-100"></div>
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10 mb-2">
-                                    <div className="flex items-center space-x-4">
-                                        <div className="w-16 h-16 bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-dark-surface dark:to-neutral-800/80 rounded-2xl flex items-center justify-center p-3.5 shadow-sm border border-neutral-200/50 dark:border-neutral-700/50 group-hover:scale-105 transition-transform duration-300">
-                                            <svg viewBox="0 0 24 24" className="w-full h-full drop-shadow-sm"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" /><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" /><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" /><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" /></svg>
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-3">
-                                                <h3 className="text-xl font-extrabold text-neutral-900 dark:text-white tracking-tight">Google Ads</h3>
-                                                {connectedSources.includes('ga4') && (
-                                                    <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-400 rounded-md border border-green-200 dark:border-green-800/50">Active</span>
-                                                )}
+                                            {/* GSC */}
+                                            <div className="bg-neutral-50 dark:bg-dark-surface/50 p-4 rounded-xl border border-neutral-200/50 dark:border-neutral-700/50 transition-colors focus-within:border-brand-300 dark:focus-within:border-brand-700">
+                                                <label className="block text-xs font-bold text-brand-600 dark:text-brand-400 mb-2 uppercase tracking-wide">Target Site (GSC)</label>
+                                                <select
+                                                    value={selectedGsc}
+                                                    onChange={e => setSelectedGsc(e.target.value)}
+                                                    className="w-full text-sm rounded-lg border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-neutral-900 dark:text-white focus:ring-brand-400 py-2.5 px-3 focus:outline-none focus:ring-2 shadow-sm font-medium"
+                                                >
+                                                    <option value="">Select Site...</option>
+                                                    {gscSites.map(s => <option key={s.siteUrl} value={s.siteUrl}>{s.siteUrl}</option>)}
+                                                </select>
                                             </div>
-                                            <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium mt-0.5">Automated sync for Google PPC campaigns and ad spend</p>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        {!connectedSources.includes('ga4') && (
-                                            <Button onClick={() => window.location.href = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/google`} className="shadow-lg shadow-brand-500/25">Connect Google</Button>
-                                        )}
-                                    </div>
-                                </div>
 
-                                {connectedSources.includes('ga4') && (
-                                    <div className="mt-8 relative z-10 pt-6 border-t border-neutral-100 dark:border-neutral-800/80">
-                                        <div className="bg-neutral-50 dark:bg-dark-surface/50 p-4 rounded-xl border border-neutral-200/50 dark:border-neutral-700/50 transition-colors focus-within:border-brand-300 dark:focus-within:border-brand-700 max-w-lg">
-                                            <label className="block text-xs font-bold text-brand-600 dark:text-brand-400 mb-2 uppercase tracking-wide">Select Ads Account</label>
-                                            <select
-                                                value={selectedGAds}
-                                                onChange={e => setSelectedGAds(e.target.value)}
-                                                className="w-full text-sm rounded-lg border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-neutral-900 dark:text-white focus:ring-brand-400 py-2.5 px-3 focus:outline-none focus:ring-2 shadow-sm font-medium"
-                                            >
-                                                <option value="">Select Account...</option>
-                                                {gAdsAccounts.map(g => <option key={g} value={g}>{g}</option>)}
-                                            </select>
+                                            {/* Google Ads */}
+                                            <div className="bg-neutral-50 dark:bg-dark-surface/50 p-4 rounded-xl border border-neutral-200/50 dark:border-neutral-700/50 transition-colors focus-within:border-brand-300 dark:focus-within:border-brand-700 lg:col-span-2">
+                                                <label className="block text-xs font-bold text-brand-600 dark:text-brand-400 mb-2 uppercase tracking-wide">Ads Account</label>
+                                                <select
+                                                    value={selectedGAds}
+                                                    onChange={e => setSelectedGAds(e.target.value)}
+                                                    className="w-full text-sm rounded-lg border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-neutral-900 dark:text-white focus:ring-brand-400 py-2.5 px-3 focus:outline-none focus:ring-2 shadow-sm font-medium"
+                                                >
+                                                    <option value="">Select Account...</option>
+                                                    {gAdsAccounts.map(g => <option key={g} value={g}>{g}</option>)}
+                                                </select>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
@@ -252,7 +197,7 @@ const ConnectAccountsPage = () => {
                                     </div>
                                     <div>
                                         {!connectedSources.includes('facebook-ads') && (
-                                            <Button variant="secondary" onClick={() => window.location.href = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/facebook`} className="shadow-lg shadow-blue-500/10 hover:border-blue-400">Connect Meta</Button>
+                                            <Button onClick={() => window.location.href = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/facebook`} className="shadow-lg shadow-brand-500/25">Connect Meta</Button>
                                         )}
                                     </div>
                                 </div>

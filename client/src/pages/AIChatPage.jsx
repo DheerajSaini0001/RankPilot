@@ -145,7 +145,7 @@ const AIChatPage = () => {
 
     return (
         <DashboardLayout>
-            <div className="flex flex-col h-full min-h-[calc(100vh-4rem)] relative">
+            <div className="flex flex-col h-[calc(100vh-140px)] relative">
                 {/* Header */}
                 <div className="flex items-center space-x-4 mb-6 shrink-0">
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/20">

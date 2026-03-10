@@ -13,6 +13,10 @@ import LandingPage from './pages/LandingPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
+import GscPage from './pages/GscPage';
+import Ga4Page from './pages/Ga4Page';
+import GoogleAdsPage from './pages/GoogleAdsPage';
+import FacebookAdsPage from './pages/FacebookAdsPage';
 import { ProtectedRoute, AuthRoute, AdminRoute } from './components/ui/RouteWrappers';
 
 const App = () => {
@@ -60,6 +64,30 @@ const App = () => {
         <Route path="/dashboard/ai-chat" element={
           <ProtectedRoute>
             <AIChatPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/dashboard/gsc" element={
+          <ProtectedRoute>
+            <GscPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/dashboard/ga4" element={
+          <ProtectedRoute>
+            <Ga4Page />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/dashboard/google-ads" element={
+          <ProtectedRoute>
+            <GoogleAdsPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/dashboard/facebook-ads" element={
+          <ProtectedRoute>
+            <FacebookAdsPage />
           </ProtectedRoute>
         } />
 
