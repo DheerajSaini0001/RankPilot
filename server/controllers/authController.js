@@ -105,6 +105,15 @@ export const login = async (req, res) => {
         return res.status(423).json({ success: false, message: 'Account locked' });
     }
 
+    // Account was created via Google/Facebook OAuth — no password set
+    if (!user.passwordHash) {
+        return res.status(400).json({
+            success: false,
+            code: 'OAUTH_ACCOUNT',
+            message: 'This account was created with Google sign-in. Please continue with Google, or use "Forgot Password" to set a password.'
+        });
+    }
+
     const isMatch = await bcrypt.compare(password, user.passwordHash);
 
     if (!isMatch) {

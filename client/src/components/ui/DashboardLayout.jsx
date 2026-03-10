@@ -40,8 +40,13 @@ const DashboardLayout = ({ children }) => {
 
             getActiveAccounts()
                 .then(res => {
-                    if (res.data?.gscSiteUrl) {
-                        setAccounts({ activeGscSite: res.data.gscSiteUrl });
+                    if (res.data) {
+                        const updates = {};
+                        if (res.data.gscSiteUrl) updates.activeGscSite = res.data.gscSiteUrl;
+                        if (res.data.ga4PropertyId) updates.activeGa4PropertyId = res.data.ga4PropertyId;
+                        if (res.data.googleAdsCustomerId) updates.activeGoogleAdsCustomerId = res.data.googleAdsCustomerId;
+                        if (res.data.facebookAdAccountId) updates.activeFacebookAdAccountId = res.data.facebookAdAccountId;
+                        if (Object.keys(updates).length > 0) setAccounts(updates);
                     }
                 })
                 .catch(() => { });

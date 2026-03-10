@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/ui/DashboardLayout';
 import KpiCard from '../components/dashboard/KpiCard';
 import DataTable from '../components/dashboard/DataTable';
@@ -9,7 +10,8 @@ import {
     CursorArrowRaysIcon,
     MagnifyingGlassIcon,
     ChartBarIcon,
-    InformationCircleIcon
+    InformationCircleIcon,
+    ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
@@ -17,7 +19,9 @@ const formatNumber = (num) => Number(num).toLocaleString('en-US', { maximumFract
 
 const GscPage = () => {
     const { startDate, endDate } = useDateRangeStore();
-    const { activeGscSite } = useAccountsStore();
+    const { activeGscSite, connectedSources } = useAccountsStore();
+    const isConnected = connectedSources.includes('gsc');
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     
     const [overview, setOverview] = useState(null);
@@ -76,14 +80,30 @@ const GscPage = () => {
         loadData();
     }, [activeGscSite, startDate, endDate]);
 
+    if (!connectedSources.includes('ga4')) {
+        return (
+            <DashboardLayout>
+                <div className="flex flex-col h-full items-center justify-center">
+                    <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700/60 p-8 rounded-2xl flex flex-col items-center text-center max-w-sm">
+                        <ExclamationTriangleIcon className="w-12 h-12 text-neutral-400 mb-4" />
+                        <h2 className="text-xl font-bold text-neutral-900 dark:text-white">Google Not Connected</h2>
+                        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-2 mb-5">Please go to Integrations to connect your Google account to enable Search Console data.</p>
+                        <button onClick={() => navigate('/connect-accounts')} className="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold rounded-xl transition-colors">Go to Integrations</button>
+                    </div>
+                </div>
+            </DashboardLayout>
+        );
+    }
+
     if (!activeGscSite) {
         return (
             <DashboardLayout>
                 <div className="flex flex-col h-full items-center justify-center">
-                    <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700/60 p-8 rounded-2xl flex flex-col items-center">
-                        <MagnifyingGlassIcon className="w-12 h-12 text-neutral-400 mb-4" />
-                        <h2 className="text-xl font-bold text-neutral-900 dark:text-white">No Google Search Console Site Selected</h2>
-                        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-2">Please select a website from the dropdown on the left sidebar.</p>
+                    <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700/60 p-8 rounded-2xl flex flex-col items-center text-center max-w-sm">
+                        <MagnifyingGlassIcon className="w-12 h-12 text-amber-400 mb-4" />
+                        <h2 className="text-xl font-bold text-neutral-900 dark:text-white">No Site Selected</h2>
+                        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-2 mb-5">Google is connected, but no Search Console site has been selected. Pick one from the sidebar dropdown or go to Integrations.</p>
+                        <button onClick={() => navigate('/connect-accounts')} className="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold rounded-xl transition-colors">Select a Site</button>
                     </div>
                 </div>
             </DashboardLayout>

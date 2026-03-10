@@ -14,17 +14,31 @@ const SettingsPage = () => {
     const handleGoogleDisconnect = async () => {
         if (!window.confirm("Disconnect Google data? All reports & API links will be lost.")) return;
         try {
-            await disconnectGoogle();
-            setAccounts({ connectedSources: connectedSources.filter(s => !['ga4', 'gsc', 'google-ads'].includes(s)) });
-            toast.success("Google disconnected");
+            const res = await disconnectGoogle();
+            setAccounts({
+                connectedSources: connectedSources.filter(s => !['ga4', 'gsc', 'google-ads'].includes(s)),
+                ga4: {},
+                gsc: {},
+                googleAds: {},
+                gscSites: [],
+                activeGscSite: null
+            });
+            if (res.data?.oauthOnly) {
+                toast.success("Google disconnected. Since you used Google to sign in, we've sent a password-setup email to your inbox so you can still log in.", { duration: 8000 });
+            } else {
+                toast.success("Google disconnected");
+            }
         } catch { toast.error("Error disconnecting Google"); }
     };
 
     const handleFacebookDisconnect = async () => {
         if (!window.confirm("Disconnect Facebook Ads?")) return;
         try {
-            await disconnectFacebook();
-            setAccounts({ connectedSources: connectedSources.filter(s => s !== 'facebook-ads') });
+            const res = await disconnectFacebook();
+            setAccounts({
+                connectedSources: connectedSources.filter(s => s !== 'facebook-ads'),
+                facebook: {}
+            });
             toast.success("Facebook disconnected");
         } catch { toast.error("Error disconnecting Facebook"); }
     };
@@ -35,7 +49,7 @@ const SettingsPage = () => {
             try {
                 await api.delete('/auth/me');
                 clearAuth();
-                window.location.href = '/login';
+                window.location.href = '/';
             } catch { toast.error("Error deleting account."); }
         } else {
             toast.error("Confirmation string didn't match.");

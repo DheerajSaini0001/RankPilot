@@ -77,6 +77,13 @@ const ConnectAccountsPage = () => {
                 facebookAdAccountId: selectedFbAds
             };
             await selectAccounts(data);
+            // Update store immediately so page guards use fresh data
+            setAccounts({
+                activeGscSite: selectedGsc || null,
+                activeGa4PropertyId: selectedGa4 || null,
+                activeGoogleAdsCustomerId: selectedGAds || null,
+                activeFacebookAdAccountId: selectedFbAds || null,
+            });
             toast.success('Accounts linked successfully!');
             navigate('/dashboard');
         } catch (err) {

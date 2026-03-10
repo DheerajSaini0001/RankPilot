@@ -135,7 +135,7 @@ const AuthCallback = () => {
         })
         .catch(err => {
           console.error('OAuth getMe error:', err);
-          window.location.href = '/login';
+          window.location.href = '/';
         });
     }
   }, [code, setAuth]);

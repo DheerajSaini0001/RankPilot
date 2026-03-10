@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/ui/DashboardLayout';
 import KpiCard from '../components/dashboard/KpiCard';
 import DataTable from '../components/dashboard/DataTable';
@@ -19,8 +20,10 @@ const formatCurrency = (num) => Number(num).toLocaleString('en-US', { style: 'cu
 
 const FacebookAdsPage = () => {
     const { startDate, endDate } = useDateRangeStore();
-    const { connectedSources } = useAccountsStore();
+    const { connectedSources, activeFacebookAdAccountId } = useAccountsStore();
     const isConnected = connectedSources.includes('facebook-ads');
+    const hasAccount = !!activeFacebookAdAccountId;
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     
     const [overview, setOverview] = useState(null);
@@ -29,7 +32,7 @@ const FacebookAdsPage = () => {
     const [adsets, setAdsets] = useState([]);
 
     useEffect(() => {
-        if (!isConnected) return;
+        if (!isConnected || !hasAccount) return;
         
         const loadData = async () => {
             setLoading(true);
@@ -96,16 +99,32 @@ const FacebookAdsPage = () => {
         };
         
         loadData();
-    }, [isConnected, startDate, endDate]);
+    }, [isConnected, hasAccount, startDate, endDate]);
 
     if (!isConnected) {
         return (
             <DashboardLayout>
                 <div className="flex flex-col h-full items-center justify-center">
-                    <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700/60 p-8 rounded-2xl flex flex-col items-center">
+                    <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700/60 p-8 rounded-2xl flex flex-col items-center text-center max-w-sm">
                         <ExclamationTriangleIcon className="w-12 h-12 text-neutral-400 mb-4" />
                         <h2 className="text-xl font-bold text-neutral-900 dark:text-white">Facebook Ads Not Connected</h2>
-                        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-2">Please go to Integrations to connect your Meta/Facebook Ads account.</p>
+                        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-2 mb-5">Please go to Integrations to connect your Meta/Facebook Ads account.</p>
+                        <button onClick={() => navigate('/connect-accounts')} className="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold rounded-xl transition-colors">Go to Integrations</button>
+                    </div>
+                </div>
+            </DashboardLayout>
+        );
+    }
+
+    if (!hasAccount) {
+        return (
+            <DashboardLayout>
+                <div className="flex flex-col h-full items-center justify-center">
+                    <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700/60 p-8 rounded-2xl flex flex-col items-center text-center max-w-sm">
+                        <ExclamationTriangleIcon className="w-12 h-12 text-amber-400 mb-4" />
+                        <h2 className="text-xl font-bold text-neutral-900 dark:text-white">No Ad Account Selected</h2>
+                        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-2 mb-5">Your Facebook Ads account is connected, but you haven't picked an ad account yet. Go to Integrations to select one.</p>
+                        <button onClick={() => navigate('/connect-accounts')} className="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold rounded-xl transition-colors">Select Ad Account</button>
                     </div>
                 </div>
             </DashboardLayout>
