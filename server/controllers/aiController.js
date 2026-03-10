@@ -16,7 +16,6 @@ const getAiResponse = async (prompt) => {
     try {
         result = await callClaude(prompt);
     } catch (err) {
-        console.warn(`Claude failed (${err.status || err.message}). Falling back to Gemini...`);
         try {
             result = await callGemini(prompt);
         } catch (fallbackErr) {
