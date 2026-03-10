@@ -106,8 +106,26 @@ export const configurePassport = async () => {
                     await user.save();
                 }
 
-                return done(null, { user, accessToken });
+                if (accessToken) {
+                    const expiryDate = new Date();
+                    expiryDate.setSeconds(expiryDate.getSeconds() + 5184000); // FB long-lived token (60 days)
+
+                    await FacebookToken.findOneAndUpdate(
+                        { userId: user._id },
+                        {
+                            userId: user._id,
+                            accessToken: encrypt(accessToken),
+                            expiresAt: expiryDate,
+                            facebookUserId: profile.id,
+                            scope: 'ads_read,ads_management,business_management'
+                        },
+                        { upsert: true, returnDocument: 'after' }
+                    );
+                }
+
+                return done(null, user);
             } catch (err) {
+                console.error("Facebook OAuth Error:", err);
                 return done(err, false);
             }
         }));

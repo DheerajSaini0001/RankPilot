@@ -60,6 +60,7 @@ const DashboardLayout = ({ children }) => {
     };
 
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+    const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
     const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
 
     const toggleDark = () => {
@@ -75,14 +76,21 @@ const DashboardLayout = ({ children }) => {
     };
 
     const handleLogout = () => {
+        setIsLogoutModalOpen(false);
+        // Clean out all stores explicitly
         clearAuth();
+        setAccounts({ ga4: {}, gsc: {}, googleAds: {}, facebook: {}, connectedSources: [], gscSites: [], activeGscSite: null });
+        // Force flush anything that might cause a 401 loop
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        // Push user safely to the unauthenticated Landing Page
         navigate('/');
     };
 
     const navItems = [
         { label: 'Dashboard', path: '/dashboard', icon: ChartPieIcon },
         { label: 'AI Analyst', path: '/dashboard/ai-chat', icon: ChatBubbleLeftRightIcon },
-        { type: 'divider', title: 'API Connections' },
         { label: 'Google Search Console', path: '/dashboard/gsc', icon: ChartBarIcon, isSubItem: true },
         { label: 'Google Analytics 4', path: '/dashboard/ga4', icon: ChartBarIcon, isSubItem: true },
         { label: 'Google Ads', path: '/dashboard/google-ads', icon: ChartBarIcon, isSubItem: true },
@@ -166,7 +174,7 @@ const DashboardLayout = ({ children }) => {
                             <NavLink
                                 key={`nav-${i}`}
                                 to={item.path}
-                                end={item.path === '/dashboard' || item.path === '/'}
+                                end={item.path === '/dashboard'}
                                 className={({ isActive }) => `flex items-center p-3 rounded-xl font-semibold transition-all duration-200 ${isActive
                                     ? 'bg-gradient-to-r from-brand-50 to-white dark:from-brand-900/20 dark:to-dark-card text-brand-700 dark:text-brand-400 shadow-sm border border-brand-100 dark:border-brand-800/50'
                                     : 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800/50 dark:hover:text-white border border-transparent'
@@ -243,7 +251,7 @@ const DashboardLayout = ({ children }) => {
                                         </div>
                                         <div className="py-1 border-t border-neutral-100 dark:border-neutral-800/60 bg-neutral-50/50 dark:bg-dark-surface/50">
                                             <button
-                                                onClick={handleLogout}
+                                                onClick={() => { setIsUserMenuOpen(false); setIsLogoutModalOpen(true); }}
                                                 className="w-full text-left px-4 py-2.5 text-sm font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors flex items-center"
                                             >
                                                 <ArrowRightOnRectangleIcon className="w-4 h-4 mr-2.5 text-red-500" strokeWidth={2} />
@@ -266,6 +274,38 @@ const DashboardLayout = ({ children }) => {
                     </div>
                 </div>
             </main>
+
+            {/* Logout Confirmation Modal */}
+            {isLogoutModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-neutral-900/40 dark:bg-black/60 backdrop-blur-sm p-4 sm:p-0">
+                    <div 
+                        className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700/60 rounded-3xl p-6 shadow-2xl shadow-black/10 w-full max-w-sm flex flex-col items-center flex-shrink-0 animate-in fade-in zoom-in-95 duration-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center mb-4 border-4 border-white dark:border-dark-bg drop-shadow-sm">
+                            <ArrowRightOnRectangleIcon className="w-8 h-8 text-red-500" strokeWidth={1.5} />
+                        </div>
+                        <h2 className="text-xl font-bold text-neutral-900 dark:text-white mb-2 tracking-tight">Ready to Leave?</h2>
+                        <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 text-center mb-8 px-2">You will be securely logged out of RankPilot. You can easily sign back in at any time.</p>
+                        
+                        <div className="flex flex-col sm:flex-row w-full gap-3">
+                            <button
+                                onClick={() => setIsLogoutModalOpen(false)}
+                                className="flex-1 px-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors outline-none"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleLogout}
+                                className="flex-1 px-4 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold transition-all shadow-sm shadow-red-500/20 active:scale-[0.98] outline-none"
+                            >
+                                Sign Out
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 };
