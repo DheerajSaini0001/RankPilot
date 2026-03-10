@@ -20,7 +20,7 @@ const setCache = async (userId, source, reportType, accountId, dateRangeStart, d
 
 const getClient = async (userId) => {
     const auth = await getValidGoogleToken(userId);
-    const credentials = await auth.getCredentials();
+    const credentials = auth.credentials;
     const GOOGLE_CLIENT_ID = await configService.get('GOOGLE_CLIENT_ID');
     const GOOGLE_CLIENT_SECRET = await configService.get('GOOGLE_CLIENT_SECRET');
     const GOOGLE_ADS_DEVELOPER_TOKEN = await configService.get('GOOGLE_ADS_DEVELOPER_TOKEN');
