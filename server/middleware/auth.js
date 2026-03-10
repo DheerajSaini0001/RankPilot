@@ -23,3 +23,15 @@ export const protect = async (req, res, next) => {
         return res.status(401).json({ success: false, message: 'Not authorized to access this route' });
     }
 };
+
+export const attachUserFromState = async (req, res, next) => {
+    if (req.query.state) {
+        try {
+            const decoded = jwt.verify(req.query.state, process.env.JWT_SECRET);
+            req.user = await User.findById(decoded.userId);
+        } catch (err) {
+            console.error('State token verify failed');
+        }
+    }
+    next();
+};

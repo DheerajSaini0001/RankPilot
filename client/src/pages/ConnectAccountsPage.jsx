@@ -6,6 +6,7 @@ import Badge from '../components/ui/Badge';
 import { getMe } from '../api/authApi';
 import { listGa4, listGsc, listGoogleAds, listFacebookAds, selectAccounts, getActiveAccounts, disconnectGoogle, disconnectFacebook } from '../api/accountApi';
 import { useAccountsStore } from '../store/accountsStore';
+import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
 
 const ConnectAccountsPage = () => {
@@ -13,6 +14,7 @@ const ConnectAccountsPage = () => {
     const [saving, setSaving] = useState(false);
 
     const { connectedSources, setAccounts } = useAccountsStore();
+    const { token } = useAuthStore();
     const navigate = useNavigate();
 
     // Data lists
@@ -125,7 +127,7 @@ const ConnectAccountsPage = () => {
                                     </div>
                                     <div>
                                         {!connectedSources.includes('ga4') && (
-                                            <Button onClick={() => window.location.href = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/google`} className="shadow-lg shadow-brand-500/25">Connect Google</Button>
+                                            <Button onClick={() => window.location.href = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/google?token=${encodeURIComponent(token)}`} className="shadow-lg shadow-brand-500/25">Connect Google</Button>
                                         )}
                                     </div>
                                 </div>
@@ -197,7 +199,7 @@ const ConnectAccountsPage = () => {
                                     </div>
                                     <div>
                                         {!connectedSources.includes('facebook-ads') && (
-                                            <Button onClick={() => window.location.href = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/facebook`} className="shadow-lg shadow-brand-500/25">Connect Meta</Button>
+                                            <Button onClick={() => window.location.href = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/facebook?token=${encodeURIComponent(token)}`} className="shadow-lg shadow-brand-500/25">Connect Meta</Button>
                                         )}
                                     </div>
                                 </div>
