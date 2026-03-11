@@ -10,8 +10,9 @@ class PromptBuilder {
         };
     }
 
-    buildContext(startDate, endDate, data) {
-        let ctx = `## Analytics Context\nDate Range: ${startDate} to ${endDate}\n`;
+    buildContext(startDate, endDate, data = {}) {
+        if (!data) data = {};
+        let ctx = `## Analytics Context\n`;
 
         if (data.ga4) {
             ctx += `### Google Analytics 4\nUsers: ${data.ga4.users}\nSessions: ${data.ga4.sessions}\nBounce Rate: ${data.ga4.bounceRate}%\nAvg Session: ${data.ga4.avgSessionDuration}s\nPage Views: ${data.ga4.screenPageViews}\n`;

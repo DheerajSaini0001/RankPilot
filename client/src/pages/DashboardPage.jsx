@@ -55,7 +55,7 @@ const DashboardPage = () => {
                         }
                     }).catch(() => null)
                 );
-                
+
                 // Get timeseries
                 promises.push(
                     api.get(`/ga4/timeseries?startDate=${startDate}&endDate=${endDate}&metric=sessions`).then(r => {
@@ -69,12 +69,12 @@ const DashboardPage = () => {
             if (activeGscSite) {
                 promises.push(
                     api.get(`/gsc/overview?startDate=${startDate}&endDate=${endDate}`).then(r => {
-                       if (r.data && r.data.rows && r.data.rows[0]) {
-                           newOverview.gsc = {
-                               clicks: parseFloat(r.data.rows[0].clicks || 0),
-                               impressions: parseFloat(r.data.rows[0].impressions || 0)
-                           };
-                       }
+                        if (r.data && r.data.rows && r.data.rows[0]) {
+                            newOverview.gsc = {
+                                clicks: parseFloat(r.data.rows[0].clicks || 0),
+                                impressions: parseFloat(r.data.rows[0].impressions || 0)
+                            };
+                        }
                     }).catch(() => null)
                 );
             }
@@ -112,7 +112,7 @@ const DashboardPage = () => {
 
             const rawResults = await Promise.all(promises);
             setOverviewData(newOverview);
-            
+
             // Format timeseries for GA4 if available, otherwise just leave empty
             const ga4Chart = rawResults.find(res => res && res.source === 'ga4');
             if (ga4Chart) {
@@ -177,8 +177,8 @@ const DashboardPage = () => {
     const totalAdImpressions = (overviewData.fbAds?.impressions || 0) + (overviewData.gAds?.impressions || 0);
     const searchImpressions = (overviewData.gsc?.impressions || 0);
     const totalAdClicks = (overviewData.fbAds?.clicks || 0) + (overviewData.gAds?.clicks || 0);
-    const totalConversions = (overviewData.gAds?.conversions || 0); 
-    
+    const totalConversions = (overviewData.gAds?.conversions || 0);
+
     // Provide a generic shape if we don't have GA4 yet to preview the UI elegantly
     const chartDataToUse = timeseriesData.length > 0 ? timeseriesData : [
         { date: 'Connect GA4 to view', traffic: 0 }
