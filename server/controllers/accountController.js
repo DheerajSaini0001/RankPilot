@@ -1,6 +1,10 @@
 import UserAccounts from '../models/UserAccounts.js';
 import GoogleToken from '../models/GoogleToken.js';
 import FacebookToken from '../models/FacebookToken.js';
+import DailyMetric from '../models/DailyMetric.js';
+import Conversation from '../models/Conversation.js';
+import Message from '../models/Message.js';
+import WeeklyInsight from '../models/WeeklyInsight.js';
 import User from '../models/User.js';
 import { listProperties } from '../services/ga4Service.js';
 import { listSites as fetchGscSites } from '../services/gscService.js';
@@ -125,9 +129,56 @@ export const listSites = async (req, res) => {
 export const deleteSite = async (req, res) => {
     try {
         const { siteId } = req.params;
-        await UserAccounts.findOneAndDelete({ _id: siteId, userId: req.user._id });
-        res.status(200).json({ message: 'Site deleted successfully' });
+        const userId = req.user._id;
+
+        // 1. Find the account to get platform specific IDs before deletion
+        const account = await UserAccounts.findOne({ _id: siteId, userId });
+        if (!account) return res.status(404).json({ message: 'Site not found' });
+
+        const platformIds = [
+            account.ga4PropertyId,
+            account.gscSiteUrl,
+            account.googleAdsCustomerId,
+            account.facebookAdAccountId
+        ].filter(Boolean);
+
+        // 2. Delete conversations and their messages
+        const conversations = await Conversation.find({ siteId, userId });
+        const convIds = conversations.map(c => c._id);
+        
+        if (convIds.length > 0) {
+            await Message.deleteMany({ conversationId: { $in: convIds } });
+            await Conversation.deleteMany({ _id: { $in: convIds } });
+        }
+
+        // 3. Delete weekly insights
+        await WeeklyInsight.deleteMany({ siteId, userId });
+
+        // 4. Delete daily metrics
+        // We only delete metrics if no other site for this user is using the same platform account
+        for (const pid of platformIds) {
+            const otherSiteUsingThis = await UserAccounts.findOne({
+                userId,
+                _id: { $ne: siteId },
+                $or: [
+                    { ga4PropertyId: pid },
+                    { gscSiteUrl: pid },
+                    { googleAdsCustomerId: pid },
+                    { facebookAdAccountId: pid }
+                ]
+            });
+
+            if (!otherSiteUsingThis) {
+                await DailyMetric.deleteMany({ userId, platformAccountId: pid });
+            }
+        }
+
+        // 5. Finally delete the site record
+        await UserAccounts.deleteOne({ _id: siteId, userId });
+
+        res.status(200).json({ message: 'Site and all associated data deleted successfully' });
     } catch (error) {
+        console.error('Delete Site Error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 };

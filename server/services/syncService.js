@@ -110,8 +110,8 @@ const syncGsc = async (acc, startDate, endDate) => {
     if (!acc || !acc.gscSiteUrl) return;
     const userId = acc.userId;
 
-    // Fetch granular data: Date + Page + Query + Device + Country + Search Appearance
-    const res = await runGscQuery(userId, 'ultra_detail_sync', startDate, endDate, ['date', 'page', 'query', 'device', 'country', 'searchAppearance']);
+    // Fetch granular data: Date + Page + Query + Device + Country
+    const res = await runGscQuery(userId, 'ultra_detail_sync', startDate, endDate, ['date', 'page', 'query', 'device', 'country']);
     
     if (res.rows) {
         // Increase limit to 25000 rows for maximum detail
@@ -126,16 +126,14 @@ const syncGsc = async (acc, startDate, endDate) => {
                         'dimensions.page': row.keys[1],
                         'dimensions.query': row.keys[2],
                         'dimensions.device': row.keys[3],
-                        'dimensions.country': row.keys[4],
-                        'dimensions.searchAppearance': row.keys[5] || 'WEB'
+                        'dimensions.country': row.keys[4]
                     },
                     update: {
                         dimensions: {
                             page: row.keys[1],
                             query: row.keys[2],
                             device: row.keys[3],
-                            country: row.keys[4],
-                            searchAppearance: row.keys[5] || 'WEB'
+                            country: row.keys[4]
                         },
                         metrics: {
                             clicks: row.clicks,
