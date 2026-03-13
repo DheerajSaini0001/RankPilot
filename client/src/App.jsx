@@ -113,6 +113,7 @@ const App = () => {
 
 import { getMe } from './api/authApi';
 import { useAuthStore } from './store/authStore';
+import { useAccountsStore } from './store/accountsStore'; // Added this import
 
 // Handle OAuth callback token in URL
 const AuthCallback = () => {
@@ -127,6 +128,10 @@ const AuthCallback = () => {
       getMe()
         .then(res => {
           setAuth(code, res.data.user);
+          // Sync connection status to accounts store
+          const { setAccounts } = useAccountsStore.getState();
+          setAccounts({ connectedSources: res.data.connectedSources });
+          
           if (res.data.connectedSources.length === 0) {
             window.location.href = '/connect-accounts';
           } else {

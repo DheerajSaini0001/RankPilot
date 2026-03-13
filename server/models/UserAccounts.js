@@ -12,7 +12,10 @@ const userAccountsSchema = new mongoose.Schema({
     googleAdsCurrencyCode: { type: String },
     facebookAdAccountId: { type: String },
     facebookAdAccountName: { type: String },
-    facebookAdCurrency: { type: String }
+    facebookAdCurrency: { type: String },
+    isHistoricalSyncComplete: { type: Boolean, default: false },
+    lastDailySyncAt: { type: Date },
+    syncStatus: { type: String, enum: ['idle', 'syncing', 'error'], default: 'idle' }
 }, {
     timestamps: true
 });

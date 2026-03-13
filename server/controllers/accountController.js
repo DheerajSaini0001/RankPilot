@@ -6,7 +6,7 @@ import { listProperties } from '../services/ga4Service.js';
 import { listSites } from '../services/gscService.js';
 import { listAccounts } from '../services/googleAdsService.js';
 import { listAdAccounts } from '../services/facebookAdsService.js';
-import AnalyticsCache from '../models/AnalyticsCache.js';
+import { syncHistoricalData } from '../services/syncService.js';
 import { sendPasswordResetEmail } from '../utils/emailService.js';
 import crypto from 'crypto';
 
@@ -50,13 +50,41 @@ export const listFacebookAds = async (req, res) => {
 };
 
 export const selectAccounts = async (req, res) => {
-    const { ga4PropertyId, ga4PropertyName, ga4AccountId, gscSiteUrl, gscPermission, googleAdsCustomerId, googleAdsAccountName, googleAdsCurrencyCode, facebookAdAccountId, facebookAdAccountName, facebookAdCurrency } = req.body;
+    const updates = {};
+    const fields = [
+        'ga4PropertyId', 'ga4PropertyName', 'ga4AccountId',
+        'gscSiteUrl', 'gscPermission',
+        'googleAdsCustomerId', 'googleAdsAccountName', 'googleAdsCurrencyCode',
+        'facebookAdAccountId', 'facebookAdAccountName', 'facebookAdCurrency'
+    ];
 
+    fields.forEach(field => {
+        if (req.body[field] !== undefined) {
+            updates[field] = req.body[field];
+        }
+    });
+
+    const oldAccount = await UserAccounts.findOne({ userId: req.user._id });
+    
     const account = await UserAccounts.findOneAndUpdate(
         { userId: req.user._id },
-        { ga4PropertyId, ga4PropertyName, ga4AccountId, gscSiteUrl, gscPermission, googleAdsCustomerId, googleAdsAccountName, googleAdsCurrencyCode, facebookAdAccountId, facebookAdAccountName, facebookAdCurrency },
+        { $set: updates },
         { upsert: true, returnDocument: 'after' }
     );
+
+    // Only trigger sync if IDs changed and are not empty
+    if (updates.ga4PropertyId && updates.ga4PropertyId !== oldAccount?.ga4PropertyId) {
+        syncHistoricalData(req.user._id, 'ga4', 5).catch(e => console.error('BG Sync Fail GA4:', e));
+    }
+    if (updates.gscSiteUrl && updates.gscSiteUrl !== oldAccount?.gscSiteUrl) {
+        syncHistoricalData(req.user._id, 'gsc', 5).catch(e => console.error('BG Sync Fail GSC:', e));
+    }
+    if (updates.googleAdsCustomerId && updates.googleAdsCustomerId !== oldAccount?.googleAdsCustomerId) {
+        syncHistoricalData(req.user._id, 'google-ads', 5).catch(e => console.error('BG Sync Fail Google Ads:', e));
+    }
+    if (updates.facebookAdAccountId && updates.facebookAdAccountId !== oldAccount?.facebookAdAccountId) {
+        syncHistoricalData(req.user._id, 'facebook-ads', 5).catch(e => console.error('BG Sync Fail Facebook Ads:', e));
+    }
 
     res.status(200).json({ message: 'Accounts selected', accounts: account });
 };
@@ -73,7 +101,6 @@ export const disconnectGoogle = async (req, res) => {
     await UserAccounts.findOneAndUpdate({ userId: req.user._id }, {
         $unset: { ga4PropertyId: "", ga4PropertyName: "", ga4AccountId: "", gscSiteUrl: "", gscPermission: "", googleAdsCustomerId: "", googleAdsAccountName: "", googleAdsCurrencyCode: "" }
     });
-    await AnalyticsCache.deleteMany({ userId: req.user._id, source: { $in: ['ga4', 'gsc', 'google-ads'] } });
 
     let oauthOnly = false;
     if (!user.passwordHash) {
@@ -96,6 +123,5 @@ export const disconnectFacebook = async (req, res) => {
     await UserAccounts.findOneAndUpdate({ userId: req.user._id }, {
         $unset: { facebookAdAccountId: "", facebookAdAccountName: "", facebookAdCurrency: "" }
     });
-    await AnalyticsCache.deleteMany({ userId: req.user._id, source: 'facebook-ads' });
     res.status(200).json({ message: 'Facebook disconnected' });
 };

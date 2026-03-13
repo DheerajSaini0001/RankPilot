@@ -14,12 +14,15 @@ import {
     ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import FilterBar from '../components/dashboard/FilterBar';
+import { useFilterStore } from '../store/filterStore';
 
 const formatNumber = (num) => Number(num).toLocaleString('en-US', { maximumFractionDigits: 0 });
 const formatCurrency = (num) => Number(num).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
 const GoogleAdsPage = () => {
     const { startDate, endDate } = useDateRangeStore();
+    const { device, campaign } = useFilterStore();
     const { connectedSources, activeGoogleAdsCustomerId } = useAccountsStore();
     const isConnected = connectedSources.includes('google-ads');
     const hasAccount = !!activeGoogleAdsCustomerId;
@@ -37,60 +40,20 @@ const GoogleAdsPage = () => {
         const loadData = async () => {
             setLoading(true);
             try {
-                const [overviewRes, timeseriesRes, campaignsRes, keywordsRes] = await Promise.all([
-                    api.get(`/google-ads/overview?startDate=${startDate}&endDate=${endDate}`).catch(() => ({ data: [] })),
-                    api.get(`/google-ads/timeseries?startDate=${startDate}&endDate=${endDate}`).catch(() => ({ data: [] })),
-                    api.get(`/google-ads/campaigns?startDate=${startDate}&endDate=${endDate}`).catch(() => ({ data: [] })),
-                    api.get(`/google-ads/keywords?startDate=${startDate}&endDate=${endDate}`).catch(() => ({ data: [] })),
-                ]);
+                const query = new URLSearchParams({
+                    startDate,
+                    endDate,
+                    ...(device && { device }),
+                    ...(campaign && { campaign })
+                }).toString();
+                
+                const res = await api.get(`/analytics/google-ads-summary?${query}`);
+                const data = res.data;
 
-                if (overviewRes.data && overviewRes.data.length > 0) {
-                    setOverview({
-                        cost: overviewRes.data[0].metrics.costMicros / 1000000,
-                        impressions: overviewRes.data[0].metrics.impressions,
-                        clicks: overviewRes.data[0].metrics.clicks,
-                        conversions: overviewRes.data[0].metrics.conversions,
-                        ctr: overviewRes.data[0].metrics.ctr,
-                        cpc: overviewRes.data[0].metrics.averageCpc / 1000000,
-                    });
-                } else {
-                    setOverview({ cost: 0, impressions: 0, clicks: 0, conversions: 0, ctr: 0, cpc: 0 });
-                }
-
-                if (timeseriesRes.data && timeseriesRes.data.length > 0) {
-                    const formattedChart = timeseriesRes.data.map(row => ({
-                        date: row.segments.date,
-                        clicks: row.metrics.clicks,
-                        cost: row.metrics.costMicros / 1000000
-                    })).sort((a, b) => new Date(a.date) - new Date(b.date));
-                    setTimeseries(formattedChart);
-                } else {
-                    setTimeseries([]);
-                }
-
-                if (campaignsRes.data && campaignsRes.data.length > 0) {
-                    setCampaigns(campaignsRes.data.map(r => ({
-                        name: r.campaign.name,
-                        status: r.campaign.status,
-                        cost: r.metrics.costMicros / 1000000,
-                        impressions: r.metrics.impressions,
-                        clicks: r.metrics.clicks,
-                        conversions: r.metrics.conversions
-                    })));
-                } else {
-                    setCampaigns([]);
-                }
-
-                if (keywordsRes.data && keywordsRes.data.length > 0) {
-                    setKeywords(keywordsRes.data.map(r => ({
-                        name: r.keywordView ? r.keywordView.resourceName : 'Unknown',
-                        cost: r.metrics.costMicros / 1000000,
-                        impressions: r.metrics.impressions,
-                        clicks: r.metrics.clicks
-                    })));
-                } else {
-                    setKeywords([]);
-                }
+                setOverview(data.overview);
+                setTimeseries(data.timeseries);
+                setCampaigns(data.campaigns);
+                setKeywords(data.keywords);
             } catch (err) {
                 console.error("Google Ads fetch err", err);
             } finally {
@@ -99,7 +62,7 @@ const GoogleAdsPage = () => {
         };
         
         loadData();
-    }, [isConnected, hasAccount, startDate, endDate]);
+    }, [isConnected, hasAccount, startDate, endDate, device, campaign]);
 
     if (!isConnected) {
         return (
@@ -153,6 +116,8 @@ const GoogleAdsPage = () => {
                     <h1 className="text-2xl font-black text-neutral-900 dark:text-white tracking-tight">Google Ads</h1>
                     <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">Campaign and Search Ad metrics</p>
                 </div>
+
+                <FilterBar showCampaign />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <KpiCard

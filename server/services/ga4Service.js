@@ -1,21 +1,6 @@
 import { google } from 'googleapis';
 import { getValidGoogleToken } from './googleAuthService.js';
 import UserAccounts from '../models/UserAccounts.js';
-import AnalyticsCache from '../models/AnalyticsCache.js';
-
-const getCache = async (userId, source, reportType, accountId, dateRangeStart, dateRangeEnd) => {
-    return await AnalyticsCache.findOne({ userId, source, reportType, accountId, dateRangeStart, dateRangeEnd, expiresAt: { $gt: new Date() } });
-};
-
-const setCache = async (userId, source, reportType, accountId, dateRangeStart, dateRangeEnd, data) => {
-    const fetchedAt = new Date();
-    const expiresAt = new Date(fetchedAt.getTime() + 30 * 60 * 1000); // 30 min TTL
-    await AnalyticsCache.findOneAndUpdate(
-        { userId, source, reportType, accountId, dateRangeStart, dateRangeEnd },
-        { data, fetchedAt, expiresAt },
-        { upsert: true }
-    );
-};
 
 export const listProperties = async (userId) => {
     const auth = await getValidGoogleToken(userId);
@@ -40,9 +25,6 @@ export const runReport = async (userId, reportType, startDate, endDate, dimensio
     const account = await UserAccounts.findOne({ userId });
     if (!account || !account.ga4PropertyId) throw new Error('SOURCE_NOT_CONNECTED');
 
-    const cached = await getCache(userId, 'ga4', reportType, account.ga4PropertyId, startDate, endDate);
-    if (cached) return cached.data;
-
     const auth = await getValidGoogleToken(userId);
     const analyticsdata = google.analyticsdata({ version: 'v1beta', auth });
 
@@ -55,6 +37,5 @@ export const runReport = async (userId, reportType, startDate, endDate, dimensio
         }
     });
 
-    await setCache(userId, 'ga4', reportType, account.ga4PropertyId, startDate, endDate, res.data);
     return res.data;
 };

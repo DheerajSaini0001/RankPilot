@@ -15,6 +15,7 @@ import gscRoutes from './routes/gscRoutes.js';
 import googleAdsRoutes from './routes/googleAdsRoutes.js';
 import facebookAdsRoutes from './routes/facebookAdsRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
+import analyticsRoutes from './routes/analyticsRoutes.js';
 
 const app = express();
 
@@ -44,6 +45,7 @@ app.use('/api/gsc', gscRoutes);
 app.use('/api/google-ads', googleAdsRoutes);
 app.use('/api/facebook-ads', facebookAdsRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 app.use(errorHandler);
 

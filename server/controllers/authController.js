@@ -5,7 +5,6 @@ import User from '../models/User.js';
 import GoogleToken from '../models/GoogleToken.js';
 import FacebookToken from '../models/FacebookToken.js';
 import UserAccounts from '../models/UserAccounts.js';
-import AnalyticsCache from '../models/AnalyticsCache.js';
 import Conversation from '../models/Conversation.js';
 import { sendPasswordResetEmail, sendVerificationEmail } from '../utils/emailService.js';
 
@@ -187,10 +186,19 @@ export const authCallback = async (req, res) => {
 export const getMe = async (req, res) => {
     const googleToken = await GoogleToken.findOne({ userId: req.user._id });
     const facebookToken = await FacebookToken.findOne({ userId: req.user._id });
+    const accounts = await UserAccounts.findOne({ userId: req.user._id });
 
     let connectedSources = [];
-    if (googleToken) connectedSources.push('ga4', 'gsc', 'google-ads');
-    if (facebookToken) connectedSources.push('facebook-ads');
+    if (googleToken) {
+        connectedSources.push('google');
+        if (accounts?.ga4PropertyId) connectedSources.push('ga4');
+        if (accounts?.gscSiteUrl) connectedSources.push('gsc');
+        if (accounts?.googleAdsCustomerId) connectedSources.push('google-ads');
+    }
+    if (facebookToken) {
+        connectedSources.push('facebook');
+        if (accounts?.facebookAdAccountId) connectedSources.push('facebook-ads');
+    }
 
     res.status(200).json({
         user: { id: req.user._id, name: req.user.displayName, email: req.user.email, avatar: req.user.avatar },
@@ -202,7 +210,6 @@ export const deleteMe = async (req, res) => {
     await GoogleToken.deleteMany({ userId: req.user._id });
     await FacebookToken.deleteMany({ userId: req.user._id });
     await UserAccounts.deleteMany({ userId: req.user._id });
-    await AnalyticsCache.deleteMany({ userId: req.user._id });
     await Conversation.deleteMany({ userId: req.user._id });
     await User.findByIdAndDelete(req.user._id);
 

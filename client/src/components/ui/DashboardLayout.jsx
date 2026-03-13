@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
-    HomeIcon,
     Cog6ToothIcon,
     WrenchIcon,
     ArrowRightOnRectangleIcon,
@@ -40,14 +39,20 @@ const DashboardLayout = ({ children }) => {
 
             getActiveAccounts()
                 .then(res => {
-                    if (res.data) {
-                        const updates = {};
-                        if (res.data.gscSiteUrl) updates.activeGscSite = res.data.gscSiteUrl;
-                        if (res.data.ga4PropertyId) updates.activeGa4PropertyId = res.data.ga4PropertyId;
-                        if (res.data.googleAdsCustomerId) updates.activeGoogleAdsCustomerId = res.data.googleAdsCustomerId;
-                        if (res.data.facebookAdAccountId) updates.activeFacebookAdAccountId = res.data.facebookAdAccountId;
-                        if (Object.keys(updates).length > 0) setAccounts(updates);
-                    }
+                    const data = res.data || {};
+                    const updates = {
+                        activeGscSite: data.gscSiteUrl || '',
+                        activeGa4PropertyId: data.ga4PropertyId || '',
+                        activeGoogleAdsCustomerId: data.googleAdsCustomerId || '',
+                        activeFacebookAdAccountId: data.facebookAdAccountId || '',
+                        // Also sync metadata
+                        syncMetadata: {
+                            isHistoricalSyncComplete: data.isHistoricalSyncComplete || false,
+                            lastDailySyncAt: data.lastDailySyncAt || null,
+                            syncStatus: data.syncStatus || 'idle'
+                        }
+                    };
+                    setAccounts(updates);
                 })
                 .catch(() => { });
         }
@@ -80,14 +85,10 @@ const DashboardLayout = ({ children }) => {
     };
 
     const handleLogout = () => {
-        // Clean out all stores explicitly
         clearAuth();
         setAccounts({ ga4: {}, gsc: {}, googleAds: {}, facebook: {}, connectedSources: [], gscSites: [], activeGscSite: null });
-        // Force flush anything that might cause a 401 loop
         localStorage.clear();
         sessionStorage.clear();
-        
-        // Push user safely to the unauthenticated Landing Page
         navigate('/');
     };
 
@@ -128,18 +129,17 @@ const DashboardLayout = ({ children }) => {
                             <MagnifyingGlassIcon className="h-4 w-4 text-neutral-400" aria-hidden="true" strokeWidth={2} />
                         </div>
                         <select
-                            value={activeGscSite && gscSites?.some(s => s.siteUrl === activeGscSite) ? activeGscSite : ''}
+                            value={activeGscSite || (connectedSources.includes('google') ? 'none' : '')}
                             onChange={handleSiteChange}
-                            disabled={!gscSites || gscSites.length === 0}
+                            disabled={!connectedSources.includes('google')}
                             className="w-full pl-9 pr-9 py-2.5 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm text-neutral-900 dark:text-neutral-100 flex items-center justify-between shadow-sm hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {(!gscSites || gscSites.length === 0) ? (
-                                <option value="" disabled>Search websites...</option>
+                            {!connectedSources.includes('google') ? (
+                                <option value="">Search websites...</option>
                             ) : (
                                 <>
-                                    <option value="" disabled hidden>Search websites...</option>
                                     <option value="none">None Selected</option>
-                                    {gscSites.map(s => (
+                                    {gscSites && gscSites.length > 0 && gscSites.map(s => (
                                         <option key={s.siteUrl} value={s.siteUrl}>
                                             {s.siteUrl.replace('https://', '').replace('http://', '').replace('sc-domain:', '').replace(/\/$/, '')}
                                         </option>

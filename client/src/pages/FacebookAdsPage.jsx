@@ -14,12 +14,15 @@ import {
     ChartBarIcon
 } from '@heroicons/react/24/outline';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import FilterBar from '../components/dashboard/FilterBar';
+import { useFilterStore } from '../store/filterStore';
 
 const formatNumber = (num) => Number(num).toLocaleString('en-US', { maximumFractionDigits: 0 });
 const formatCurrency = (num) => Number(num).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
 const FacebookAdsPage = () => {
     const { startDate, endDate } = useDateRangeStore();
+    const { device, campaign } = useFilterStore();
     const { connectedSources, activeFacebookAdAccountId } = useAccountsStore();
     const isConnected = connectedSources.includes('facebook-ads');
     const hasAccount = !!activeFacebookAdAccountId;
@@ -37,60 +40,20 @@ const FacebookAdsPage = () => {
         const loadData = async () => {
             setLoading(true);
             try {
-                const [overviewRes, timeseriesRes, campaignsRes, adsetsRes] = await Promise.all([
-                    api.get(`/facebook-ads/overview?startDate=${startDate}&endDate=${endDate}`).catch(() => ({ data: { data: [] } })),
-                    api.get(`/facebook-ads/timeseries?startDate=${startDate}&endDate=${endDate}`).catch(() => ({ data: { data: [] } })),
-                    api.get(`/facebook-ads/campaigns?startDate=${startDate}&endDate=${endDate}`).catch(() => ({ data: { data: [] } })),
-                    api.get(`/facebook-ads/adsets?startDate=${startDate}&endDate=${endDate}`).catch(() => ({ data: { data: [] } })),
-                ]);
+                const query = new URLSearchParams({
+                    startDate,
+                    endDate,
+                    ...(device && { device }),
+                    ...(campaign && { campaign })
+                }).toString();
+                
+                const res = await api.get(`/analytics/facebook-ads-summary?${query}`);
+                const data = res.data;
 
-                if (overviewRes.data && overviewRes.data.data && overviewRes.data.data.length > 0) {
-                    const row = overviewRes.data.data[0];
-                    setOverview({
-                        spend: parseFloat(row.spend || 0),
-                        impressions: parseInt(row.impressions || 0),
-                        clicks: parseInt(row.clicks || 0),
-                        cpc: parseFloat(row.cpc || 0),
-                        ctr: parseFloat(row.ctr || 0)
-                    });
-                } else {
-                    setOverview({ spend: 0, impressions: 0, clicks: 0, cpc: 0, ctr: 0 });
-                }
-
-                if (timeseriesRes.data && timeseriesRes.data.data) {
-                    const formattedChart = timeseriesRes.data.data.map(row => ({
-                        date: row.date_start,
-                        clicks: parseInt(row.clicks || 0),
-                        spend: parseFloat(row.spend || 0)
-                    })).sort((a, b) => new Date(a.date) - new Date(b.date));
-                    setTimeseries(formattedChart);
-                } else {
-                    setTimeseries([]);
-                }
-
-                if (campaignsRes.data && campaignsRes.data.data) {
-                    setCampaigns(campaignsRes.data.data.slice(0, 20).map(r => ({
-                        id: r.campaign_id,
-                        name: r.campaign_name,
-                        spend: parseFloat(r.spend || 0),
-                        impressions: parseInt(r.impressions || 0),
-                        clicks: parseInt(r.clicks || 0),
-                    })));
-                } else {
-                    setCampaigns([]);
-                }
-
-                if (adsetsRes.data && adsetsRes.data.data) {
-                    setAdsets(adsetsRes.data.data.slice(0, 20).map(r => ({
-                        id: r.adset_id,
-                        name: r.adset_name,
-                        spend: parseFloat(r.spend || 0),
-                        impressions: parseInt(r.impressions || 0),
-                        clicks: parseInt(r.clicks || 0),
-                    })));
-                } else {
-                    setAdsets([]);
-                }
+                setOverview(data.overview);
+                setTimeseries(data.timeseries);
+                setCampaigns(data.campaigns);
+                setAdsets(data.adsets);
             } catch (err) {
                 console.error("Facebook Ads fetch err", err);
             } finally {
@@ -99,7 +62,7 @@ const FacebookAdsPage = () => {
         };
         
         loadData();
-    }, [isConnected, hasAccount, startDate, endDate]);
+    }, [isConnected, hasAccount, startDate, endDate, device, campaign]);
 
     if (!isConnected) {
         return (
@@ -152,6 +115,8 @@ const FacebookAdsPage = () => {
                     <h1 className="text-2xl font-black text-neutral-900 dark:text-white tracking-tight">Facebook Ads</h1>
                     <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">Social media advertising metrics</p>
                 </div>
+
+                <FilterBar showCampaign />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <KpiCard

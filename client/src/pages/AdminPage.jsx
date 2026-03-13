@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../components/ui/DashboardLayout';
 import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
 import toast from 'react-hot-toast';
 import api from '../api';
 

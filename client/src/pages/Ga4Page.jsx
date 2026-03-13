@@ -14,6 +14,8 @@ import {
     ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import FilterBar from '../components/dashboard/FilterBar';
+import { useFilterStore } from '../store/filterStore';
 
 const formatNumber = (num) => Number(num).toLocaleString('en-US', { maximumFractionDigits: 0 });
 const formatTime = (secs) => {
@@ -24,6 +26,7 @@ const formatTime = (secs) => {
 
 const Ga4Page = () => {
     const { startDate, endDate } = useDateRangeStore();
+    const { device, campaign, channel } = useFilterStore();
     const { connectedSources, activeGa4PropertyId } = useAccountsStore();
     const isConnected = connectedSources.includes('ga4');
     const hasProperty = !!activeGa4PropertyId;
@@ -41,56 +44,28 @@ const Ga4Page = () => {
         const loadData = async () => {
             setLoading(true);
             try {
-                const [overviewRes, timeseriesRes, trafficRes, pagesRes] = await Promise.all([
-                    api.get(`/ga4/overview?startDate=${startDate}&endDate=${endDate}`).catch(() => ({ data: null })),
-                    api.get(`/ga4/timeseries?startDate=${startDate}&endDate=${endDate}&metric=sessions`).catch(() => ({ data: null })),
-                    api.get(`/ga4/traffic?startDate=${startDate}&endDate=${endDate}`).catch(() => ({ data: null })),
-                    api.get(`/ga4/pages?startDate=${startDate}&endDate=${endDate}`).catch(() => ({ data: null })),
-                ]);
+                const query = new URLSearchParams({
+                    startDate,
+                    endDate,
+                    ...(device && { device }),
+                    ...(campaign && { campaign }),
+                    ...(channel && { channel })
+                }).toString();
 
-                if (overviewRes.data && overviewRes.data.rows && overviewRes.data.rows[0]) {
-                    setOverview({
-                        activeUsers: overviewRes.data.rows[0].metricValues[0].value,
-                        sessions: overviewRes.data.rows[0].metricValues[1].value,
-                        bounceRate: overviewRes.data.rows[0].metricValues[2].value,
-                        avgSessionDuration: overviewRes.data.rows[0].metricValues[3].value,
-                        pageViews: overviewRes.data.rows[0].metricValues[4].value
-                    });
-                } else {
-                    setOverview({ activeUsers: 0, sessions: 0, bounceRate: 0, avgSessionDuration: 0, pageViews: 0 });
-                }
+                const res = await api.get(`/analytics/ga4-summary?${query}`);
+                const data = res.data;
 
-                if (timeseriesRes.data && timeseriesRes.data.rows) {
-                    const formattedChart = timeseriesRes.data.rows.map(row => ({
-                        date: row.dimensionValues[0].value,
-                        sessions: parseInt(row.metricValues[0].value, 10),
-                    })).sort((a, b) => new Date(a.date) - new Date(b.date));
-                    setTimeseries(formattedChart);
-                } else {
-                    setTimeseries([]);
-                }
+                setOverview({
+                    activeUsers: data.overview.users,
+                    sessions: data.overview.sessions,
+                    bounceRate: data.overview.bounceRate,
+                    avgSessionDuration: data.overview.avgSessionDuration,
+                    pageViews: data.overview.pageViews
+                });
 
-                if (trafficRes.data && trafficRes.data.rows) {
-                    setTraffic(trafficRes.data.rows.slice(0, 10).map(r => ({
-                        channel: r.dimensionValues[0].value,
-                        source: r.dimensionValues[1].value,
-                        sessions: parseFloat(r.metricValues[0].value),
-                        activeUsers: parseFloat(r.metricValues[1].value)
-                    })));
-                } else {
-                    setTraffic([]);
-                }
-
-                if (pagesRes.data && pagesRes.data.rows) {
-                    setPages(pagesRes.data.rows.slice(0, 10).map(r => ({
-                        path: r.dimensionValues[0].value,
-                        title: r.dimensionValues[1].value,
-                        views: parseFloat(r.metricValues[0].value),
-                        users: parseFloat(r.metricValues[1].value)
-                    })));
-                } else {
-                    setPages([]);
-                }
+                setTimeseries(data.timeseries);
+                setTraffic(data.traffic);
+                setPages(data.pages);
             } catch (err) {
                 console.error("GA4 fetch err", err);
             } finally {
@@ -99,7 +74,7 @@ const Ga4Page = () => {
         };
         
         loadData();
-    }, [isConnected, hasProperty, startDate, endDate]);
+    }, [isConnected, hasProperty, startDate, endDate, device, campaign, channel]);
 
     if (!isConnected) {
         return (
@@ -152,6 +127,8 @@ const Ga4Page = () => {
                     <h1 className="text-2xl font-black text-neutral-900 dark:text-white tracking-tight">Google Analytics 4</h1>
                     <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">Website traffic and engagement metrics</p>
                 </div>
+
+                <FilterBar showChannel />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <KpiCard

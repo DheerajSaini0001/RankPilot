@@ -14,13 +14,15 @@ import {
     ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import FilterBar from '../components/dashboard/FilterBar';
+import { useFilterStore } from '../store/filterStore';
 
 const formatNumber = (num) => Number(num).toLocaleString('en-US', { maximumFractionDigits: 0 });
 
 const GscPage = () => {
     const { startDate, endDate } = useDateRangeStore();
+    const { device } = useFilterStore();
     const { activeGscSite, connectedSources } = useAccountsStore();
-    const isConnected = connectedSources.includes('gsc');
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     
@@ -35,41 +37,19 @@ const GscPage = () => {
         const loadData = async () => {
             setLoading(true);
             try {
-                const [overviewRes, timeseriesRes, queriesRes, pagesRes] = await Promise.all([
-                    api.get(`/gsc/overview?startDate=${startDate}&endDate=${endDate}`).catch(() => ({ data: null })),
-                    api.get(`/gsc/timeseries?startDate=${startDate}&endDate=${endDate}`).catch(() => ({ data: { rows: [] } })),
-                    api.get(`/gsc/queries?startDate=${startDate}&endDate=${endDate}`).catch(() => ({ data: { rows: [] } })),
-                    api.get(`/gsc/pages?startDate=${startDate}&endDate=${endDate}`).catch(() => ({ data: { rows: [] } })),
-                ]);
+                const query = new URLSearchParams({
+                    startDate,
+                    endDate,
+                    ...(device && { device })
+                }).toString();
+                
+                const res = await api.get(`/analytics/gsc-summary?${query}`);
+                const data = res.data;
 
-                if (overviewRes.data && overviewRes.data.rows && overviewRes.data.rows[0]) {
-                    setOverview(overviewRes.data.rows[0]);
-                } else {
-                    setOverview({ clicks: 0, impressions: 0, ctr: 0, position: 0 });
-                }
-
-                if (timeseriesRes.data && timeseriesRes.data.rows) {
-                    const formattedChart = timeseriesRes.data.rows.map(row => ({
-                        date: row.keys[0],
-                        clicks: row.clicks,
-                        impressions: row.impressions
-                    })).sort((a, b) => new Date(a.date) - new Date(b.date));
-                    setTimeseries(formattedChart);
-                } else {
-                    setTimeseries([]);
-                }
-
-                if (queriesRes.data && queriesRes.data.rows) {
-                    setQueries(queriesRes.data.rows.slice(0, 10).map(r => ({ ...r, query: r.keys[0] })));
-                } else {
-                    setQueries([]);
-                }
-
-                if (pagesRes.data && pagesRes.data.rows) {
-                    setPages(pagesRes.data.rows.slice(0, 10).map(r => ({ ...r, page: r.keys[0] })));
-                } else {
-                    setPages([]);
-                }
+                setOverview(data.overview);
+                setTimeseries(data.timeseries);
+                setQueries(data.queries);
+                setPages(data.pages);
             } catch (err) {
                 console.error("GSC fetch err", err);
             } finally {
@@ -131,6 +111,8 @@ const GscPage = () => {
                     <h1 className="text-2xl font-black text-neutral-900 dark:text-white tracking-tight">Search Console Performance</h1>
                     <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">Analytics for <span className="font-bold text-brand-600 dark:text-brand-400">{activeGscSite.replace('https://', '')}</span></p>
                 </div>
+
+                <FilterBar />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <KpiCard

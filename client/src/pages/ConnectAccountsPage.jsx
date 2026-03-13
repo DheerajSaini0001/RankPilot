@@ -2,9 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/ui/DashboardLayout';
 import Button from '../components/ui/Button';
-import Badge from '../components/ui/Badge';
 import { getMe } from '../api/authApi';
-import { listGa4, listGsc, listGoogleAds, listFacebookAds, selectAccounts, getActiveAccounts, disconnectGoogle, disconnectFacebook } from '../api/accountApi';
+import { listGa4, listGsc, listGoogleAds, listFacebookAds, selectAccounts, getActiveAccounts } from '../api/accountApi';
 import { useAccountsStore } from '../store/accountsStore';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
@@ -48,7 +47,7 @@ const ConnectAccountsPage = () => {
                 if (active.data.facebookAdAccountId) setSelectedFbAds(active.data.facebookAdAccountId);
             }
 
-            if (me.data.connectedSources.includes('ga4')) {
+            if (me.data.connectedSources.includes('google')) {
                 const p = await listGa4().catch(() => ({ data: [] }));
                 setGa4Props(p.data || []);
                 const s = await listGsc().catch(() => ({ data: [] }));
@@ -56,9 +55,9 @@ const ConnectAccountsPage = () => {
                 const g = await listGoogleAds().catch(() => ({ data: [] }));
                 setGAdsAccounts(g.data || []);
             }
-            if (me.data.connectedSources.includes('facebook-ads')) {
+            if (me.data.connectedSources.includes('facebook')) {
                 const f = await listFacebookAds().catch(() => ({ data: [] }));
-                setFbAdAccounts(f.data?.data || []);
+                setFbAdAccounts(f.data || []);
             }
         } catch (err) {
             console.error(err);
@@ -70,13 +69,23 @@ const ConnectAccountsPage = () => {
     const handleSave = async () => {
         setSaving(true);
         try {
+            const selectedGa4Obj = ga4Props.find(p => p.id === selectedGa4);
+            const selectedGAdsObj = gAdsAccounts.find(g => g === selectedGAds);
+            const selectedFbAdsObj = fbAdAccounts.find(f => f.id === selectedFbAds);
+
             const data = {
                 ga4PropertyId: selectedGa4,
+                ga4PropertyName: selectedGa4Obj?.name || '',
+                ga4AccountId: selectedGa4Obj?.accountId || '',
                 gscSiteUrl: selectedGsc,
                 googleAdsCustomerId: selectedGAds,
-                facebookAdAccountId: selectedFbAds
+                googleAdsAccountName: selectedGAdsObj || '', // Google Ads list currently returns just IDs
+                facebookAdAccountId: selectedFbAds,
+                facebookAdAccountName: selectedFbAdsObj?.name || ''
             };
+            
             await selectAccounts(data);
+            
             // Update store immediately so page guards use fresh data
             setAccounts({
                 activeGscSite: selectedGsc || null,
@@ -125,7 +134,7 @@ const ConnectAccountsPage = () => {
                                         <div>
                                             <div className="flex items-center gap-3">
                                                 <h3 className="text-xl font-extrabold text-neutral-900 dark:text-white tracking-tight">Google Integrations</h3>
-                                                {connectedSources.includes('ga4') && (
+                                                {connectedSources.includes('google') && (
                                                     <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-400 rounded-md border border-green-200 dark:border-green-800/50">Active</span>
                                                 )}
                                             </div>
@@ -133,13 +142,13 @@ const ConnectAccountsPage = () => {
                                         </div>
                                     </div>
                                     <div>
-                                        {!connectedSources.includes('ga4') && (
+                                        {!connectedSources.includes('google') && (
                                             <Button onClick={() => window.location.href = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/google?token=${encodeURIComponent(token)}`} className="shadow-lg shadow-brand-500/25">Connect Google</Button>
                                         )}
                                     </div>
                                 </div>
 
-                                {connectedSources.includes('ga4') && (
+                                {connectedSources.includes('google') && (
                                     <div className="mt-8 relative z-10 pt-6 border-t border-neutral-100 dark:border-neutral-800/80">
                                         <h4 className="text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-4 uppercase tracking-wider">Configure Services</h4>
                                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -197,7 +206,7 @@ const ConnectAccountsPage = () => {
                                         <div>
                                             <div className="flex items-center gap-3">
                                                 <h3 className="text-xl font-extrabold text-neutral-900 dark:text-white tracking-tight">Meta Business Sync</h3>
-                                                {connectedSources.includes('facebook-ads') && (
+                                                {connectedSources.includes('facebook') && (
                                                     <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-400 rounded-md border border-green-200 dark:border-green-800/50">Active</span>
                                                 )}
                                             </div>
@@ -205,13 +214,13 @@ const ConnectAccountsPage = () => {
                                         </div>
                                     </div>
                                     <div>
-                                        {!connectedSources.includes('facebook-ads') && (
+                                        {!connectedSources.includes('facebook') && (
                                             <Button onClick={() => window.location.href = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/facebook?token=${encodeURIComponent(token)}`} className="shadow-lg shadow-brand-500/25">Connect Meta</Button>
                                         )}
                                     </div>
                                 </div>
 
-                                {connectedSources.includes('facebook-ads') && (
+                                {connectedSources.includes('facebook') && (
                                     <div className="mt-8 relative z-10 pt-6 border-t border-neutral-100 dark:border-neutral-800/80">
                                         <h4 className="text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-4 uppercase tracking-wider">Configure Ad Account</h4>
                                         <div className="bg-neutral-50 dark:bg-dark-surface/50 p-4 rounded-xl border border-neutral-200/50 dark:border-neutral-700/50 transition-colors focus-within:border-brand-300 dark:focus-within:border-brand-700 max-w-sm">

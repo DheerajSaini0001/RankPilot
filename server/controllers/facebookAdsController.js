@@ -1,38 +1,66 @@
-import { getInsights } from '../services/facebookAdsService.js';
+import DailyMetric from '../models/DailyMetric.js';
 
 export const getOverview = async (req, res) => {
     const { startDate, endDate } = req.query;
-    const data = await getInsights(req.user._id, 'overview', startDate, endDate, 'account', {});
-    res.status(200).json(data);
+    const results = await DailyMetric.aggregate([
+        { $match: { userId: req.user._id, source: 'facebook-ads', date: { $gte: startDate, $lte: endDate } } },
+        { $group: {
+            _id: null,
+            spend: { $sum: "$metrics.spend" },
+            impressions: { $sum: "$metrics.impressions" },
+            clicks: { $sum: "$metrics.clicks" },
+            reach: { $sum: "$metrics.reach" }
+        }}
+    ]);
+    res.status(200).json(results);
 };
 
 export const getCampaigns = async (req, res) => {
     const { startDate, endDate } = req.query;
-    const data = await getInsights(req.user._id, 'campaigns', startDate, endDate, 'campaign', {});
-    res.status(200).json(data);
+    const data = await DailyMetric.aggregate([
+        { $match: { userId: req.user._id, source: 'facebook-ads', date: { $gte: startDate, $lte: endDate } } },
+        { $group: {
+            _id: "$dimensions.campaign",
+            spend: { $sum: "$metrics.spend" },
+            clicks: { $sum: "$metrics.clicks" },
+            impressions: { $sum: "$metrics.impressions" }
+        }},
+        { $sort: { spend: -1 } }
+    ]);
+    res.status(200).json(data.map(d => ({
+        campaign_name: d._id,
+        spend: d.spend,
+        clicks: d.clicks,
+        impressions: d.impressions
+    })));
 };
 
 export const getAdsets = async (req, res) => {
-    const { startDate, endDate } = req.query;
-    const data = await getInsights(req.user._id, 'adsets', startDate, endDate, 'adset', {});
-    res.status(200).json(data);
+    res.status(200).json([]);
 };
 
 export const getAds = async (req, res) => {
-    const { startDate, endDate } = req.query;
-    const data = await getInsights(req.user._id, 'ads', startDate, endDate, 'ad', {});
-    res.status(200).json(data);
+    res.status(200).json([]);
 };
 
 export const getTimeseries = async (req, res) => {
     const { startDate, endDate } = req.query;
-    const data = await getInsights(req.user._id, 'timeseries', startDate, endDate, 'account', { time_increment: 1 });
-    res.status(200).json(data);
+    const data = await DailyMetric.aggregate([
+        { $match: { userId: req.user._id, source: 'facebook-ads', date: { $gte: startDate, $lte: endDate } } },
+        { $group: {
+            _id: "$date",
+            spend: { $sum: "$metrics.spend" },
+            clicks: { $sum: "$metrics.clicks" }
+        }},
+        { $sort: { _id: 1 } }
+    ]);
+    res.status(200).json(data.map(d => ({
+        date_start: d._id,
+        spend: d.spend,
+        clicks: d.clicks
+    })));
 };
 
 export const getCompare = async (req, res) => {
-    const { startDate1, endDate1, startDate2, endDate2 } = req.query;
-    const data1 = await getInsights(req.user._id, 'overview', startDate1, endDate1, 'account', {});
-    const data2 = await getInsights(req.user._id, 'overview', startDate2, endDate2, 'account', {});
-    res.status(200).json({ current: data1, prior: data2 });
+    res.status(200).json({ current: null, prior: null });
 };

@@ -6,21 +6,24 @@ import { useAccountsStore } from '../store/accountsStore';
 import {
     UsersIcon,
     CursorArrowRaysIcon,
-    CurrencyDollarIcon,
     ChatBubbleLeftRightIcon,
     CheckCircleIcon,
     BanknotesIcon,
     MagnifyingGlassIcon,
+    CloudArrowUpIcon,
 } from '@heroicons/react/24/outline';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import api from '../api';
+import FilterBar from '../components/dashboard/FilterBar';
+import { useFilterStore } from '../store/filterStore';
 
 const formatNumber = (num) => Number(num).toLocaleString('en-US', { maximumFractionDigits: 0 });
 const formatCurrency = (num) => Number(num).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
 const DashboardPage = () => {
-    const { startDate, endDate } = useDateRangeStore();
-    const { connectedSources, activeGscSite } = useAccountsStore();
+    const { preset, startDate, endDate } = useDateRangeStore();
+    const { device, campaign, channel } = useFilterStore();
+    const { connectedSources, activeGscSite, syncMetadata, setAccounts } = useAccountsStore();
     const [loading, setLoading] = useState(true);
     const [overviewData, setOverviewData] = useState({ ga4: null, gAds: null, fbAds: null, gsc: null });
     const [timeseriesData, setTimeseriesData] = useState([]);
@@ -33,100 +36,95 @@ const DashboardPage = () => {
     const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
     useEffect(() => {
+        const fetchStatus = async () => {
+            try {
+                const res = await api.get('/accounts/active');
+                const data = res.data || {};
+                setAccounts({
+                    activeGscSite: data.gscSiteUrl || '',
+                    activeGa4PropertyId: data.ga4PropertyId || '',
+                    activeGoogleAdsCustomerId: data.googleAdsCustomerId || '',
+                    activeFacebookAdAccountId: data.facebookAdAccountId || '',
+                    syncMetadata: {
+                        isHistoricalSyncComplete: data.isHistoricalSyncComplete || false,
+                        lastDailySyncAt: data.lastDailySyncAt || null,
+                        syncStatus: data.syncStatus || 'idle'
+                    }
+                });
+            } catch (err) {
+                console.error('Failed to fetch initial sync status', err);
+            }
+        };
+        fetchStatus();
         loadDashboardData();
         loadSuggestions();
-    }, [startDate, endDate, connectedSources, activeGscSite]);
+    }, [startDate, endDate, connectedSources, activeGscSite, device, campaign, channel]);
+
+    // Poll sync status if syncing
+    useEffect(() => {
+        let interval;
+        if (syncMetadata.syncStatus === 'syncing') {
+            interval = setInterval(async () => {
+                try {
+                    const res = await api.get('/accounts/active');
+                    const data = res.data || {};
+                    setAccounts({
+                        activeGscSite: data.gscSiteUrl || '',
+                        activeGa4PropertyId: data.ga4PropertyId || '',
+                        activeGoogleAdsCustomerId: data.googleAdsCustomerId || '',
+                        activeFacebookAdAccountId: data.facebookAdAccountId || '',
+                        syncMetadata: {
+                            isHistoricalSyncComplete: data.isHistoricalSyncComplete || false,
+                            lastDailySyncAt: data.lastDailySyncAt || null,
+                            syncStatus: data.syncStatus || 'idle'
+                        }
+                    });
+                    if (data.syncStatus !== 'syncing') {
+                        clearInterval(interval);
+                        loadDashboardData(); // Reload data once sync is finished
+                    }
+                } catch (err) {
+                    console.error('Failed to poll sync status', err);
+                }
+            }, 5000); // Poll every 5 seconds
+        }
+        return () => clearInterval(interval);
+    }, [syncMetadata.syncStatus]);
 
     const loadDashboardData = async () => {
         setLoading(true);
         try {
-            const promises = [];
-            const newOverview = { ga4: null, gAds: null, fbAds: null, gsc: null };
+            const query = new URLSearchParams({
+                startDate,
+                endDate,
+                ...(device && { device }),
+                ...(campaign && { campaign }),
+                ...(channel && { channel })
+            }).toString();
 
-            // GA4
-            if (connectedSources.includes('ga4')) {
-                promises.push(
-                    api.get(`/ga4/overview?startDate=${startDate}&endDate=${endDate}`).then(r => {
-                        if (r.data && r.data.rows && r.data.rows[0]) {
-                            newOverview.ga4 = {
-                                activeUsers: parseFloat(r.data.rows[0].metricValues[0].value || 0),
-                                sessions: parseFloat(r.data.rows[0].metricValues[1].value || 0)
-                            };
-                        }
-                    }).catch(() => null)
-                );
+            const res = await api.get(`/analytics/dashboard-summary?${query}`);
+            const data = res.data;
 
-                // Get timeseries
-                promises.push(
-                    api.get(`/ga4/timeseries?startDate=${startDate}&endDate=${endDate}&metric=sessions`).then(r => {
-                        if (r.data && r.data.rows) return { source: 'ga4', data: r.data.rows };
-                        return null;
-                    }).catch(() => null)
-                );
-            }
+            setOverviewData({
+                ga4: data.ga4,
+                gsc: data.gsc,
+                gAds: {
+                    cost: data.googleAds.spend,
+                    impressions: data.googleAds.impressions,
+                    clicks: data.googleAds.clicks,
+                    conversions: data.googleAds.conversions
+                },
+                fbAds: data.facebookAds
+            });
 
-            // GSC
-            if (activeGscSite) {
-                promises.push(
-                    api.get(`/gsc/overview?startDate=${startDate}&endDate=${endDate}`).then(r => {
-                        if (r.data && r.data.rows && r.data.rows[0]) {
-                            newOverview.gsc = {
-                                clicks: parseFloat(r.data.rows[0].clicks || 0),
-                                impressions: parseFloat(r.data.rows[0].impressions || 0)
-                            };
-                        }
-                    }).catch(() => null)
-                );
-            }
-
-            // FB Ads
-            if (connectedSources.includes('facebook-ads')) {
-                promises.push(
-                    api.get(`/facebook-ads/overview?startDate=${startDate}&endDate=${endDate}`).then(r => {
-                        if (r.data && r.data.data && r.data.data[0]) {
-                            newOverview.fbAds = {
-                                spend: parseFloat(r.data.data[0].spend || 0),
-                                impressions: parseFloat(r.data.data[0].impressions || 0),
-                                clicks: parseFloat(r.data.data[0].clicks || 0)
-                            };
-                        }
-                    }).catch(() => null)
-                );
-            }
-
-            // Google Ads
-            if (connectedSources.includes('google-ads')) {
-                promises.push(
-                    api.get(`/google-ads/overview?startDate=${startDate}&endDate=${endDate}`).then(r => {
-                        if (r.data && r.data.length > 0) {
-                            newOverview.gAds = {
-                                cost: parseFloat(r.data[0].metrics.costMicros || 0) / 1000000,
-                                impressions: parseFloat(r.data[0].metrics.impressions || 0),
-                                clicks: parseFloat(r.data[0].metrics.clicks || 0),
-                                conversions: parseFloat(r.data[0].metrics.conversions || 0)
-                            };
-                        }
-                    }).catch(() => null)
-                );
-            }
-
-            const rawResults = await Promise.all(promises);
-            setOverviewData(newOverview);
-
-            // Format timeseries for GA4 if available, otherwise just leave empty
-            const ga4Chart = rawResults.find(res => res && res.source === 'ga4');
-            if (ga4Chart) {
-                const formattedChart = ga4Chart.data.map(row => ({
-                    date: row.dimensionValues[0].value,
-                    traffic: parseInt(row.metricValues[0].value, 10),
-                })).sort((a, b) => new Date(a.date) - new Date(b.date));
-                setTimeseriesData(formattedChart);
+            if (data.timeseries) {
+                setTimeseriesData(data.timeseries);
             } else {
                 setTimeseriesData([]);
             }
 
         } catch (err) {
-            console.error(err);
+            console.error('Failed to load unified dashboard data:', err);
         } finally {
             setLoading(false);
         }
@@ -175,14 +173,15 @@ const DashboardPage = () => {
     const searchClicks = (overviewData.gsc?.clicks || 0);
     const totalAdSpend = (overviewData.fbAds?.spend || 0) + (overviewData.gAds?.cost || 0);
     const totalAdImpressions = (overviewData.fbAds?.impressions || 0) + (overviewData.gAds?.impressions || 0);
-    const searchImpressions = (overviewData.gsc?.impressions || 0);
     const totalAdClicks = (overviewData.fbAds?.clicks || 0) + (overviewData.gAds?.clicks || 0);
     const totalConversions = (overviewData.gAds?.conversions || 0);
 
     // Provide a generic shape if we don't have GA4 yet to preview the UI elegantly
     const chartDataToUse = timeseriesData.length > 0 ? timeseriesData : [
-        { date: 'Connect GA4 to view', traffic: 0 }
+        { date: 'Fetching data...', traffic: 0 }
     ];
+
+    const isDataEmpty = totalTraffic === 0 && searchClicks === 0 && totalAdSpend === 0;
 
     return (
         <DashboardLayout>
@@ -190,6 +189,21 @@ const DashboardPage = () => {
 
                 {/* Main Content */}
                 <div className="flex-1 flex flex-col space-y-6 min-w-0">
+
+                    <FilterBar />
+
+                    {isDataEmpty && !loading && (preset === 'today' || preset === 'yesterday') && (
+                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-4 rounded-2xl flex items-start gap-3 animate-in fade-in slide-in-from-top-4 duration-500">
+                            <CloudArrowUpIcon className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                            <div>
+                                <h4 className="text-sm font-bold text-blue-900 dark:text-blue-100">Historical Data is Syncing</h4>
+                                <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                                    We are currently fetching your last 5 years of data. Analytics platforms like GSC and Ads can also have a 24-48h processing delay.
+                                    <button onClick={() => useDateRangeStore.getState().setPreset('28d', '', '')} className="ml-2 underline font-bold">Try selecting 'Last 28 Days'</button> to see recent activity.
+                                </p>
+                            </div>
+                        </div>
+                    )}
 
                     {/* KPIs */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 shrink-0">
@@ -235,8 +249,12 @@ const DashboardPage = () => {
                     <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden flex flex-col flex-1 min-h-[350px]">
                         <div className="p-5 border-b border-neutral-100 dark:border-neutral-800 flex justify-between items-center bg-neutral-50/50 dark:bg-dark-surface/50">
                             <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Overall Traffic Trend</h3>
-                            <div className="px-2.5 py-1 bg-brand-100/50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 text-[10px] font-bold uppercase tracking-wider rounded-md border border-brand-200 dark:border-brand-800/50">
-                                {connectedSources.includes('ga4') ? 'Live GA4 Data' : 'Add GA4'}
+                            <div className="flex items-center gap-3">
+                                {connectedSources.includes('ga4') && (
+                                    <div className="px-2.5 py-1 bg-brand-100/50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 text-[10px] font-bold uppercase tracking-wider rounded-md border border-brand-200 dark:border-brand-800/50">
+                                        Live GA4 Data
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <div className="flex-1 p-5 flex flex-col min-h-0">
