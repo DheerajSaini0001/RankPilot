@@ -27,7 +27,7 @@ const formatTime = (secs) => {
 const Ga4Page = () => {
     const { startDate, endDate } = useDateRangeStore();
     const { device, campaign, channel } = useFilterStore();
-    const { connectedSources, activeGa4PropertyId } = useAccountsStore();
+    const { connectedSources, activeGa4PropertyId, activeSiteId } = useAccountsStore();
     const isConnected = connectedSources.includes('ga4');
     const hasProperty = !!activeGa4PropertyId;
     const navigate = useNavigate();
@@ -38,43 +38,54 @@ const Ga4Page = () => {
     const [traffic, setTraffic] = useState([]);
     const [pages, setPages] = useState([]);
 
-    useEffect(() => {
+    const loadData = async () => {
         if (!isConnected || !hasProperty) return;
-        
-        const loadData = async () => {
-            setLoading(true);
-            try {
-                const query = new URLSearchParams({
-                    startDate,
-                    endDate,
-                    ...(device && { device }),
-                    ...(campaign && { campaign }),
-                    ...(channel && { channel })
-                }).toString();
+        setLoading(true);
+        try {
+            const query = new URLSearchParams({
+                startDate,
+                endDate,
+                ...(device && { device }),
+                ...(campaign && { campaign }),
+                ...(channel && { channel }),
+                ...(activeSiteId && { siteId: activeSiteId })
+            }).toString();
 
-                const res = await api.get(`/analytics/ga4-summary?${query}`);
-                const data = res.data;
+            const res = await api.get(`/analytics/ga4-summary?${query}`);
+            const data = res.data;
 
-                setOverview({
-                    activeUsers: data.overview.users,
-                    sessions: data.overview.sessions,
-                    bounceRate: data.overview.bounceRate,
-                    avgSessionDuration: data.overview.avgSessionDuration,
-                    pageViews: data.overview.pageViews
-                });
+            setOverview({
+                activeUsers: data.overview.users,
+                sessions: data.overview.sessions,
+                bounceRate: data.overview.bounceRate,
+                avgSessionDuration: data.overview.avgSessionDuration,
+                pageViews: data.overview.pageViews
+            });
 
-                setTimeseries(data.timeseries);
-                setTraffic(data.traffic);
-                setPages(data.pages);
-            } catch (err) {
-                console.error("GA4 fetch err", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        
+            setTimeseries(data.timeseries);
+            setTraffic(data.traffic);
+            setPages(data.pages);
+        } catch (err) {
+            console.error("GA4 fetch err", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         loadData();
-    }, [isConnected, hasProperty, startDate, endDate, device, campaign, channel]);
+    }, [isConnected, hasProperty, startDate, endDate, device, campaign, channel, activeSiteId]);
+
+    // Auto-refresh every 10 minutes
+    useEffect(() => {
+        const interval = setInterval(() => {
+            console.log('Auto-refreshing GA4 data...');
+            loadData();
+        }, 10 * 60 * 1000);
+
+        return () => clearInterval(interval);
+    }, [isConnected, hasProperty, startDate, endDate, device, campaign, channel, activeSiteId]);
+
 
     if (!isConnected) {
         return (

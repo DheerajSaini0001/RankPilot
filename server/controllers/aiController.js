@@ -28,15 +28,16 @@ const getAiResponse = async (prompt) => {
     return result;
 };
 
-const fetchPlatformData = async (userId, startDate, endDate) => {
+const fetchPlatformData = async (userId, startDate, endDate, siteId) => {
     let data = {};
-    const userAcc = await UserAccounts.findOne({ userId });
+    const query = siteId ? { _id: siteId, userId } : { userId };
+    const userAcc = await UserAccounts.findOne(query).sort({ updatedAt: -1 });
     if (!userAcc) return data;
 
     const promises = [];
 
     if (userAcc.ga4PropertyId) {
-        promises.push(runGa4Report(userId, 'overview', startDate, endDate, ['date'], ['activeUsers', 'sessions', 'bounceRate', 'averageSessionDuration', 'screenPageViews'])
+        promises.push(runGa4Report(userId, 'overview', startDate, endDate, ['date'], ['activeUsers', 'sessions', 'bounceRate', 'averageSessionDuration', 'screenPageViews'], userAcc.ga4PropertyId)
             .then(r => {
                 const rows = r.rows?.[0]?.metricValues || [];
                 data.ga4 = {
@@ -50,7 +51,7 @@ const fetchPlatformData = async (userId, startDate, endDate) => {
     }
 
     if (userAcc.gscSiteUrl) {
-        promises.push(runGscQuery(userId, 'overview', startDate, endDate, [])
+        promises.push(runGscQuery(userId, 'overview', startDate, endDate, [], userAcc.gscSiteUrl)
             .then(r => {
                 const totals = r.rows?.[0] || {};
                 data.gsc = {
@@ -64,7 +65,7 @@ const fetchPlatformData = async (userId, startDate, endDate) => {
 
     if (userAcc.googleAdsCustomerId) {
         const q = `SELECT metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions, metrics.ctr, metrics.average_cpc FROM campaign WHERE segments.date >= '${startDate}' AND segments.date <= '${endDate}'`;
-        promises.push(runGAdsQuery(userId, 'overview', startDate, endDate, q)
+        promises.push(runGAdsQuery(userId, 'overview', startDate, endDate, q, userAcc.googleAdsCustomerId)
             .then(r => {
                 const totals = r.reduce((acc, row) => {
                     acc.spend += (row.metrics.costMicros / 1000000);
@@ -88,7 +89,7 @@ const fetchPlatformData = async (userId, startDate, endDate) => {
     }
 
     if (userAcc.facebookAdAccountId) {
-        promises.push(getFbInsights(userId, 'overview', startDate, endDate, 'account', {})
+        promises.push(getFbInsights(userId, 'overview', startDate, endDate, 'account', {}, userAcc.facebookAdAccountId)
             .then(r => {
                 const insight = r.data?.[0] || {};
                 data.facebookAds = {
@@ -109,8 +110,9 @@ const fetchPlatformData = async (userId, startDate, endDate) => {
     return data;
 };
 
+
 export const askAi = async (req, res) => {
-    let { question, conversationId, activeSources } = req.body;
+    let { question, conversationId, activeSources, siteId } = req.body;
 
     const tzOffset = (new Date()).getTimezoneOffset() * 60000;
     const localISOTime = (new Date(Date.now() - tzOffset)).toISOString().slice(0, 10);
@@ -131,15 +133,21 @@ export const askAi = async (req, res) => {
     }
 
     const userId = req.user._id;
-    const data = await fetchPlatformData(userId, startDate, endDate);
+    const data = await fetchPlatformData(userId, startDate, endDate, siteId);
 
     const prompt = promptBuilder.buildAskPrompt(question, startDate, endDate, data);
 
     let convId = conversationId;
     if (!convId) {
-        const conv = await Conversation.create({ userId: req.user._id, title: question.substring(0, 60), sources: activeSources });
+        const conv = await Conversation.create({ 
+            userId: req.user._id, 
+            siteId: siteId || null, 
+            title: question.substring(0, 60), 
+            sources: activeSources 
+        });
         convId = conv._id;
     }
+
 
     await Message.create({ conversationId: convId, role: 'user', content: question });
 
@@ -164,9 +172,12 @@ export const askAi = async (req, res) => {
 };
 
 export const getConversations = async (req, res) => {
-    const convs = await Conversation.find({ userId: req.user._id }).sort({ createdAt: -1 });
+    const { siteId } = req.query;
+    const query = siteId ? { userId: req.user._id, siteId } : { userId: req.user._id };
+    const convs = await Conversation.find(query).sort({ createdAt: -1 });
     res.status(200).json(convs);
 };
+
 
 export const getConversation = async (req, res) => {
     const conv = await Conversation.findOne({ _id: req.params.id, userId: req.user._id });
@@ -182,13 +193,16 @@ export const deleteConversation = async (req, res) => {
 };
 
 export const getWeeklyInsight = async (req, res) => {
-    const insight = await WeeklyInsight.findOne({ userId: req.user._id, expiresAt: { $gt: new Date() } });
+    const { siteId } = req.query;
+    const query = siteId ? { userId: req.user._id, siteId, expiresAt: { $gt: new Date() } } : { userId: req.user._id, expiresAt: { $gt: new Date() } };
+    const insight = await WeeklyInsight.findOne(query);
     if (insight) return res.status(200).json(insight);
+
     res.status(404).json({ message: 'No insight found. Please refresh.' });
 };
 
 export const refreshWeeklyInsight = async (req, res) => {
-    let { dateRangeStart, dateRangeEnd, activeSources, data } = req.body;
+    let { dateRangeStart, dateRangeEnd, activeSources, data, siteId } = req.body;
     
     if (!dateRangeStart || !dateRangeEnd) {
         const now = new Date();
@@ -198,7 +212,7 @@ export const refreshWeeklyInsight = async (req, res) => {
     }
 
     if (!data) {
-        data = await fetchPlatformData(req.user._id, dateRangeStart, dateRangeEnd);
+        data = await fetchPlatformData(req.user._id, dateRangeStart, dateRangeEnd, siteId);
     }
 
     const prompt = promptBuilder.buildWeeklyInsightPrompt(dateRangeStart, dateRangeEnd, data);
@@ -212,15 +226,16 @@ export const refreshWeeklyInsight = async (req, res) => {
 
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const insight = await WeeklyInsight.findOneAndUpdate(
-        { userId: req.user._id },
+        { userId: req.user._id, siteId: siteId || null },
         { content: cleanContent, sources: activeSources, expiresAt },
         { upsert: true, returnDocument: 'after' }
     );
+
     res.status(200).json(insight);
 };
 
 export const getSuggestedQuestions = async (req, res) => {
-    let { dateRangeStart, dateRangeEnd, data } = req.body;
+    let { dateRangeStart, dateRangeEnd, data, siteId } = req.body;
 
     if (!dateRangeStart || !dateRangeEnd) {
         const now = new Date();
@@ -230,7 +245,7 @@ export const getSuggestedQuestions = async (req, res) => {
     }
 
     if (!data) {
-        data = await fetchPlatformData(req.user._id, dateRangeStart, dateRangeEnd);
+        data = await fetchPlatformData(req.user._id, dateRangeStart, dateRangeEnd, siteId);
     }
 
     const prompt = promptBuilder.buildSuggestionsPrompt(dateRangeStart, dateRangeEnd, data);

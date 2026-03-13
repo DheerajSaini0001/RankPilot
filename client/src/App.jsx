@@ -17,7 +17,9 @@ import GscPage from './pages/GscPage';
 import Ga4Page from './pages/Ga4Page';
 import GoogleAdsPage from './pages/GoogleAdsPage';
 import FacebookAdsPage from './pages/FacebookAdsPage';
+import SitesPage from './pages/SitesPage';
 import { ProtectedRoute, AuthRoute, AdminRoute } from './components/ui/RouteWrappers';
+
 
 const App = () => {
   return (
@@ -60,6 +62,13 @@ const App = () => {
             <DashboardPage />
           </ProtectedRoute>
         } />
+
+        <Route path="/dashboard/sites" element={
+          <ProtectedRoute>
+            <SitesPage />
+          </ProtectedRoute>
+        } />
+
 
         <Route path="/dashboard/ai-chat" element={
           <ProtectedRoute>

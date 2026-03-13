@@ -23,7 +23,7 @@ const formatCurrency = (num) => Number(num).toLocaleString('en-US', { style: 'cu
 const GoogleAdsPage = () => {
     const { startDate, endDate } = useDateRangeStore();
     const { device, campaign } = useFilterStore();
-    const { connectedSources, activeGoogleAdsCustomerId } = useAccountsStore();
+    const { connectedSources, activeGoogleAdsCustomerId, activeSiteId } = useAccountsStore();
     const isConnected = connectedSources.includes('google-ads');
     const hasAccount = !!activeGoogleAdsCustomerId;
     const navigate = useNavigate();
@@ -34,35 +34,47 @@ const GoogleAdsPage = () => {
     const [campaigns, setCampaigns] = useState([]);
     const [keywords, setKeywords] = useState([]);
 
+    const loadData = async () => {
+        setLoading(true);
+        try {
+            const query = new URLSearchParams({
+                startDate,
+                endDate,
+                ...(device && { device }),
+                ...(campaign && { campaign }),
+                ...(activeSiteId && { siteId: activeSiteId })
+            }).toString();
+            
+            const res = await api.get(`/analytics/google-ads-summary?${query}`);
+            const data = res.data;
+
+            setOverview(data.overview);
+            setTimeseries(data.timeseries);
+            setCampaigns(data.campaigns);
+            setKeywords(data.keywords);
+        } catch (err) {
+            console.error("Google Ads fetch err", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
         if (!isConnected || !hasAccount) return;
-        
-        const loadData = async () => {
-            setLoading(true);
-            try {
-                const query = new URLSearchParams({
-                    startDate,
-                    endDate,
-                    ...(device && { device }),
-                    ...(campaign && { campaign })
-                }).toString();
-                
-                const res = await api.get(`/analytics/google-ads-summary?${query}`);
-                const data = res.data;
-
-                setOverview(data.overview);
-                setTimeseries(data.timeseries);
-                setCampaigns(data.campaigns);
-                setKeywords(data.keywords);
-            } catch (err) {
-                console.error("Google Ads fetch err", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        
         loadData();
-    }, [isConnected, hasAccount, startDate, endDate, device, campaign]);
+    }, [isConnected, hasAccount, startDate, endDate, device, campaign, activeSiteId]);
+
+    // Auto-refresh every 10 minutes
+    useEffect(() => {
+        if (!isConnected || !hasAccount) return;
+        const interval = setInterval(() => {
+            console.log('Auto-refreshing Google Ads data...');
+            loadData();
+        }, 10 * 60 * 1000);
+
+        return () => clearInterval(interval);
+    }, [isConnected, hasAccount, startDate, endDate, device, campaign, activeSiteId]);
+
 
     if (!isConnected) {
         return (

@@ -14,14 +14,15 @@ import {
 } from '../controllers/authController.js';
 import { protect, attachUserFromState } from '../middleware/auth.js';
 import { catchAsync } from '../utils/catchAsync.js';
+import { authLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
-router.post('/register', catchAsync(register));
+router.post('/register', authLimiter, catchAsync(register));
 router.get('/verify-email/:token', catchAsync(verifyEmail));
-router.post('/login', catchAsync(login));
+router.post('/login', authLimiter, catchAsync(login));
 router.post('/logout', protect, catchAsync(logout));
-router.post('/forgot-password', catchAsync(forgotPassword));
+router.post('/forgot-password', authLimiter, catchAsync(forgotPassword));
 router.post('/reset-password', catchAsync(resetPassword));
 router.post('/resend-verification', catchAsync(resendVerification));
 

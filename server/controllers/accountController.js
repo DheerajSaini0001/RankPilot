@@ -3,7 +3,7 @@ import GoogleToken from '../models/GoogleToken.js';
 import FacebookToken from '../models/FacebookToken.js';
 import User from '../models/User.js';
 import { listProperties } from '../services/ga4Service.js';
-import { listSites } from '../services/gscService.js';
+import { listSites as fetchGscSites } from '../services/gscService.js';
 import { listAccounts } from '../services/googleAdsService.js';
 import { listAdAccounts } from '../services/facebookAdsService.js';
 import { syncHistoricalData } from '../services/syncService.js';
@@ -24,12 +24,13 @@ export const listGa4 = async (req, res) => {
 
 export const listGsc = async (req, res) => {
     try {
-        const sites = await listSites(req.user._id);
+        const sites = await fetchGscSites(req.user._id);
         res.status(200).json(sites);
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
 
 export const listGoogleAds = async (req, res) => {
     try {
@@ -55,7 +56,8 @@ export const selectAccounts = async (req, res) => {
         'ga4PropertyId', 'ga4PropertyName', 'ga4AccountId',
         'gscSiteUrl', 'gscPermission',
         'googleAdsCustomerId', 'googleAdsAccountName', 'googleAdsCurrencyCode',
-        'facebookAdAccountId', 'facebookAdAccountName', 'facebookAdCurrency'
+        'facebookAdAccountId', 'facebookAdAccountName', 'facebookAdCurrency',
+        'siteName'
     ];
 
     fields.forEach(field => {
@@ -64,41 +66,79 @@ export const selectAccounts = async (req, res) => {
         }
     });
 
-    const oldAccount = await UserAccounts.findOne({ userId: req.user._id });
-    
-    const account = await UserAccounts.findOneAndUpdate(
-        { userId: req.user._id },
-        { $set: updates },
-        { upsert: true, returnDocument: 'after' }
-    );
+    const siteId = req.body.siteId;
+    let account;
 
-    // Only trigger sync if IDs changed and are not empty
-    if (updates.ga4PropertyId && updates.ga4PropertyId !== oldAccount?.ga4PropertyId) {
-        syncHistoricalData(req.user._id, 'ga4', 5).catch(e => console.error('BG Sync Fail GA4:', e));
+    if (siteId) {
+        account = await UserAccounts.findOneAndUpdate(
+            { _id: siteId, userId: req.user._id },
+            { $set: updates },
+            { returnDocument: 'after' }
+        );
+    } else {
+        account = await UserAccounts.findOneAndUpdate(
+            { userId: req.user._id, siteName: updates.siteName || 'My Website' },
+            { $set: updates },
+            { upsert: true, returnDocument: 'after' }
+        );
     }
-    if (updates.gscSiteUrl && updates.gscSiteUrl !== oldAccount?.gscSiteUrl) {
-        syncHistoricalData(req.user._id, 'gsc', 5).catch(e => console.error('BG Sync Fail GSC:', e));
+
+    if (!account) return res.status(404).json({ message: 'Account not found' });
+
+    // Only trigger sync if IDs were provided in this update
+    if (updates.ga4PropertyId) {
+        syncHistoricalData(account._id, 'ga4', 5).catch(e => console.error('BG Sync Fail GA4:', e));
     }
-    if (updates.googleAdsCustomerId && updates.googleAdsCustomerId !== oldAccount?.googleAdsCustomerId) {
-        syncHistoricalData(req.user._id, 'google-ads', 5).catch(e => console.error('BG Sync Fail Google Ads:', e));
+    if (updates.gscSiteUrl) {
+        syncHistoricalData(account._id, 'gsc', 5).catch(e => console.error('BG Sync Fail GSC:', e));
     }
-    if (updates.facebookAdAccountId && updates.facebookAdAccountId !== oldAccount?.facebookAdAccountId) {
-        syncHistoricalData(req.user._id, 'facebook-ads', 5).catch(e => console.error('BG Sync Fail Facebook Ads:', e));
+    if (updates.googleAdsCustomerId) {
+        syncHistoricalData(account._id, 'google-ads', 5).catch(e => console.error('BG Sync Fail Google Ads:', e));
+    }
+    if (updates.facebookAdAccountId) {
+        syncHistoricalData(account._id, 'facebook-ads', 5).catch(e => console.error('BG Sync Fail Facebook Ads:', e));
     }
 
     res.status(200).json({ message: 'Accounts selected', accounts: account });
 };
 
 export const getActiveAccounts = async (req, res) => {
-    const account = await UserAccounts.findOne({ userId: req.user._id });
+    const { siteId } = req.query;
+    let account;
+    if (siteId && siteId !== 'undefined') {
+        account = await UserAccounts.findOne({ _id: siteId, userId: req.user._id });
+    } else {
+        account = await UserAccounts.findOne({ userId: req.user._id }).sort({ updatedAt: -1 });
+    }
     res.status(200).json(account || {});
+};
+
+export const listSites = async (req, res) => {
+    try {
+        const sites = await UserAccounts.find({ userId: req.user._id }).sort({ updatedAt: -1 });
+        res.status(200).json(sites);
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const deleteSite = async (req, res) => {
+    try {
+        const { siteId } = req.params;
+        await UserAccounts.findOneAndDelete({ _id: siteId, userId: req.user._id });
+        res.status(200).json({ message: 'Site deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
 };
 
 export const disconnectGoogle = async (req, res) => {
     const user = await User.findById(req.user._id);
 
     await GoogleToken.deleteOne({ userId: req.user._id });
-    await UserAccounts.findOneAndUpdate({ userId: req.user._id }, {
+    // When disconnecting Google, we should probably unset from ALL sites or just the current one?
+    // Disconnecting the token affects ALL sites because they share the Google token.
+    await UserAccounts.updateMany({ userId: req.user._id }, {
         $unset: { ga4PropertyId: "", ga4PropertyName: "", ga4AccountId: "", gscSiteUrl: "", gscPermission: "", googleAdsCustomerId: "", googleAdsAccountName: "", googleAdsCurrencyCode: "" }
     });
 
@@ -120,8 +160,9 @@ export const disconnectGoogle = async (req, res) => {
 
 export const disconnectFacebook = async (req, res) => {
     await FacebookToken.deleteOne({ userId: req.user._id });
-    await UserAccounts.findOneAndUpdate({ userId: req.user._id }, {
+    await UserAccounts.updateMany({ userId: req.user._id }, {
         $unset: { facebookAdAccountId: "", facebookAdAccountName: "", facebookAdCurrency: "" }
     });
     res.status(200).json({ message: 'Facebook disconnected' });
 };
+

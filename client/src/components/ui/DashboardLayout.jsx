@@ -14,60 +14,65 @@ import {
     PlusIcon,
     QuestionMarkCircleIcon,
     BellIcon,
-    ChartBarIcon
+    ChartBarIcon,
+    GlobeAltIcon
 } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../store/authStore';
 import { useAccountsStore } from '../../store/accountsStore';
-import { listGsc, getActiveAccounts, selectAccounts } from '../../api/accountApi';
+import { listSites, getActiveAccounts, selectAccounts } from '../../api/accountApi';
 
 const DashboardLayout = ({ children }) => {
     const { user, clearAuth } = useAuthStore();
-    const { connectedSources = [], activeGscSite, gscSites = [], setAccounts } = useAccountsStore();
+    const { 
+        connectedSources = [], 
+        userSites = [], 
+        activeSiteId, 
+        setAccounts 
+    } = useAccountsStore();
     const navigate = useNavigate();
     const isAdmin = user?.email === import.meta.env.VITE_SUPER_ADMIN_EMAIL;
 
     useEffect(() => {
         if (user) {
-            listGsc()
+            listSites()
                 .then(res => {
-                    const data = res.data || [];
-                    if (data.length > 0) {
-                        setAccounts({ gscSites: data });
+                    const sites = res.data || [];
+                    setAccounts({ userSites: sites });
+                    // If no activeSiteId is set but we have sites, pick the first one
+                    if (!activeSiteId && sites.length > 0) {
+                        setAccounts({ activeSiteId: sites[0]._id });
                     }
                 })
                 .catch(() => { });
 
-            getActiveAccounts()
+            getActiveAccounts(activeSiteId)
                 .then(res => {
                     const data = res.data || {};
-                    const updates = {
+                    setAccounts({
                         activeGscSite: data.gscSiteUrl || '',
                         activeGa4PropertyId: data.ga4PropertyId || '',
                         activeGoogleAdsCustomerId: data.googleAdsCustomerId || '',
                         activeFacebookAdAccountId: data.facebookAdAccountId || '',
-                        // Also sync metadata
                         syncMetadata: {
                             isHistoricalSyncComplete: data.isHistoricalSyncComplete || false,
                             lastDailySyncAt: data.lastDailySyncAt || null,
                             syncStatus: data.syncStatus || 'idle'
                         }
-                    };
-                    setAccounts(updates);
+                    });
                 })
                 .catch(() => { });
         }
-    }, [user, connectedSources, setAccounts]);
+    }, [user, activeSiteId, setAccounts]);
 
-    const handleSiteChange = async (e) => {
-        const url = e.target.value === 'none' ? '' : e.target.value;
-        setAccounts({ activeGscSite: url });
-        try {
-            await selectAccounts({ gscSiteUrl: url });
-            window.location.reload();
-        } catch (err) {
-            console.error('Failed to change site');
+    const handleSiteChange = (e) => {
+        const id = e.target.value;
+        if (id === 'new') {
+            navigate('/connect-accounts?new=true');
+        } else {
+            setAccounts({ activeSiteId: id });
         }
     };
+
 
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
@@ -94,6 +99,7 @@ const DashboardLayout = ({ children }) => {
 
     const navItems = [
         { label: 'Dashboard', path: '/dashboard', icon: ChartPieIcon },
+        { label: 'Connected Sites', path: '/dashboard/sites', icon: GlobeAltIcon },
         { label: 'AI Analyst', path: '/dashboard/ai-chat', icon: ChatBubbleLeftRightIcon },
         { label: 'Google Search Console', path: '/dashboard/gsc', icon: ChartBarIcon, isSubItem: true },
         { label: 'Google Analytics 4', path: '/dashboard/ga4', icon: ChartBarIcon, isSubItem: true },
@@ -126,26 +132,23 @@ const DashboardLayout = ({ children }) => {
                 <div className="px-4 pt-6 pb-2 relative z-10 space-y-3">
                     <div className="relative group cursor-pointer">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
-                            <MagnifyingGlassIcon className="h-4 w-4 text-neutral-400" aria-hidden="true" strokeWidth={2} />
+                            <ChartBarIcon className="h-4 w-4 text-neutral-400" aria-hidden="true" strokeWidth={2} />
                         </div>
                         <select
-                            value={activeGscSite || (connectedSources.includes('google') ? 'none' : '')}
+                            value={activeSiteId || ''}
                             onChange={handleSiteChange}
-                            disabled={!connectedSources.includes('google')}
-                            className="w-full pl-9 pr-9 py-2.5 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm text-neutral-900 dark:text-neutral-100 flex items-center justify-between shadow-sm hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full pl-9 pr-9 py-2.5 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm text-neutral-900 dark:text-neutral-100 flex items-center justify-between shadow-sm hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 appearance-none cursor-pointer"
                         >
-                            {!connectedSources.includes('google') ? (
-                                <option value="">Search websites...</option>
+                            {userSites.length === 0 ? (
+                                <option value="">No websites added</option>
                             ) : (
-                                <>
-                                    <option value="none">None Selected</option>
-                                    {gscSites && gscSites.length > 0 && gscSites.map(s => (
-                                        <option key={s.siteUrl} value={s.siteUrl}>
-                                            {s.siteUrl.replace('https://', '').replace('http://', '').replace('sc-domain:', '').replace(/\/$/, '')}
-                                        </option>
-                                    ))}
-                                </>
+                                userSites.map(site => (
+                                    <option key={site._id} value={site._id}>
+                                        {site.siteName}
+                                    </option>
+                                ))
                             )}
+                            <option value="new">+ Add New Website</option>
                         </select>
                         <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none z-10">
                             <ChevronDownIcon className="h-4 w-4 text-neutral-400" aria-hidden="true" strokeWidth={2} />
@@ -153,13 +156,14 @@ const DashboardLayout = ({ children }) => {
                     </div>
 
                     <button
-                        onClick={() => navigate('/connect-accounts')}
+                        onClick={() => navigate('/connect-accounts?new=true')}
                         className="w-full flex items-center justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-[#3B82F6] hover:bg-[#2563EB] dark:bg-brand-600 dark:hover:bg-brand-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition-colors"
                     >
                         <PlusIcon className="h-4 w-4 mr-1.5" aria-hidden="true" strokeWidth={2.5} />
                         Add website
                     </button>
                 </div>
+
 
                 <nav className="flex-1 px-4 pb-4 space-y-1.5 overflow-y-auto relative z-10">
                     {navItems.map((item, i) => {

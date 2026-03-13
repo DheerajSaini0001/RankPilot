@@ -23,7 +23,7 @@ const formatCurrency = (num) => Number(num).toLocaleString('en-US', { style: 'cu
 const DashboardPage = () => {
     const { preset, startDate, endDate } = useDateRangeStore();
     const { device, campaign, channel } = useFilterStore();
-    const { connectedSources, activeGscSite, syncMetadata, setAccounts } = useAccountsStore();
+    const { connectedSources, activeGscSite, syncMetadata, setAccounts, activeSiteId } = useAccountsStore();
     const [loading, setLoading] = useState(true);
     const [overviewData, setOverviewData] = useState({ ga4: null, gAds: null, fbAds: null, gsc: null });
     const [timeseriesData, setTimeseriesData] = useState([]);
@@ -36,29 +36,21 @@ const DashboardPage = () => {
     const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
     useEffect(() => {
-        const fetchStatus = async () => {
-            try {
-                const res = await api.get('/accounts/active');
-                const data = res.data || {};
-                setAccounts({
-                    activeGscSite: data.gscSiteUrl || '',
-                    activeGa4PropertyId: data.ga4PropertyId || '',
-                    activeGoogleAdsCustomerId: data.googleAdsCustomerId || '',
-                    activeFacebookAdAccountId: data.facebookAdAccountId || '',
-                    syncMetadata: {
-                        isHistoricalSyncComplete: data.isHistoricalSyncComplete || false,
-                        lastDailySyncAt: data.lastDailySyncAt || null,
-                        syncStatus: data.syncStatus || 'idle'
-                    }
-                });
-            } catch (err) {
-                console.error('Failed to fetch initial sync status', err);
-            }
-        };
-        fetchStatus();
         loadDashboardData();
         loadSuggestions();
-    }, [startDate, endDate, connectedSources, activeGscSite, device, campaign, channel]);
+    }, [startDate, endDate, connectedSources, activeSiteId, device, campaign, channel]);
+
+    // Auto-refresh every 10 minutes
+    useEffect(() => {
+        const interval = setInterval(() => {
+            console.log('Auto-refreshing dashboard data...');
+            loadDashboardData();
+            loadSuggestions();
+        }, 10 * 60 * 1000); // 10 minutes
+
+        return () => clearInterval(interval);
+    }, [startDate, endDate, connectedSources, activeSiteId, device, campaign, channel]);
+
 
     // Poll sync status if syncing
     useEffect(() => {
@@ -66,11 +58,12 @@ const DashboardPage = () => {
         if (syncMetadata.syncStatus === 'syncing') {
             interval = setInterval(async () => {
                 try {
-                    const res = await api.get('/accounts/active');
+                    const res = await api.get(`/accounts/active${activeSiteId ? `?siteId=${activeSiteId}` : ''}`);
                     const data = res.data || {};
                     setAccounts({
                         activeGscSite: data.gscSiteUrl || '',
                         activeGa4PropertyId: data.ga4PropertyId || '',
+
                         activeGoogleAdsCustomerId: data.googleAdsCustomerId || '',
                         activeFacebookAdAccountId: data.facebookAdAccountId || '',
                         syncMetadata: {
@@ -99,7 +92,8 @@ const DashboardPage = () => {
                 endDate,
                 ...(device && { device }),
                 ...(campaign && { campaign }),
-                ...(channel && { channel })
+                ...(channel && { channel }),
+                ...(activeSiteId && { siteId: activeSiteId })
             }).toString();
 
             const res = await api.get(`/analytics/dashboard-summary?${query}`);
@@ -133,7 +127,11 @@ const DashboardPage = () => {
     const loadSuggestions = async () => {
         setSuggestionsLoading(true);
         try {
-            const res = await api.post('/ai/suggested-questions', { dateRangeStart: startDate, dateRangeEnd: endDate });
+            const res = await api.post('/ai/suggested-questions', { 
+                dateRangeStart: startDate, 
+                dateRangeEnd: endDate,
+                siteId: activeSiteId
+            });
             setSuggestions(res.data.questions);
         } catch (err) {
             setSuggestions([
@@ -157,7 +155,8 @@ const DashboardPage = () => {
                 dateRangeStart: startDate,
                 dateRangeEnd: endDate,
                 activeSources: connectedSources,
-                data: overviewData
+                data: overviewData,
+                siteId: activeSiteId
             });
             setAiResponse(res.data.answer);
             setAiQuery('');

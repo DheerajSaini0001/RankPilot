@@ -14,6 +14,10 @@ const dailyMetricSchema = new mongoose.Schema({
 
 // Index for fast lookups by user, source, date and dimensions for filtering
 dailyMetricSchema.index({ userId: 1, source: 1, date: 1 });
+dailyMetricSchema.index({ platformAccountId: 1 });
 dailyMetricSchema.index({ date: 1 });
+dailyMetricSchema.index({ 'dimensions.campaign': 1 }); // Important for Ads
+dailyMetricSchema.index({ 'dimensions.query': 1 });    // Important for GSC
+dailyMetricSchema.index({ 'dimensions.device': 1 });   // Universal detailed filtering
 
 export default mongoose.model('DailyMetric', dailyMetricSchema);

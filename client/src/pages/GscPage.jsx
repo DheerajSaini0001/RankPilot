@@ -22,7 +22,7 @@ const formatNumber = (num) => Number(num).toLocaleString('en-US', { maximumFract
 const GscPage = () => {
     const { startDate, endDate } = useDateRangeStore();
     const { device } = useFilterStore();
-    const { activeGscSite, connectedSources } = useAccountsStore();
+    const { activeGscSite, connectedSources, activeSiteId } = useAccountsStore();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     
@@ -31,34 +31,45 @@ const GscPage = () => {
     const [queries, setQueries] = useState([]);
     const [pages, setPages] = useState([]);
 
-    useEffect(() => {
+    const loadData = async () => {
         if (!activeGscSite) return;
-        
-        const loadData = async () => {
-            setLoading(true);
-            try {
-                const query = new URLSearchParams({
-                    startDate,
-                    endDate,
-                    ...(device && { device })
-                }).toString();
-                
-                const res = await api.get(`/analytics/gsc-summary?${query}`);
-                const data = res.data;
+        setLoading(true);
+        try {
+            const query = new URLSearchParams({
+                startDate,
+                endDate,
+                ...(device && { device }),
+                ...(activeSiteId && { siteId: activeSiteId })
+            }).toString();
+            
+            const res = await api.get(`/analytics/gsc-summary?${query}`);
+            const data = res.data;
 
-                setOverview(data.overview);
-                setTimeseries(data.timeseries);
-                setQueries(data.queries);
-                setPages(data.pages);
-            } catch (err) {
-                console.error("GSC fetch err", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        
+            setOverview(data.overview);
+            setTimeseries(data.timeseries);
+            setQueries(data.queries);
+            setPages(data.pages);
+        } catch (err) {
+            console.error("GSC fetch err", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         loadData();
-    }, [activeGscSite, startDate, endDate]);
+    }, [activeGscSite, startDate, endDate, device, activeSiteId]);
+
+    // Auto-refresh every 10 minutes
+    useEffect(() => {
+        const interval = setInterval(() => {
+            console.log('Auto-refreshing GSC data...');
+            loadData();
+        }, 10 * 60 * 1000);
+
+        return () => clearInterval(interval);
+    }, [activeGscSite, startDate, endDate, device, activeSiteId]);
+
 
     if (!connectedSources.includes('ga4')) {
         return (

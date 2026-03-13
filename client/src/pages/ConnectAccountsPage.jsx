@@ -12,9 +12,11 @@ const ConnectAccountsPage = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
-    const { connectedSources, setAccounts } = useAccountsStore();
+    const { connectedSources, activeSiteId, setAccounts } = useAccountsStore();
     const { token } = useAuthStore();
     const navigate = useNavigate();
+    const queryParams = new URLSearchParams(window.location.search);
+    const isNew = queryParams.get('new') === 'true';
 
     // Data lists
     const [ga4Props, setGa4Props] = useState([]);
@@ -27,11 +29,13 @@ const ConnectAccountsPage = () => {
     const [selectedGsc, setSelectedGsc] = useState('');
     const [selectedGAds, setSelectedGAds] = useState('');
     const [selectedFbAds, setSelectedFbAds] = useState('');
+    const [siteName, setSiteName] = useState('My Website');
+
 
     useEffect(() => {
         loadData();
-        // eslint-disable-next-line
-    }, []);
+    }, [activeSiteId, isNew]);
+
 
     const loadData = async () => {
         setLoading(true);
@@ -39,12 +43,23 @@ const ConnectAccountsPage = () => {
             const me = await getMe();
             setAccounts({ connectedSources: me.data.connectedSources });
 
-            const active = await getActiveAccounts();
-            if (active.data) {
-                if (active.data.ga4PropertyId) setSelectedGa4(active.data.ga4PropertyId);
-                if (active.data.gscSiteUrl) setSelectedGsc(active.data.gscSiteUrl);
-                if (active.data.googleAdsCustomerId) setSelectedGAds(active.data.googleAdsCustomerId);
-                if (active.data.facebookAdAccountId) setSelectedFbAds(active.data.facebookAdAccountId);
+            // Only load active accounts if we are NOT in "new site" mode
+            if (!isNew) {
+                const active = await getActiveAccounts(activeSiteId);
+                if (active.data) {
+                    if (active.data.siteName) setSiteName(active.data.siteName);
+                    if (active.data.ga4PropertyId) setSelectedGa4(active.data.ga4PropertyId);
+                    if (active.data.gscSiteUrl) setSelectedGsc(active.data.gscSiteUrl);
+                    if (active.data.googleAdsCustomerId) setSelectedGAds(active.data.googleAdsCustomerId);
+                    if (active.data.facebookAdAccountId) setSelectedFbAds(active.data.facebookAdAccountId);
+                }
+            } else {
+                // Reset selections for new site
+                setSiteName('New Website');
+                setSelectedGa4('');
+                setSelectedGsc('');
+                setSelectedGAds('');
+                setSelectedFbAds('');
             }
 
             if (me.data.connectedSources.includes('google')) {
@@ -67,6 +82,10 @@ const ConnectAccountsPage = () => {
     };
 
     const handleSave = async () => {
+        if (!siteName.trim()) {
+            toast.error('Please enter a website name');
+            return;
+        }
         setSaving(true);
         try {
             const selectedGa4Obj = ga4Props.find(p => p.id === selectedGa4);
@@ -74,6 +93,8 @@ const ConnectAccountsPage = () => {
             const selectedFbAdsObj = fbAdAccounts.find(f => f.id === selectedFbAds);
 
             const data = {
+                siteId: isNew ? undefined : activeSiteId,
+                siteName: siteName,
                 ga4PropertyId: selectedGa4,
                 ga4PropertyName: selectedGa4Obj?.name || '',
                 ga4AccountId: selectedGa4Obj?.accountId || '',
@@ -84,16 +105,17 @@ const ConnectAccountsPage = () => {
                 facebookAdAccountName: selectedFbAdsObj?.name || ''
             };
             
-            await selectAccounts(data);
+            const res = await selectAccounts(data);
+            const updatedAccount = res.data.accounts;
             
-            // Update store immediately so page guards use fresh data
             setAccounts({
-                activeGscSite: selectedGsc || null,
-                activeGa4PropertyId: selectedGa4 || null,
-                activeGoogleAdsCustomerId: selectedGAds || null,
-                activeFacebookAdAccountId: selectedFbAds || null,
+                activeSiteId: updatedAccount._id,
+                activeGscSite: updatedAccount.gscSiteUrl || null,
+                activeGa4PropertyId: updatedAccount.ga4PropertyId || null,
+                activeGoogleAdsCustomerId: updatedAccount.googleAdsCustomerId || null,
+                activeFacebookAdAccountId: updatedAccount.facebookAdAccountId || null,
             });
-            toast.success('Accounts linked successfully!');
+            toast.success(isNew ? 'New website added!' : 'Integrations updated!');
             navigate('/dashboard');
         } catch (err) {
             toast.error('Failed to link accounts');
@@ -121,9 +143,23 @@ const ConnectAccountsPage = () => {
                         <div className="h-40 bg-neutral-200 dark:bg-neutral-800 rounded-xl"></div>
                     </div>
                 ) : (
-                    <div className="flex flex-col h-full">
-                        <div className="flex flex-col gap-6 xl:gap-8 flex-1">
-                            {/* Google Integrations (Combined) */}
+                <div className="flex flex-col h-full">
+                    <div className="flex flex-col gap-6 xl:gap-8 flex-1">
+                        {/* Site Name Input */}
+                        <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-3xl p-6 md:p-8 shadow-sm">
+                            <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-2 uppercase tracking-wide">Website Name</label>
+                            <input
+                                type="text"
+                                value={siteName}
+                                onChange={e => setSiteName(e.target.value)}
+                                placeholder="e.g. My Portfolio, Client XYZ"
+                                className="w-full max-w-md text-lg font-bold rounded-xl border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-dark-surface text-neutral-900 dark:text-white focus:ring-brand-400 py-3 px-4 focus:outline-none focus:ring-2 shadow-sm"
+                            />
+                            <p className="text-xs text-neutral-500 mt-2 italic">* Use a unique name to distinguish multiple websites.</p>
+                        </div>
+
+                        {/* Google Integrations (Combined) */}
+
                             <div className="group bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-3xl p-6 md:p-8 shadow-sm hover:shadow-2xl hover:shadow-brand-500/5 hover:border-brand-400/50 dark:hover:border-brand-500/50 transition-all duration-500 relative overflow-hidden">
                                 <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none transition-opacity duration-500 opacity-0 group-hover:opacity-100"></div>
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10 mb-2">

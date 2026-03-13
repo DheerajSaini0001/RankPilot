@@ -8,6 +8,8 @@ import {
     listFacebookAds,
     selectAccounts,
     getActiveAccounts,
+    listSites,
+    deleteSite,
     disconnectGoogle,
     disconnectFacebook
 } from '../controllers/accountController.js';
@@ -21,7 +23,10 @@ router.get('/google-ads/list', catchAsync(listGoogleAds));
 router.get('/facebook-ads/list', catchAsync(listFacebookAds));
 router.post('/select', catchAsync(selectAccounts));
 router.get('/active', catchAsync(getActiveAccounts));
+router.get('/sites', catchAsync(listSites));
+router.delete('/sites/:siteId', catchAsync(deleteSite));
 router.delete('/disconnect/google', catchAsync(disconnectGoogle));
 router.delete('/disconnect/facebook', catchAsync(disconnectFacebook));
+
 
 export default router;

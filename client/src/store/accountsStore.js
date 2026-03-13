@@ -10,6 +10,8 @@ export const useAccountsStore = create(
             facebook: {},
             connectedSources: [],
             gscSites: [],
+            userSites: [], // All sites from DB
+            activeSiteId: null, // Currently selected site ID
             activeGscSite: null,
             activeGa4PropertyId: null,
             activeGoogleAdsCustomerId: null,
@@ -19,6 +21,7 @@ export const useAccountsStore = create(
                 lastDailySyncAt: null,
                 syncStatus: 'idle'
             },
+
             setAccounts: (updates) => set((state) => {
                 const newState = { ...state, ...updates };
                 

@@ -23,7 +23,7 @@ import {
 import ReactMarkdown from 'react-markdown';
 
 const AIChatPage = () => {
-    const { connectedSources } = useAccountsStore();
+    const { connectedSources, activeSiteId } = useAccountsStore();
     const { user } = useAuthStore();
 
     const [messages, setMessages] = useState([]);
@@ -65,11 +65,11 @@ const AIChatPage = () => {
         loadConversations();
         loadWeeklyInsight();
         loadSuggestions();
-    }, []);
+    }, [activeSiteId]);
 
     const loadConversations = async () => {
         try {
-            const res = await getConversations();
+            const res = await getConversations(activeSiteId);
             setConversations(res.data);
         } catch (err) {
             console.error(err);
@@ -107,7 +107,7 @@ const AIChatPage = () => {
     const loadWeeklyInsight = async () => {
         setInsightLoading(true);
         try {
-            const res = await getWeeklyInsight();
+            const res = await getWeeklyInsight(activeSiteId);
             if (res.data) setWeeklyInsight(res.data.content);
         } catch (err) {
             console.error(err);
@@ -120,7 +120,7 @@ const AIChatPage = () => {
     const handleRefreshInsight = async () => {
         setInsightLoading(true);
         try {
-            const res = await refreshWeeklyInsight({ activeSources: selectedSources });
+            const res = await refreshWeeklyInsight({ activeSources: selectedSources, siteId: activeSiteId });
             setWeeklyInsight(res.data.content);
         } catch (err) {
             console.error(err);
@@ -132,7 +132,7 @@ const AIChatPage = () => {
     const loadSuggestions = async () => {
         setSuggestionsLoading(true);
         try {
-            const res = await getSuggestedQuestions({});
+            const res = await getSuggestedQuestions({ siteId: activeSiteId });
             setSuggestions(res.data.questions);
         } catch (err) {
             console.error(err);
@@ -168,7 +168,8 @@ const AIChatPage = () => {
             const res = await askAi({
                 question: currentQuery,
                 activeSources: selectedSources,
-                conversationId: activeConversationId
+                conversationId: activeConversationId,
+                siteId: activeSiteId
             });
 
             if (!activeConversationId && res.data.conversationId) {

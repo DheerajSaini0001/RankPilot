@@ -5,8 +5,12 @@ import { runQuery as runGscQuery } from './gscService.js';
 import { runQuery as runGAdsQuery } from './googleAdsService.js';
 import { getInsights as getFbInsights } from './facebookAdsService.js';
 
-export const syncHistoricalData = async (userId, source, years = 5) => {
-    console.log(`Starting historical sync for User ${userId}, Source: ${source}, Years: ${years}`);
+export const syncHistoricalData = async (accountId, source, years = 5) => {
+    const acc = await UserAccounts.findById(accountId);
+    if (!acc) return;
+    const userId = acc.userId;
+
+    console.log(`Starting historical sync for Account ${accountId} (User ${userId}), Source: ${source}, Years: ${years}`);
     
     const now = new Date();
     const endDate = now.toISOString().split('T')[0];
@@ -15,34 +19,34 @@ export const syncHistoricalData = async (userId, source, years = 5) => {
     const startDate = pastDate.toISOString().split('T')[0];
 
     try {
-        await UserAccounts.findOneAndUpdate({ userId }, { syncStatus: 'syncing' }, { returnDocument: 'after' });
+        await UserAccounts.findByIdAndUpdate(accountId, { syncStatus: 'syncing' });
         
         switch (source) {
-            case 'ga4': await syncGa4(userId, startDate, endDate); break;
-            case 'gsc': await syncGsc(userId, startDate, endDate); break;
-            case 'google-ads': await syncGoogleAds(userId, startDate, endDate); break;
-            case 'facebook-ads': await syncFacebookAds(userId, startDate, endDate); break;
+            case 'ga4': await syncGa4(acc, startDate, endDate); break;
+            case 'gsc': await syncGsc(acc, startDate, endDate); break;
+            case 'google-ads': await syncGoogleAds(acc, startDate, endDate); break;
+            case 'facebook-ads': await syncFacebookAds(acc, startDate, endDate); break;
         }
 
-        await UserAccounts.findOneAndUpdate({ userId }, { 
+        await UserAccounts.findByIdAndUpdate(accountId, { 
             isHistoricalSyncComplete: true, 
             syncStatus: 'idle',
             lastDailySyncAt: new Date()
-        }, { returnDocument: 'after' });
+        });
     } catch (err) {
-        console.error(`Historical Sync Failed for ${source}:`, err.message);
-        await UserAccounts.findOneAndUpdate({ userId }, { syncStatus: 'error' }, { returnDocument: 'after' });
+        console.error(`Historical Sync Failed for ${source} (Account: ${accountId}):`, err.message);
+        await UserAccounts.findByIdAndUpdate(accountId, { syncStatus: 'error' });
     }
 };
 
-const syncGa4 = async (userId, startDate, endDate) => {
-    const acc = await UserAccounts.findOne({ userId });
+const syncGa4 = async (acc, startDate, endDate) => {
     if (!acc || !acc.ga4PropertyId) return;
+    const userId = acc.userId;
 
-    // Fetch granular data: Date + Source/Medium + Device
-    const report = await runGa4Report(userId, 'high_detail_sync', startDate, endDate, 
-        ['date', 'sessionSourceMedium', 'deviceCategory'], 
-        ['activeUsers', 'sessions', 'bounceRate', 'screenPageViews']
+    // Fetch granular data: Date + Source/Medium + Device + Location + Page
+    const report = await runGa4Report(userId, 'ultra_detail_sync', startDate, endDate, 
+        ['date', 'sessionSourceMedium', 'deviceCategory', 'country', 'city', 'landingPagePlusQueryString'], 
+        ['activeUsers', 'sessions', 'bounceRate', 'screenPageViews', 'averageSessionDuration', 'conversions', 'totalRevenue']
     );
     
     if (report.rows) {
@@ -53,56 +57,75 @@ const syncGa4 = async (userId, startDate, endDate) => {
                 updateOne: {
                     filter: { 
                         userId, 
+                        platformAccountId: acc.ga4PropertyId,
                         source: 'ga4', 
                         date: formattedDate,
                         'dimensions.source': row.dimensionValues[1].value,
-                        'dimensions.device': row.dimensionValues[2].value
+                        'dimensions.device': row.dimensionValues[2].value,
+                        'dimensions.country': row.dimensionValues[3].value,
+                        'dimensions.city': row.dimensionValues[4].value,
+                        'dimensions.landingPage': row.dimensionValues[5].value
                     },
                     update: {
-                        platformAccountId: acc.ga4PropertyId,
                         dimensions: {
                             source: row.dimensionValues[1].value,
-                            device: row.dimensionValues[2].value
+                            device: row.dimensionValues[2].value,
+                            country: row.dimensionValues[3].value,
+                            city: row.dimensionValues[4].value,
+                            landingPage: row.dimensionValues[5].value
                         },
                         metrics: {
-                            users: parseFloat(row.metricValues[0].value),
-                            sessions: parseFloat(row.metricValues[1].value),
-                            bounceRate: parseFloat(row.metricValues[2].value),
-                            screenPageViews: parseFloat(row.metricValues[3].value)
+                            users: parseFloat(row.metricValues[0].value || 0),
+                            sessions: parseFloat(row.metricValues[1].value || 0),
+                            bounceRate: parseFloat(row.metricValues[2].value || 0),
+                            pageViews: parseFloat(row.metricValues[3].value || 0),
+                            avgSessionDuration: parseFloat(row.metricValues[4].value || 0),
+                            conversions: parseFloat(row.metricValues[5].value || 0),
+                            revenue: parseFloat(row.metricValues[6].value || 0)
                         }
                     },
                     upsert: true
                 }
             };
         });
-        await DailyMetric.bulkWrite(operations);
+        
+        // Split into chunks of 1000 for safety
+        for (let i = 0; i < operations.length; i += 1000) {
+            const chunk = operations.slice(i, i + 1000);
+            await DailyMetric.bulkWrite(chunk);
+        }
     }
 };
 
-const syncGsc = async (userId, startDate, endDate) => {
-    const acc = await UserAccounts.findOne({ userId });
-    if (!acc || !acc.gscSiteUrl) return;
 
-    // Fetch granular data: Date + Page + Query
-    const res = await runGscQuery(userId, 'high_detail_sync', startDate, endDate, ['date', 'page', 'query']);
+const syncGsc = async (acc, startDate, endDate) => {
+    if (!acc || !acc.gscSiteUrl) return;
+    const userId = acc.userId;
+
+    // Fetch granular data: Date + Page + Query + Device + Country
+    const res = await runGscQuery(userId, 'ultra_detail_sync', startDate, endDate, ['date', 'page', 'query', 'device', 'country']);
     
     if (res.rows) {
-        // Limit to top 500 rows per batch to keep DB performance sane but detailed
-        const operations = res.rows.slice(0, 1000).map(row => {
+        // Increase limit to 5000 rows for more detail
+        const operations = res.rows.slice(0, 5000).map(row => {
             return {
                 updateOne: {
                     filter: { 
                         userId, 
+                        platformAccountId: acc.gscSiteUrl,
                         source: 'gsc', 
                         date: row.keys[0],
                         'dimensions.page': row.keys[1],
-                        'dimensions.query': row.keys[2]
+                        'dimensions.query': row.keys[2],
+                        'dimensions.device': row.keys[3],
+                        'dimensions.country': row.keys[4]
                     },
                     update: {
-                        platformAccountId: acc.gscSiteUrl,
                         dimensions: {
                             page: row.keys[1],
-                            query: row.keys[2]
+                            query: row.keys[2],
+                            device: row.keys[3],
+                            country: row.keys[4]
                         },
                         metrics: {
                             clicks: row.clicks,
@@ -115,84 +138,130 @@ const syncGsc = async (userId, startDate, endDate) => {
                 }
             };
         });
-        if (operations.length > 0) await DailyMetric.bulkWrite(operations);
+        
+        // Split into chunks of 1000 for safety
+        for (let i = 0; i < operations.length; i += 1000) {
+            const chunk = operations.slice(i, i + 1000);
+            await DailyMetric.bulkWrite(chunk);
+        }
     }
 };
 
-const syncGoogleAds = async (userId, startDate, endDate) => {
-    const acc = await UserAccounts.findOne({ userId });
-    if (!acc || !acc.googleAdsCustomerId) return;
 
-    // Fetch by Date + Campaign
-    const query = `SELECT segments.date, campaign.name, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions FROM customer WHERE segments.date BETWEEN '${startDate}' AND '${endDate}'`;
-    const res = await runGAdsQuery(userId, 'high_detail_sync', startDate, endDate, query);
+const syncGoogleAds = async (acc, startDate, endDate) => {
+    if (!acc || !acc.googleAdsCustomerId) return;
+    const userId = acc.userId;
+
+    // Fetch by Date + Campaign + Ad Group + Device
+    const query = `
+        SELECT 
+            segments.date, 
+            campaign.name, 
+            ad_group.name,
+            segments.device,
+            metrics.cost_micros, 
+            metrics.impressions, 
+            metrics.clicks, 
+            metrics.conversions,
+            metrics.conversions_value
+        FROM customer 
+        WHERE segments.date BETWEEN '${startDate}' AND '${endDate}'
+    `;
+    const res = await runGAdsQuery(userId, 'ultra_detail_sync', startDate, endDate, query);
 
     if (res && res.length > 0) {
         const operations = res.map(row => ({
             updateOne: {
                 filter: { 
                     userId, 
+                    platformAccountId: acc.googleAdsCustomerId,
                     source: 'google-ads', 
                     date: row.segments.date,
-                    'dimensions.campaign': row.campaign.name
+                    'dimensions.campaign': row.campaign.name,
+                    'dimensions.adGroup': row.adGroup?.name,
+                    'dimensions.device': row.segments.device
                 },
                 update: {
-                    platformAccountId: acc.googleAdsCustomerId,
                     dimensions: {
-                        campaign: row.campaign.name
+                        campaign: row.campaign.name,
+                        adGroup: row.adGroup?.name,
+                        device: row.segments.device
                     },
                     metrics: {
                         spend: parseFloat(row.metrics.costMicros || 0) / 1000000,
                         impressions: parseFloat(row.metrics.impressions || 0),
                         clicks: parseFloat(row.metrics.clicks || 0),
-                        conversions: parseFloat(row.metrics.conversions || 0)
+                        conversions: parseFloat(row.metrics.conversions || 0),
+                        conversionValue: parseFloat(row.metrics.conversionsValue || 0)
                     }
                 },
                 upsert: true
             }
         }));
-        await DailyMetric.bulkWrite(operations);
+        
+        // Split into chunks of 1000 for safety
+        for (let i = 0; i < operations.length; i += 1000) {
+            const chunk = operations.slice(i, i + 1000);
+            await DailyMetric.bulkWrite(chunk);
+        }
     }
 };
 
-const syncFacebookAds = async (userId, startDate, endDate) => {
-    const acc = await UserAccounts.findOne({ userId });
-    if (!acc || !acc.facebookAdAccountId) return;
 
-    // Fetch by Date + Campaign
-    const res = await getFbInsights(userId, 'high_detail_sync', startDate, endDate, 'campaign', { time_increment: 1 });
+const syncFacebookAds = async (acc, startDate, endDate) => {
+    if (!acc || !acc.facebookAdAccountId) return;
+    const userId = acc.userId;
+
+    // Fetch by Date + Campaign + Ad Set + Ad + Device
+    const res = await getFbInsights(userId, 'ultra_detail_sync', startDate, endDate, 'ad', { 
+        time_increment: 1,
+        breakdowns: 'device_platform'
+    });
 
     if (res && res.length > 0) {
         const operations = res.map(row => ({
             updateOne: {
                 filter: { 
                     userId, 
+                    platformAccountId: acc.facebookAdAccountId,
                     source: 'facebook-ads', 
                     date: row.date_start,
-                    'dimensions.campaign': row.campaign_name
+                    'dimensions.campaign': row.campaign_name,
+                    'dimensions.adSet': row.adset_name,
+                    'dimensions.ad': row.ad_name,
+                    'dimensions.device': row.device_platform
                 },
                 update: {
-                    platformAccountId: acc.facebookAdAccountId,
                     dimensions: {
-                        campaign: row.campaign_name
+                        campaign: row.campaign_name,
+                        adSet: row.adset_name,
+                        ad: row.ad_name,
+                        device: row.device_platform
                     },
                     metrics: {
                         spend: parseFloat(row.spend || 0),
                         impressions: parseFloat(row.impressions || 0),
                         clicks: parseFloat(row.clicks || 0),
-                        reach: parseFloat(row.reach || 0)
+                        reach: parseFloat(row.reach || 0),
+                        conversions: parseFloat(row.conversions?.[0]?.value || 0),
+                        frequency: parseFloat(row.frequency || 0)
                     }
                 },
                 upsert: true
             }
         }));
-        await DailyMetric.bulkWrite(operations);
+        
+        // Split into chunks of 1000 for safety
+        for (let i = 0; i < operations.length; i += 1000) {
+            const chunk = operations.slice(i, i + 1000);
+            await DailyMetric.bulkWrite(chunk);
+        }
     }
 };
 
-/**
- * Runs a daily sync for all connected platforms for all users
- */
+
+
+// Runs a daily sync for all connected platforms for all users
 export const syncDailyForAllUsers = async () => {
     const users = await UserAccounts.find({});
     const yesterday = new Date();
@@ -201,15 +270,16 @@ export const syncDailyForAllUsers = async () => {
 
     for (const acc of users) {
         try {
-            if (acc.ga4PropertyId) await syncGa4(acc.userId, dateStr, dateStr);
-            if (acc.gscSiteUrl) await syncGsc(acc.userId, dateStr, dateStr);
-            if (acc.googleAdsCustomerId) await syncGoogleAds(acc.userId, dateStr, dateStr);
-            if (acc.facebookAdAccountId) await syncFacebookAds(acc.userId, dateStr, dateStr);
+            if (acc.ga4PropertyId) await syncGa4(acc, dateStr, dateStr);
+            if (acc.gscSiteUrl) await syncGsc(acc, dateStr, dateStr);
+            if (acc.googleAdsCustomerId) await syncGoogleAds(acc, dateStr, dateStr);
+            if (acc.facebookAdAccountId) await syncFacebookAds(acc, dateStr, dateStr);
             
-            await UserAccounts.findByIdAndUpdate(acc._id, { lastDailySyncAt: new Date() }, { returnDocument: 'after' });
+            await UserAccounts.findByIdAndUpdate(acc._id, { lastDailySyncAt: new Date() });
         } catch (e) {
-            console.error(`Daily Sync Partial Fail for User ${acc.userId}:`, e.message);
+            console.error(`Daily Sync Partial Fail for account ${acc._id}:`, e.message);
         }
     }
+
 };
 

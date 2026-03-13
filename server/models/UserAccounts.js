@@ -1,7 +1,8 @@
 import mongoose from 'mongoose';
 
 const userAccountsSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    siteName: { type: String, required: true, default: 'My Website' },
     ga4PropertyId: { type: String },
     ga4PropertyName: { type: String },
     ga4AccountId: { type: String },
@@ -19,5 +20,8 @@ const userAccountsSchema = new mongoose.Schema({
 }, {
     timestamps: true
 });
+
+userAccountsSchema.index({ userId: 1, siteName: 1 }, { unique: true });
+
 
 export default mongoose.model('UserAccounts', userAccountsSchema);
