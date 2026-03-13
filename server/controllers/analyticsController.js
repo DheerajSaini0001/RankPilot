@@ -45,82 +45,126 @@ export const getDashboardSummary = async (req, res) => {
     const userId = req.user._id;
 
     try {
-        // Fetch everything in parallel for speed
-        const [ga4Filter, gscFilter, adsFilter, tsFilter] = await Promise.all([
+        // Calculate previous period for growth comparison
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const diff = end - start;
+        const prevEnd = new Date(start.getTime() - (24 * 60 * 60 * 1000));
+        const prevStart = new Date(prevEnd.getTime() - diff);
+        const prevStartDate = prevStart.toISOString().split('T')[0];
+        const prevEndDate = prevEnd.toISOString().split('T')[0];
+
+        // Fetch everything in parallel
+        const [ga4Filter, gscFilter, adsFilter, tsGa4Filter, tsGscFilter, tsAdsFilter, prevGa4Filter, prevGscFilter, prevAdsFilter, topPagesFilter] = await Promise.all([
             buildMatchFilter(userId, 'ga4', req.query),
             buildMatchFilter(userId, 'gsc', req.query),
             buildMatchFilter(userId, ['google-ads', 'facebook-ads'], req.query),
+            buildMatchFilter(userId, 'ga4', req.query),
+            buildMatchFilter(userId, 'gsc', req.query),
+            buildMatchFilter(userId, ['google-ads', 'facebook-ads'], req.query),
+            buildMatchFilter(userId, 'ga4', { ...req.query, startDate: prevStartDate, endDate: prevEndDate }),
+            buildMatchFilter(userId, 'gsc', { ...req.query, startDate: prevStartDate, endDate: prevEndDate }),
+            buildMatchFilter(userId, ['google-ads', 'facebook-ads'], { ...req.query, startDate: prevStartDate, endDate: prevEndDate }),
             buildMatchFilter(userId, 'ga4', req.query)
         ]);
 
-        const [ga4Data, gscData, adsData, ga4Timeseries] = await Promise.all([
-            // GA4 Summary
+        const [ga4Data, gscData, adsData, ga4Ts, gscTs, adsTs, prevGa4Data, prevGscData, prevAdsData, topPages] = await Promise.all([
+            // Current Period
+            DailyMetric.aggregate([ { $match: ga4Filter }, { $group: { _id: null, activeUsers: { $sum: "$metrics.users" }, sessions: { $sum: "$metrics.sessions" }, screenPageViews: { $sum: "$metrics.pageViews" }, bounceRate: { $avg: "$metrics.bounceRate" } }} ]),
+            DailyMetric.aggregate([ { $match: gscFilter }, { $group: { _id: null, clicks: { $sum: "$metrics.clicks" }, impressions: { $sum: "$metrics.impressions" }, position: { $avg: "$metrics.position" } }} ]),
+            DailyMetric.aggregate([ { $match: adsFilter }, { $group: { _id: "$source", spend: { $sum: "$metrics.spend" }, impressions: { $sum: "$metrics.impressions" }, clicks: { $sum: "$metrics.clicks" }, conversions: { $sum: "$metrics.conversions" } }} ]),
+            
+            // Timeseries
+            DailyMetric.aggregate([ { $match: tsGa4Filter }, { $group: { _id: "$date", sessions: { $sum: "$metrics.sessions" } }}, { $sort: { _id: 1 } } ]),
+            DailyMetric.aggregate([ { $match: tsGscFilter }, { $group: { _id: "$date", clicks: { $sum: "$metrics.clicks" }, impressions: { $sum: "$metrics.impressions" } }}, { $sort: { _id: 1 } } ]),
+            DailyMetric.aggregate([ { $match: tsAdsFilter }, { $group: { _id: "$date", spend: { $sum: "$metrics.spend" }, conversions: { $sum: "$metrics.conversions" } }}, { $sort: { _id: 1 } } ]),
+            
+            // Previous Period (for growth)
+            DailyMetric.aggregate([ { $match: prevGa4Filter }, { $group: { _id: null, sessions: { $sum: "$metrics.sessions" } }} ]),
+            DailyMetric.aggregate([ { $match: prevGscFilter }, { $group: { _id: null, clicks: { $sum: "$metrics.clicks" } }} ]),
+            DailyMetric.aggregate([ { $match: prevAdsFilter }, { $group: { _id: "$source", spend: { $sum: "$metrics.spend" }, conversions: { $sum: "$metrics.conversions" } }} ]),
+
+            // Top Pages
             DailyMetric.aggregate([
-                { $match: ga4Filter },
+                { $match: topPagesFilter },
                 { $group: {
-                    _id: null,
-                    activeUsers: { $sum: "$metrics.users" },
-                    sessions: { $sum: "$metrics.sessions" },
-                    screenPageViews: { $sum: "$metrics.screenPageViews" },
-                    avgBounceRate: { $avg: "$metrics.bounceRate" }
-                }}
-            ]),
-            // GSC Summary
-            DailyMetric.aggregate([
-                { $match: gscFilter },
-                { $group: {
-                    _id: null,
-                    clicks: { $sum: "$metrics.clicks" },
-                    impressions: { $sum: "$metrics.impressions" },
-                    avgPosition: { $avg: "$metrics.position" }
-                }}
-            ]),
-            // Ads Summary (Both Google and Facebook)
-            DailyMetric.aggregate([
-                { $match: adsFilter },
-                { $group: {
-                    _id: "$source",
-                    spend: { $sum: "$metrics.spend" },
-                    impressions: { $sum: "$metrics.impressions" },
-                    clicks: { $sum: "$metrics.clicks" },
-                    conversions: { $sum: "$metrics.conversions" }
-                }}
-            ]),
-            // GA4 Timeseries for the chart
-            DailyMetric.aggregate([
-                { $match: tsFilter },
-                { $group: {
-                    _id: "$date",
-                    sessions: { $sum: "$metrics.sessions" }
+                    _id: "$dimensions.pagePath",
+                    views: { $sum: "$metrics.pageViews" },
+                    users: { $sum: "$metrics.users" },
+                    bounceRate: { $avg: "$metrics.bounceRate" }
                 }},
-                { $sort: { _id: 1 } }
+                { $sort: { views: -1 } },
+                { $limit: 5 }
             ])
         ]);
 
+        // Merge timeseries
+        const tsMap = {};
+        ga4Ts.forEach(d => { tsMap[d._id] = { date: d._id, Sessions: d.sessions, Clicks: 0, Impressions: 0, Spend: 0, Conversions: 0 }; });
+        gscTs.forEach(d => {
+            if (!tsMap[d._id]) tsMap[d._id] = { date: d._id, Sessions: 0, Clicks: 0, Impressions: 0, Spend: 0, Conversions: 0 };
+            tsMap[d._id].Clicks = d.clicks;
+            tsMap[d._id].Impressions = d.impressions;
+        });
+        adsTs.forEach(d => {
+            if (!tsMap[d._id]) tsMap[d._id] = { date: d._id, Sessions: 0, Clicks: 0, Impressions: 0, Spend: 0, Conversions: 0 };
+            tsMap[d._id].Spend = d.spend;
+            tsMap[d._id].Conversions = d.conversions;
+        });
+        const combinedTs = Object.values(tsMap).sort((a,b) => a.date.localeCompare(b.date));
 
-        const ga4 = ga4Data[0] || { activeUsers: 0, sessions: 0, screenPageViews: 0, avgBounceRate: 0 };
-        const gsc = gscData[0] || { clicks: 0, impressions: 0, avgPosition: 0 };
-        const gAds = adsData.find(r => r._id === 'google-ads') || { spend: 0, impressions: 0, clicks: 0, conversions: 0 };
-        const fbAds = adsData.find(r => r._id === 'facebook-ads') || { spend: 0, impressions: 0, clicks: 0, conversions: 0 };
+        const ga4 = ga4Data[0] || { activeUsers: 0, sessions: 0, screenPageViews: 0, bounceRate: 0 };
+        const gsc = gscData[0] || { clicks: 0, impressions: 0, position: 0 };
+        const adsDataAgg = adsData || [];
+        const gAds = adsDataAgg.find(r => r._id === 'google-ads') || { spend: 0, impressions: 0, clicks: 0, conversions: 0 };
+        const fbAds = adsDataAgg.find(r => r._id === 'facebook-ads') || { spend: 0, impressions: 0, clicks: 0, conversions: 0 };
+
+        const prevGa4 = prevGa4Data[0] || { sessions: 0 };
+        const prevGsc = prevGscData[0] || { clicks: 0 };
+        const prevAdsDataAgg = prevAdsData || [];
+        const prevGAds = prevAdsDataAgg.find(r => r._id === 'google-ads') || { spend: 0, conversions: 0 };
+        const prevFbAds = prevAdsDataAgg.find(r => r._id === 'facebook-ads') || { spend: 0, conversions: 0 };
+
+        const calculateGrowth = (current, previous) => {
+            if (!previous || previous === 0) return current > 0 ? 100 : 0;
+            return ((current - previous) / previous) * 100;
+        };
+
+        const totalConversions = gAds.conversions + fbAds.conversions;
+        const prevTotalConversions = prevGAds.conversions + prevFbAds.conversions;
+
+        // Generate dynamic insights
+        const insights = [];
+        if (ga4.sessions > prevGa4.sessions) {
+            insights.push({ title: 'Traffic Momentum', desc: `Traffic is up ${calculateGrowth(ga4.sessions, prevGa4.sessions).toFixed(1)}% compared to the previous period.`, color: 'brand', icon: 'UsersIcon' });
+        }
+        if (gsc.clicks > prevGsc.clicks) {
+            insights.push({ title: 'SEO Growth', desc: `Search visibility increased, driving ${gsc.clicks} clicks from Google Search.`, color: 'semantic-green', icon: 'MagnifyingGlassIcon' });
+        }
+        if (totalConversions > prevTotalConversions) {
+            insights.push({ title: 'Conversion Surge', desc: `Your marketing resonance is peaking with ${totalConversions} total conversions.`, color: 'accent', icon: 'CheckCircleIcon' });
+        } else if (totalConversions > 0) {
+             insights.push({ title: 'Conversion Insight', desc: `Connected channels generated ${totalConversions} conversions this period.`, color: 'brand', icon: 'CheckCircleIcon' });
+        }
+
+        if (insights.length < 3) {
+            insights.push({ title: 'Node Sync', desc: 'All data streams are currently synchronized and reflecting real-time metrics.', color: 'neutral', icon: 'CloudArrowUpIcon' });
+        }
 
         res.status(200).json({
-            ga4: {
-                activeUsers: ga4.activeUsers,
-                sessions: ga4.sessions,
-                avgBounceRate: ga4.avgBounceRate,
-                screenPageViews: ga4.screenPageViews
-            },
-            gsc: {
-                clicks: gsc.clicks,
-                impressions: gsc.impressions,
-                avgPosition: gsc.avgPosition
-            },
-            googleAds: gAds,
-            facebookAds: fbAds,
-            timeseries: ga4Timeseries.map(d => ({
-                date: d._id,
-                traffic: d.sessions
-            }))
+            ga4: { ...ga4, growth: calculateGrowth(ga4.sessions, prevGa4.sessions) },
+            gsc: { ...gsc, growth: calculateGrowth(gsc.clicks, prevGsc.clicks) },
+            googleAds: { ...gAds, growth: calculateGrowth(gAds.conversions, prevGAds.conversions) },
+            facebookAds: { ...fbAds, growth: calculateGrowth(fbAds.spend, prevFbAds.spend) },
+            timeseries: combinedTs,
+            topPages: topPages.map(p => ({
+                url: p._id || '/',
+                visitors: p.users,
+                views: p.views,
+                bounce: ((p.bounceRate || 0) * 100).toFixed(0) + '%',
+                share: ga4.screenPageViews > 0 ? Math.round((p.views / ga4.screenPageViews) * 100) : 0
+            })),
+            insights: insights.slice(0, 3)
         });
     } catch (error) {
         console.error('Dashboard Summary Error:', error);
@@ -134,7 +178,7 @@ export const getGa4Summary = async (req, res) => {
 
     try {
         const filter = await buildMatchFilter(userId, 'ga4', req.query);
-        const [overview, timeseries, traffic, pages] = await Promise.all([
+        const [overview, timeseries, traffic, pages, ga4BreakdownsDevices, ga4BreakdownsLocations] = await Promise.all([
             DailyMetric.aggregate([
                 { $match: filter },
                 { $group: {
@@ -142,8 +186,8 @@ export const getGa4Summary = async (req, res) => {
                     users: { $sum: "$metrics.users" },
                     sessions: { $sum: "$metrics.sessions" },
                     bounceRate: { $avg: "$metrics.bounceRate" },
-                    avgSessionDuration: { $avg: "$metrics.sessionDuration" },
-                    pageViews: { $sum: "$metrics.screenPageViews" }
+                    avgSessionDuration: { $avg: "$metrics.avgSessionDuration" },
+                    pageViews: { $sum: "$metrics.pageViews" }
                 }}
             ]),
             DailyMetric.aggregate([
@@ -165,11 +209,28 @@ export const getGa4Summary = async (req, res) => {
                 { $match: filter },
                 { $group: {
                     _id: { path: "$dimensions.pagePath", title: "$dimensions.pageTitle" },
-                    views: { $sum: "$metrics.screenPageViews" },
+                    views: { $sum: "$metrics.pageViews" },
                     users: { $sum: "$metrics.users" }
                 }},
                 { $sort: { views: -1 } },
                 { $limit: 10 }
+            ]),
+            DailyMetric.aggregate([
+                { $match: filter },
+                { $group: {
+                    _id: "$dimensions.device",
+                    value: { $sum: "$metrics.sessions" }
+                }},
+                { $sort: { value: -1 } }
+            ]),
+            DailyMetric.aggregate([
+                { $match: filter },
+                { $group: {
+                    _id: "$dimensions.country",
+                    value: { $sum: "$metrics.sessions" }
+                }},
+                { $sort: { value: -1 } },
+                { $limit: 5 }
             ])
         ]);
 
@@ -178,7 +239,11 @@ export const getGa4Summary = async (req, res) => {
             overview: overview[0] || { users: 0, sessions: 0, bounceRate: 0, avgSessionDuration: 0, pageViews: 0 },
             timeseries: timeseries.map(d => ({ date: d._id, sessions: d.sessions })),
             traffic: traffic.map(d => ({ channel: d._id.channel, source: d._id.source, sessions: d.sessions, users: d.users })),
-            pages: pages.map(d => ({ path: d._id.path, title: d._id.title, views: d.views, users: d.users }))
+            pages: pages.map(d => ({ path: d._id.path, title: d._id.title, views: d.views, users: d.users })),
+            breakdowns: {
+                devices: (ga4BreakdownsDevices || []).map(d => ({ name: d._id || 'unknown', value: d.value })),
+                locations: (ga4BreakdownsLocations || []).map(d => ({ name: d._id || 'unknown', value: d.value }))
+            }
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -191,7 +256,7 @@ export const getGscSummary = async (req, res) => {
 
     try {
         const filter = await buildMatchFilter(userId, 'gsc', req.query);
-        const [overview, timeseries, queries, pages] = await Promise.all([
+        const [overview, timeseries, queries, pages, deviceBreakdown] = await Promise.all([
             DailyMetric.aggregate([
                 { $match: filter },
                 { $group: {
@@ -226,6 +291,10 @@ export const getGscSummary = async (req, res) => {
                 }},
                 { $sort: { clicks: -1 } },
                 { $limit: 10 }
+            ]),
+            DailyMetric.aggregate([
+                { $match: filter },
+                { $group: { _id: "$dimensions.device", value: { $sum: "$metrics.clicks" } } }
             ])
         ]);
 
@@ -235,7 +304,8 @@ export const getGscSummary = async (req, res) => {
             overview: { ...ov, ctr: ov.impressions > 0 ? ov.clicks / ov.impressions : 0 },
             timeseries: timeseries.map(d => ({ date: d._id, clicks: d.clicks, impressions: d.impressions })),
             queries: queries.map(d => ({ query: d._id, clicks: d.clicks, impressions: d.impressions, ctr: d.impressions > 0 ? d.clicks / d.impressions : 0, position: d.position })),
-            pages: pages.map(d => ({ page: d._id, clicks: d.clicks, impressions: d.impressions }))
+            pages: pages.map(d => ({ page: d._id, clicks: d.clicks, impressions: d.impressions, ctr: d.impressions > 0 ? d.clicks / d.impressions : 0 })),
+            devices: deviceBreakdown.map(d => ({ name: d._id || 'unknown', value: d.value }))
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -248,7 +318,7 @@ export const getGoogleAdsSummary = async (req, res) => {
 
     try {
         const filter = await buildMatchFilter(userId, 'google-ads', req.query);
-        const [overview, timeseries, campaigns, keywords] = await Promise.all([
+        const [overview, timeseries, campaigns, keywords, deviceBreakdown] = await Promise.all([
             DailyMetric.aggregate([
                 { $match: filter },
                 { $group: {
@@ -267,7 +337,7 @@ export const getGoogleAdsSummary = async (req, res) => {
             DailyMetric.aggregate([
                 { $match: filter },
                 { $group: {
-                    _id: { name: "$dimensions.campaign", status: "$dimensions.status" },
+                    _id: { name: "$dimensions.campaign", status: "$dimensions.campaignStatus" },
                     cost: { $sum: "$metrics.spend" },
                     impressions: { $sum: "$metrics.impressions" },
                     clicks: { $sum: "$metrics.clicks" },
@@ -285,6 +355,10 @@ export const getGoogleAdsSummary = async (req, res) => {
                 }},
                 { $sort: { cost: -1 } },
                 { $limit: 10 }
+            ]),
+            DailyMetric.aggregate([
+                { $match: filter },
+                { $group: { _id: "$dimensions.device", value: { $sum: "$metrics.spend" } } }
             ])
         ]);
 
@@ -297,8 +371,25 @@ export const getGoogleAdsSummary = async (req, res) => {
                 cpc: ov.clicks > 0 ? ov.cost / ov.clicks : 0
             },
             timeseries: timeseries.map(d => ({ date: d._id, cost: d.cost, clicks: d.clicks })),
-            campaigns: campaigns.map(d => ({ name: d._id.name, status: d._id.status, cost: d.cost, impressions: d.impressions, clicks: d.clicks, conversions: d.conversions })),
-            keywords: keywords.map(d => ({ name: d._id, cost: d.cost, impressions: d.impressions, clicks: d.clicks }))
+            devices: deviceBreakdown.map(d => ({ name: d._id || 'unknown', value: d.value })),
+            campaigns: campaigns.map(d => ({ 
+                name: d._id.name, 
+                status: d._id.status, 
+                cost: d.cost, 
+                impressions: d.impressions, 
+                clicks: d.clicks, 
+                conversions: d.conversions,
+                ctr: d.impressions > 0 ? d.clicks / d.impressions : 0,
+                cpc: d.clicks > 0 ? d.cost / d.clicks : 0
+            })),
+            keywords: keywords.map(d => ({ 
+                name: d._id, 
+                cost: d.cost, 
+                impressions: d.impressions, 
+                clicks: d.clicks,
+                ctr: d.impressions > 0 ? d.clicks / d.impressions : 0,
+                cpc: d.clicks > 0 ? d.cost / d.clicks : 0
+            }))
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -311,14 +402,15 @@ export const getFacebookAdsSummary = async (req, res) => {
 
     try {
         const filter = await buildMatchFilter(userId, 'facebook-ads', req.query);
-        const [overview, timeseries, campaigns, adsets] = await Promise.all([
+        const [overview, timeseries, campaigns, adsets, deviceBreakdown] = await Promise.all([
             DailyMetric.aggregate([
                 { $match: filter },
                 { $group: {
                     _id: null,
                     spend: { $sum: "$metrics.spend" },
                     impressions: { $sum: "$metrics.impressions" },
-                    clicks: { $sum: "$metrics.clicks" }
+                    clicks: { $sum: "$metrics.clicks" },
+                    conversions: { $sum: "$metrics.conversions" }
                 }}
             ]),
             DailyMetric.aggregate([
@@ -332,7 +424,8 @@ export const getFacebookAdsSummary = async (req, res) => {
                     _id: "$dimensions.campaign",
                     spend: { $sum: "$metrics.spend" },
                     impressions: { $sum: "$metrics.impressions" },
-                    clicks: { $sum: "$metrics.clicks" }
+                    clicks: { $sum: "$metrics.clicks" },
+                    conversions: { $sum: "$metrics.conversions" }
                 }},
                 { $sort: { spend: -1 } }
             ]),
@@ -342,15 +435,20 @@ export const getFacebookAdsSummary = async (req, res) => {
                     _id: "$dimensions.adset",
                     spend: { $sum: "$metrics.spend" },
                     impressions: { $sum: "$metrics.impressions" },
-                    clicks: { $sum: "$metrics.clicks" }
+                    clicks: { $sum: "$metrics.clicks" },
+                    conversions: { $sum: "$metrics.conversions" }
                 }},
                 { $sort: { spend: -1 } },
                 { $limit: 10 }
+            ]),
+            DailyMetric.aggregate([
+                { $match: filter },
+                { $group: { _id: "$dimensions.device", value: { $sum: "$metrics.spend" } } }
             ])
         ]);
 
 
-        const ov = overview[0] || { spend: 0, impressions: 0, clicks: 0 };
+        const ov = overview[0] || { spend: 0, impressions: 0, clicks: 0, conversions: 0 };
         res.status(200).json({
             overview: {
                 ...ov,
@@ -358,8 +456,25 @@ export const getFacebookAdsSummary = async (req, res) => {
                 cpc: ov.clicks > 0 ? ov.spend / ov.clicks : 0
             },
             timeseries: timeseries.map(d => ({ date: d._id, spend: d.spend, clicks: d.clicks })),
-            campaigns: campaigns.map(d => ({ name: d._id, spend: d.spend, impressions: d.impressions, clicks: d.clicks })),
-            adsets: adsets.map(d => ({ name: d._id, spend: d.spend, impressions: d.impressions, clicks: d.clicks }))
+            devices: deviceBreakdown.map(d => ({ name: d._id || 'unknown', value: d.value })),
+            campaigns: campaigns.map(d => ({ 
+                name: d._id, 
+                spend: d.spend, 
+                impressions: d.impressions, 
+                clicks: d.clicks,
+                conversions: d.conversions,
+                ctr: d.impressions > 0 ? (d.clicks / d.impressions) * 100 : 0,
+                cpc: d.clicks > 0 ? d.spend / d.clicks : 0
+            })),
+            adsets: adsets.map(d => ({ 
+                name: d._id, 
+                spend: d.spend, 
+                impressions: d.impressions, 
+                clicks: d.clicks,
+                conversions: d.conversions,
+                ctr: d.impressions > 0 ? (d.clicks / d.impressions) * 100 : 0,
+                cpc: d.clicks > 0 ? d.spend / d.clicks : 0
+            }))
         });
     } catch (error) {
         res.status(500).json({ message: error.message });

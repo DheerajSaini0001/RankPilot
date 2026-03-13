@@ -17,6 +17,7 @@ const ConnectAccountsPage = () => {
     const navigate = useNavigate();
     const queryParams = new URLSearchParams(window.location.search);
     const isNew = queryParams.get('new') === 'true';
+    const isViewOnly = queryParams.get('view') === 'true';
 
     // Data lists
     const [ga4Props, setGa4Props] = useState([]);
@@ -30,6 +31,7 @@ const ConnectAccountsPage = () => {
     const [selectedGAds, setSelectedGAds] = useState('');
     const [selectedFbAds, setSelectedFbAds] = useState('');
     const [siteName, setSiteName] = useState('My Website');
+    const [initialValues, setInitialValues] = useState({});
 
 
     useEffect(() => {
@@ -47,13 +49,22 @@ const ConnectAccountsPage = () => {
             if (!isNew) {
                 const active = await getActiveAccounts(activeSiteId);
                 if (active.data) {
-                    if (active.data.siteName) setSiteName(active.data.siteName);
-                    if (active.data.ga4PropertyId) setSelectedGa4(active.data.ga4PropertyId);
-                    if (active.data.gscSiteUrl) setSelectedGsc(active.data.gscSiteUrl);
-                    if (active.data.googleAdsCustomerId) setSelectedGAds(active.data.googleAdsCustomerId);
-                    if (active.data.facebookAdAccountId) setSelectedFbAds(active.data.facebookAdAccountId);
+                    const vals = {
+                        siteName: active.data.siteName || '',
+                        ga4: active.data.ga4PropertyId || '',
+                        gsc: active.data.gscSiteUrl || '',
+                        gAds: active.data.googleAdsCustomerId || '',
+                        fbAds: active.data.facebookAdAccountId || ''
+                    };
+                    setInitialValues(vals);
+                    if (vals.siteName) setSiteName(vals.siteName);
+                    if (vals.ga4) setSelectedGa4(vals.ga4);
+                    if (vals.gsc) setSelectedGsc(vals.gsc);
+                    if (vals.gAds) setSelectedGAds(vals.gAds);
+                    if (vals.fbAds) setSelectedFbAds(vals.fbAds);
                 }
             } else {
+                setInitialValues({});
                 // Reset selections for new site
                 setSiteName('New Website');
                 setSelectedGa4('');
@@ -152,10 +163,12 @@ const ConnectAccountsPage = () => {
                                 type="text"
                                 value={siteName}
                                 onChange={e => setSiteName(e.target.value)}
+                                disabled={isViewOnly && !!initialValues.siteName}
                                 placeholder="e.g. My Portfolio, Client XYZ"
-                                className="w-full max-w-md text-lg font-bold rounded-xl border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-dark-surface text-neutral-900 dark:text-white focus:ring-brand-400 py-3 px-4 focus:outline-none focus:ring-2 shadow-sm"
+                                className={`w-full max-w-md text-lg font-bold rounded-xl border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-dark-surface text-neutral-900 dark:text-white focus:ring-brand-400 py-3 px-4 focus:outline-none focus:ring-2 shadow-sm ${isViewOnly && initialValues.siteName ? 'opacity-70 cursor-not-allowed' : ''}`}
                             />
-                            <p className="text-xs text-neutral-500 mt-2 italic">* Use a unique name to distinguish multiple websites.</p>
+                            {isViewOnly && <p className="text-[10px] text-brand-500 mt-2 font-black uppercase tracking-[0.2em]">Intelligent Security Mode Active</p>}
+                            {!isViewOnly && <p className="text-xs text-neutral-500 mt-2 italic">* Use a unique name to distinguish multiple websites.</p>}
                         </div>
 
                         {/* Google Integrations (Combined) */}
@@ -194,7 +207,8 @@ const ConnectAccountsPage = () => {
                                                 <select
                                                     value={selectedGa4}
                                                     onChange={e => setSelectedGa4(e.target.value)}
-                                                    className="w-full text-sm rounded-lg border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-neutral-900 dark:text-white focus:ring-brand-400 py-2.5 px-3 focus:outline-none focus:ring-2 shadow-sm font-medium"
+                                                    disabled={isViewOnly && !!initialValues.ga4}
+                                                    className={`w-full text-sm rounded-lg border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-neutral-900 dark:text-white focus:ring-brand-400 py-2.5 px-3 focus:outline-none focus:ring-2 shadow-sm font-medium ${isViewOnly && initialValues.ga4 ? 'opacity-70 cursor-not-allowed' : ''}`}
                                                 >
                                                     <option value="">Select Property...</option>
                                                     {ga4Props.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -207,7 +221,8 @@ const ConnectAccountsPage = () => {
                                                 <select
                                                     value={selectedGsc}
                                                     onChange={e => setSelectedGsc(e.target.value)}
-                                                    className="w-full text-sm rounded-lg border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-neutral-900 dark:text-white focus:ring-brand-400 py-2.5 px-3 focus:outline-none focus:ring-2 shadow-sm font-medium"
+                                                    disabled={isViewOnly && !!initialValues.gsc}
+                                                    className={`w-full text-sm rounded-lg border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-neutral-900 dark:text-white focus:ring-brand-400 py-2.5 px-3 focus:outline-none focus:ring-2 shadow-sm font-medium ${isViewOnly && initialValues.gsc ? 'opacity-70 cursor-not-allowed' : ''}`}
                                                 >
                                                     <option value="">Select Site...</option>
                                                     {gscSites.map(s => <option key={s.siteUrl} value={s.siteUrl}>{s.siteUrl}</option>)}
@@ -220,7 +235,8 @@ const ConnectAccountsPage = () => {
                                                 <select
                                                     value={selectedGAds}
                                                     onChange={e => setSelectedGAds(e.target.value)}
-                                                    className="w-full text-sm rounded-lg border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-neutral-900 dark:text-white focus:ring-brand-400 py-2.5 px-3 focus:outline-none focus:ring-2 shadow-sm font-medium"
+                                                    disabled={isViewOnly && !!initialValues.gAds}
+                                                    className={`w-full text-sm rounded-lg border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-neutral-900 dark:text-white focus:ring-brand-400 py-2.5 px-3 focus:outline-none focus:ring-2 shadow-sm font-medium ${isViewOnly && initialValues.gAds ? 'opacity-70 cursor-not-allowed' : ''}`}
                                                 >
                                                     <option value="">Select Account...</option>
                                                     {gAdsAccounts.map(g => <option key={g} value={g}>{g}</option>)}
@@ -264,7 +280,8 @@ const ConnectAccountsPage = () => {
                                             <select
                                                 value={selectedFbAds}
                                                 onChange={e => setSelectedFbAds(e.target.value)}
-                                                className="w-full text-sm rounded-lg border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-neutral-900 dark:text-white focus:ring-brand-400 py-2.5 px-3 focus:outline-none focus:ring-2 shadow-sm font-medium"
+                                                disabled={isViewOnly && !!initialValues.fbAds}
+                                                className={`w-full text-sm rounded-lg border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-neutral-900 dark:text-white focus:ring-brand-400 py-2.5 px-3 focus:outline-none focus:ring-2 shadow-sm font-medium ${isViewOnly && initialValues.fbAds ? 'opacity-70 cursor-not-allowed' : ''}`}
                                             >
                                                 <option value="">Select Ad Account...</option>
                                                 {fbAdAccounts.map(f => <option key={f.id} value={f.id}>{f.name} ({f.id})</option>)}
@@ -276,9 +293,12 @@ const ConnectAccountsPage = () => {
                         </div>
 
                         {/* Save Actions */}
-                        <div className="flex justify-end pt-10 pb-6 relative z-10 mt-6 md:mt-auto shrink-0 border-t border-neutral-200/60 dark:border-neutral-700/60">
+                        <div className="flex flex-col sm:flex-row justify-end gap-3 pt-10 pb-6 relative z-10 mt-6 md:mt-auto shrink-0 border-t border-neutral-200/60 dark:border-neutral-700/60">
+                            <Button variant="secondary" onClick={() => navigate('/sites')} className="px-8 py-3 text-sm tracking-wide">
+                                Cancel
+                            </Button>
                             <Button loading={saving} onClick={handleSave} className="px-8 py-3 text-sm tracking-wide shadow-xl shadow-brand-500/20">
-                                Save Integration Settings
+                                {isViewOnly ? 'Update Missing Connections' : 'Save Integration Settings'}
                             </Button>
                         </div>
                     </div>

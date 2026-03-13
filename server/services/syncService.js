@@ -43,10 +43,11 @@ const syncGa4 = async (acc, startDate, endDate) => {
     if (!acc || !acc.ga4PropertyId) return;
     const userId = acc.userId;
 
-    // Fetch granular data: Date + Source/Medium + Device + Location + Page
+    // Fetch granular data: Date + Channel + Source/Medium + Device + Location + Page + Browser/OS
+    // Note: GA4 runReport has a 9 dimension limit per request
     const report = await runGa4Report(userId, 'ultra_detail_sync', startDate, endDate, 
-        ['date', 'sessionSourceMedium', 'deviceCategory', 'country', 'city', 'landingPagePlusQueryString'], 
-        ['activeUsers', 'sessions', 'bounceRate', 'screenPageViews', 'averageSessionDuration', 'conversions', 'totalRevenue']
+        ['date', 'sessionDefaultChannelGroup', 'sessionSourceMedium', 'deviceCategory', 'country', 'browser', 'operatingSystem', 'pagePath', 'pageTitle'], 
+        ['activeUsers', 'sessions', 'bounceRate', 'screenPageViews', 'averageSessionDuration', 'conversions', 'totalRevenue', 'engagementRate']
     );
     
     if (report.rows) {
@@ -60,19 +61,25 @@ const syncGa4 = async (acc, startDate, endDate) => {
                         platformAccountId: acc.ga4PropertyId,
                         source: 'ga4', 
                         date: formattedDate,
-                        'dimensions.source': row.dimensionValues[1].value,
-                        'dimensions.device': row.dimensionValues[2].value,
-                        'dimensions.country': row.dimensionValues[3].value,
-                        'dimensions.city': row.dimensionValues[4].value,
-                        'dimensions.landingPage': row.dimensionValues[5].value
+                        'dimensions.channel': row.dimensionValues[1].value,
+                        'dimensions.source': row.dimensionValues[2].value,
+                        'dimensions.device': row.dimensionValues[3].value,
+                        'dimensions.country': row.dimensionValues[4].value,
+                        'dimensions.browser': row.dimensionValues[5].value,
+                        'dimensions.os': row.dimensionValues[6].value,
+                        'dimensions.pagePath': row.dimensionValues[7].value,
+                        'dimensions.pageTitle': row.dimensionValues[8].value
                     },
                     update: {
                         dimensions: {
-                            source: row.dimensionValues[1].value,
-                            device: row.dimensionValues[2].value,
-                            country: row.dimensionValues[3].value,
-                            city: row.dimensionValues[4].value,
-                            landingPage: row.dimensionValues[5].value
+                            channel: row.dimensionValues[1].value,
+                            source: row.dimensionValues[2].value,
+                            device: row.dimensionValues[3].value,
+                            country: row.dimensionValues[4].value,
+                            browser: row.dimensionValues[5].value,
+                            os: row.dimensionValues[6].value,
+                            pagePath: row.dimensionValues[7].value,
+                            pageTitle: row.dimensionValues[8].value
                         },
                         metrics: {
                             users: parseFloat(row.metricValues[0].value || 0),
@@ -81,7 +88,8 @@ const syncGa4 = async (acc, startDate, endDate) => {
                             pageViews: parseFloat(row.metricValues[3].value || 0),
                             avgSessionDuration: parseFloat(row.metricValues[4].value || 0),
                             conversions: parseFloat(row.metricValues[5].value || 0),
-                            revenue: parseFloat(row.metricValues[6].value || 0)
+                            revenue: parseFloat(row.metricValues[6].value || 0),
+                            engagementRate: parseFloat(row.metricValues[7].value || 0)
                         }
                     },
                     upsert: true
@@ -102,12 +110,12 @@ const syncGsc = async (acc, startDate, endDate) => {
     if (!acc || !acc.gscSiteUrl) return;
     const userId = acc.userId;
 
-    // Fetch granular data: Date + Page + Query + Device + Country
-    const res = await runGscQuery(userId, 'ultra_detail_sync', startDate, endDate, ['date', 'page', 'query', 'device', 'country']);
+    // Fetch granular data: Date + Page + Query + Device + Country + Search Appearance
+    const res = await runGscQuery(userId, 'ultra_detail_sync', startDate, endDate, ['date', 'page', 'query', 'device', 'country', 'searchAppearance']);
     
     if (res.rows) {
-        // Increase limit to 5000 rows for more detail
-        const operations = res.rows.slice(0, 5000).map(row => {
+        // Increase limit to 25000 rows for maximum detail
+        const operations = res.rows.slice(0, 25000).map(row => {
             return {
                 updateOne: {
                     filter: { 
@@ -118,14 +126,16 @@ const syncGsc = async (acc, startDate, endDate) => {
                         'dimensions.page': row.keys[1],
                         'dimensions.query': row.keys[2],
                         'dimensions.device': row.keys[3],
-                        'dimensions.country': row.keys[4]
+                        'dimensions.country': row.keys[4],
+                        'dimensions.searchAppearance': row.keys[5] || 'WEB'
                     },
                     update: {
                         dimensions: {
                             page: row.keys[1],
                             query: row.keys[2],
                             device: row.keys[3],
-                            country: row.keys[4]
+                            country: row.keys[4],
+                            searchAppearance: row.keys[5] || 'WEB'
                         },
                         metrics: {
                             clicks: row.clicks,
@@ -152,18 +162,23 @@ const syncGoogleAds = async (acc, startDate, endDate) => {
     if (!acc || !acc.googleAdsCustomerId) return;
     const userId = acc.userId;
 
-    // Fetch by Date + Campaign + Ad Group + Device
+    // Fetch by Date + Campaign + Ad Group + Device + Network
     const query = `
         SELECT 
             segments.date, 
             campaign.name, 
+            campaign.status,
             ad_group.name,
+            ad_group.status,
             segments.device,
+            segments.ad_network_type,
             metrics.cost_micros, 
             metrics.impressions, 
             metrics.clicks, 
             metrics.conversions,
-            metrics.conversions_value
+            metrics.conversions_value,
+            metrics.interactions,
+            metrics.video_views
         FROM customer 
         WHERE segments.date BETWEEN '${startDate}' AND '${endDate}'
     `;
@@ -178,21 +193,29 @@ const syncGoogleAds = async (acc, startDate, endDate) => {
                     source: 'google-ads', 
                     date: row.segments.date,
                     'dimensions.campaign': row.campaign.name,
+                    'dimensions.campaignStatus': row.campaign.status,
                     'dimensions.adGroup': row.adGroup?.name,
-                    'dimensions.device': row.segments.device
+                    'dimensions.adGroupStatus': row.adGroup?.status,
+                    'dimensions.device': row.segments.device,
+                    'dimensions.network': row.segments.adNetworkType
                 },
                 update: {
                     dimensions: {
                         campaign: row.campaign.name,
+                        campaignStatus: row.campaign.status,
                         adGroup: row.adGroup?.name,
-                        device: row.segments.device
+                        adGroupStatus: row.adGroup?.status,
+                        device: row.segments.device,
+                        network: row.segments.adNetworkType
                     },
                     metrics: {
                         spend: parseFloat(row.metrics.costMicros || 0) / 1000000,
                         impressions: parseFloat(row.metrics.impressions || 0),
                         clicks: parseFloat(row.metrics.clicks || 0),
                         conversions: parseFloat(row.metrics.conversions || 0),
-                        conversionValue: parseFloat(row.metrics.conversionsValue || 0)
+                        conversionValue: parseFloat(row.metrics.conversionsValue || 0),
+                        interactions: parseFloat(row.metrics.interactions || 0),
+                        videoViews: parseFloat(row.metrics.videoViews || 0)
                     }
                 },
                 upsert: true
@@ -212,10 +235,10 @@ const syncFacebookAds = async (acc, startDate, endDate) => {
     if (!acc || !acc.facebookAdAccountId) return;
     const userId = acc.userId;
 
-    // Fetch by Date + Campaign + Ad Set + Ad + Device
+    // Fetch by Date + Campaign + Ad Set + Ad + Device + Placement
     const res = await getFbInsights(userId, 'ultra_detail_sync', startDate, endDate, 'ad', { 
         time_increment: 1,
-        breakdowns: 'device_platform'
+        breakdowns: ['device_platform', 'publisher_platform']
     });
 
     if (res && res.length > 0) {
@@ -227,16 +250,18 @@ const syncFacebookAds = async (acc, startDate, endDate) => {
                     source: 'facebook-ads', 
                     date: row.date_start,
                     'dimensions.campaign': row.campaign_name,
-                    'dimensions.adSet': row.adset_name,
+                    'dimensions.adset': row.adset_name,
                     'dimensions.ad': row.ad_name,
-                    'dimensions.device': row.device_platform
+                    'dimensions.device': row.device_platform,
+                    'dimensions.publisher': row.publisher_platform
                 },
                 update: {
                     dimensions: {
                         campaign: row.campaign_name,
-                        adSet: row.adset_name,
+                        adset: row.adset_name,
                         ad: row.ad_name,
-                        device: row.device_platform
+                        device: row.device_platform,
+                        publisher: row.publisher_platform
                     },
                     metrics: {
                         spend: parseFloat(row.spend || 0),
@@ -244,7 +269,9 @@ const syncFacebookAds = async (acc, startDate, endDate) => {
                         clicks: parseFloat(row.clicks || 0),
                         reach: parseFloat(row.reach || 0),
                         conversions: parseFloat(row.conversions?.[0]?.value || 0),
-                        frequency: parseFloat(row.frequency || 0)
+                        frequency: parseFloat(row.frequency || 0),
+                        cpc: parseFloat(row.cpc || 0),
+                        ctr: parseFloat(row.ctr || 0)
                     }
                 },
                 upsert: true

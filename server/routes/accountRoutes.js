@@ -28,5 +28,4 @@ router.delete('/sites/:siteId', catchAsync(deleteSite));
 router.delete('/disconnect/google', catchAsync(disconnectGoogle));
 router.delete('/disconnect/facebook', catchAsync(disconnectFacebook));
 
-
 export default router;

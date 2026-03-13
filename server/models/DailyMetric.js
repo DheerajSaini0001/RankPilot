@@ -19,5 +19,10 @@ dailyMetricSchema.index({ date: 1 });
 dailyMetricSchema.index({ 'dimensions.campaign': 1 }); // Important for Ads
 dailyMetricSchema.index({ 'dimensions.query': 1 });    // Important for GSC
 dailyMetricSchema.index({ 'dimensions.device': 1 });   // Universal detailed filtering
+dailyMetricSchema.index({ 'dimensions.country': 1 });
+dailyMetricSchema.index({ 'dimensions.region': 1 });
+dailyMetricSchema.index({ 'dimensions.landingPage': 1 });
+dailyMetricSchema.index({ 'dimensions.network': 1 });
+dailyMetricSchema.index({ 'dimensions.publisher': 1 }); // Facebook Placements
 
 export default mongoose.model('DailyMetric', dailyMetricSchema);

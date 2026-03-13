@@ -7,8 +7,10 @@ export const useFilterStore = create(
             device: '', // mobile, desktop, tablet
             campaign: '',
             channel: '',
+            searchQuery: '',
             setFilters: (filters) => set((state) => ({ ...state, ...filters })),
-            resetFilters: () => set({ device: '', campaign: '', channel: '' }),
+            setSearchQuery: (query) => set({ searchQuery: query }),
+            resetFilters: () => set({ device: '', campaign: '', channel: '', searchQuery: '' }),
         }),
         {
             name: 'filter-storage',

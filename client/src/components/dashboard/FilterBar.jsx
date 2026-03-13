@@ -14,7 +14,7 @@ import {
     CloudArrowUpIcon
 } from '@heroicons/react/24/outline';
 
-const FilterBar = ({ showDevice = true, showCampaign = false, showChannel = false }) => {
+const FilterBar = ({ showDevice = true, showCampaign = false, showChannel = false, onRefresh, loading }) => {
     const { preset, setPreset, startDate, endDate } = useDateRangeStore();
     const { device, campaign, channel, setFilters, resetFilters } = useFilterStore();
     const { 
@@ -56,7 +56,11 @@ const FilterBar = ({ showDevice = true, showCampaign = false, showChannel = fals
     };
 
     return (
-        <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-2xl p-4 mb-6 shadow-sm flex flex-wrap items-center gap-4 transition-all overflow-x-auto no-scrollbar">
+        <div className="bg-white/80 dark:bg-dark-card/80 backdrop-blur-md border border-neutral-200/60 dark:border-neutral-700/60 rounded-[2rem] p-3 mb-8 shadow-sm flex items-center gap-4 transition-all relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/5 rounded-full blur-2xl -mr-16 -mt-16 group-hover:bg-brand-500/10 transition-colors"></div>
+            
+            <div className="flex items-center gap-4 w-full overflow-x-auto no-scrollbar py-1">
+
             {/* Date Range Section */}
             <div className="flex items-center gap-2 pr-4 border-r border-neutral-100 dark:border-neutral-800">
                 <div className="p-2 bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 rounded-lg">
@@ -146,45 +150,57 @@ const FilterBar = ({ showDevice = true, showCampaign = false, showChannel = fals
                 </button>
             )}
 
-            {/* Sync Status Section */}
-            {(activeGa4PropertyId || activeGscSite || activeGoogleAdsCustomerId || activeFacebookAdAccountId) ? (
-                <div className="ml-auto flex items-center gap-3 pl-4 border-l border-neutral-100 dark:border-neutral-800">
+            {/* Status & Actions Section */}
+            <div className="ml-auto flex items-center gap-4 pl-4 border-l border-neutral-100 dark:border-neutral-800">
+               {/* Sync Status Badge or Connect Button */}
+               {(activeGa4PropertyId || activeGscSite || activeGoogleAdsCustomerId || activeFacebookAdAccountId) ? (
                     <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${
                         syncMetadata.syncStatus === 'syncing' 
                         ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-800 animate-pulse' 
                         : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800'
                     }`}>
                         {syncMetadata.syncStatus === 'syncing' ? (
-                            <>
-                                <ArrowPathIcon className="w-4 h-4 animate-spin" />
-                                <span className="text-[11px] font-bold whitespace-nowrap">Syncing historical...</span>
-                            </>
+                            <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" />
                         ) : (
-                            <>
-                                <CheckCircleIcon className="w-4 h-4" />
-                                <div className="flex flex-col">
-                                    <span className="text-[10px] leading-none font-black uppercase tracking-wider">Data Synced</span>
-                                    {syncMetadata.lastDailySyncAt && (
-                                        <span className="text-[9px] font-bold opacity-80 whitespace-nowrap mt-0.5">
-                                            Last: {new Date(syncMetadata.lastDailySyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </span>
-                                    )}
-                                </div>
-                            </>
+                            <CheckCircleIcon className="w-3.5 h-3.5" />
                         )}
+                        <div className="flex flex-col">
+                            <span className="text-[9px] font-black uppercase tracking-wider leading-none">
+                                {syncMetadata.syncStatus === 'syncing' ? 'Syncing...' : 'Neural Synced'}
+                            </span>
+                        </div>
                     </div>
-                </div>
-            ) : (
-                <div className="ml-auto pl-4 border-l border-neutral-100 dark:border-neutral-800">
+                ) : (
                     <a 
                         href="/connect-accounts"
-                        className="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-black transition-all shadow-lg shadow-brand-500/20 hover:scale-105 active:scale-95 animate-pulse"
+                        className="flex items-center gap-2 px-4 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-[10px] font-black transition-all shadow-lg shadow-brand-500/10 hover:scale-105 active:scale-95"
                     >
-                        <CloudArrowUpIcon className="w-4 h-4" />
-                        <span>Connect Accounts</span>
+                        <CloudArrowUpIcon className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Connect Node</span>
                     </a>
+                )}
+
+                {/* Data Resonance / Refresh */}
+                {onRefresh && (
+                    <div className="flex items-center gap-4">
+                        <div className="hidden xl:flex flex-col items-end border-l border-neutral-100 dark:border-neutral-800 pl-4">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-neutral-400">Resonance</span>
+                            <span className="text-[10px] font-bold text-neutral-600 dark:text-neutral-300">
+                                {loading ? 'Syncing...' : `${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                            </span>
+                        </div>
+                        <button 
+                            onClick={onRefresh}
+                            disabled={loading}
+                            className={`p-2 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:border-brand-500/50 hover:bg-brand-50 dark:hover:bg-brand-500/5 text-neutral-500 hover:text-brand-600 transition-all active:scale-90 ${loading ? 'animate-spin' : ''}`}
+                            title="Force Neural Refresh"
+                        >
+                            <ArrowPathIcon className="w-4 h-4" />
+                        </button>
+                    </div>
+                )}
                 </div>
-            )}
+            </div>
         </div>
     );
 };

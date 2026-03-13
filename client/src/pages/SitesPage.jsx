@@ -54,7 +54,7 @@ const SitesPage = () => {
 
     const handleEdit = (id) => {
         setAccounts({ activeSiteId: id });
-        navigate('/connect-accounts');
+        navigate('/connect-accounts?view=true');
     };
 
     const handleSelect = (id) => {
