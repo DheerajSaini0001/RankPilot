@@ -1,1 +1,23 @@
-Generate a weekly insight summary over the performance of all active marketing channels based on the provided data. Give high-level observations and actionable recommendations. format as concise markdown.
+Analyze the following 7-day analytics data and generate a professional, data-driven "Weekly Intelligence Summary".
+
+Your summary MUST follow this structure:
+
+### 🚀 Weekly Momentum Overview
+Provide a 2-3 sentence high-level summary of the overall performance ecosystem. Are we trending up or down?
+
+### 📈 Statistical Patterns & Shifts
+Look at the "Daily Metrics Breakdown" and identify specific days where performance spiked or dropped. Mention the data points (e.g., "On [Date], GA4 sessions increased by X%, likely due to [Source]").
+
+### 🔍 Channel-Specific Insights
+- **Organic Growth (GSC):** Analyze impressions vs. clicks and average position trends.
+- **Paid Performance (Ads):** If data is present, evaluate spend efficiency and conversion consistency.
+- **Engagement (GA4):** Analyze user retention and session volume patterns.
+
+### 💡 Strategic Recommendations
+Provide 2-3 actionable, high-impact steps the user should take next week based on this data.
+
+**Formatting Rules:**
+- Use clean Markdown with clear headings.
+- Use **bold text** for important metrics and dates.
+- Keep observations grounded in the provided logs.
+- Do NOT include any conversational filler like "Here is your summary".

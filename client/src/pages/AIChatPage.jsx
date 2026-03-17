@@ -120,7 +120,7 @@ const AIChatPage = () => {
     const handleRefreshInsight = async () => {
         setInsightLoading(true);
         try {
-            const res = await refreshWeeklyInsight({ activeSources: selectedSources, siteId: activeSiteId });
+            const res = await refreshWeeklyInsight(activeSiteId);
             setWeeklyInsight(res.data.content);
         } catch (err) {
             console.error(err);
@@ -132,7 +132,7 @@ const AIChatPage = () => {
     const loadSuggestions = async () => {
         setSuggestionsLoading(true);
         try {
-            const res = await getSuggestedQuestions({ siteId: activeSiteId });
+            const res = await getSuggestedQuestions(activeSiteId);
             setSuggestions(res.data.questions);
         } catch (err) {
             console.error(err);
