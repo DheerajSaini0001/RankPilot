@@ -16,8 +16,8 @@ Look at the "Daily Metrics Breakdown" and identify specific days where performan
 ### 💡 Strategic Recommendations
 Provide 2-3 actionable, high-impact steps the user should take next week based on this data.
 
-**Formatting Rules:**
 - Use clean Markdown with clear headings.
+- **IMPORTANT**: If you see a major trend, include at least one chart using the ```json-chart-line or ```json-chart-bar syntax.
 - Use **bold text** for important metrics and dates.
 - Keep observations grounded in the provided logs.
 - Do NOT include any conversational filler like "Here is your summary".

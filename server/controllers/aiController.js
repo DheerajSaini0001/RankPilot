@@ -154,7 +154,10 @@ export const askAi = async (req, res) => {
 
     try {
         const extractionResult = await getAiResponse(dateExtractionPrompt);
-        const parsed = JSON.parse(extractionResult.content.replace(/```json/i, '').replace(/```/g, '').trim());
+        const content = extractionResult.content;
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        const jsonStr = jsonMatch ? jsonMatch[0] : content;
+        const parsed = JSON.parse(jsonStr);
         if (parsed.startDate && parsed.endDate) {
             startDate = parsed.startDate;
             endDate = parsed.endDate;
@@ -184,9 +187,9 @@ export const askAi = async (req, res) => {
 
     const aiResult = await getAiResponse(prompt);
 
+    // Robust JSON extraction for date (if needed in future results, but here logic applies to extractionResult)
+    // Applying preservation of markdown for final content
     let cleanContent = aiResult.content
-        .replace(/^[#\s]+(.+)$/gm, '$1')
-        .replace(/\*\*?|__/g, '')
         .replace(/(\r?\n)*.*response is advisory only.*/gi, '')
         .trim();
 

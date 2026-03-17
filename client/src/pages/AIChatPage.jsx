@@ -21,6 +21,8 @@ import {
     getSuggestedQuestions
 } from '../api/aiApi';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import ChartRenderer from '../components/ai/ChartRenderer';
 
 const AIChatPage = () => {
     const { connectedSources, activeSiteId } = useAccountsStore();
@@ -254,8 +256,26 @@ const AIChatPage = () => {
                                     <div className="h-2 bg-neutral-200 dark:bg-neutral-700 rounded-full animate-pulse w-4/6"></div>
                                 </div>
                             ) : weeklyInsight ? (
-                                <div className="text-sm font-medium text-neutral-600 dark:text-neutral-300 leading-relaxed max-h-[150px] overflow-y-auto custom-scrollbar pr-2 line-clamp-6">
-                                    {weeklyInsight}
+                                <div className="text-sm font-medium text-neutral-600 dark:text-neutral-300 leading-relaxed max-h-[300px] overflow-y-auto custom-scrollbar pr-2 prose prose-sm dark:prose-invert">
+                                    <ReactMarkdown 
+                                        remarkPlugins={[remarkGfm]}
+                                        components={{
+                                            code({ node, inline, className, children, ...props }) {
+                                                const match = /language-json-chart-(\w+)/.exec(className || '');
+                                                if (!inline && match) {
+                                                    try {
+                                                        const chartData = JSON.parse(String(children).replace(/\n$/, ''));
+                                                        return <ChartRenderer type={match[1]} data={chartData} />;
+                                                    } catch (err) {
+                                                        return <code className={className} {...props}>{children}</code>;
+                                                    }
+                                                }
+                                                return <code className={className} {...props}>{children}</code>;
+                                            }
+                                        }}
+                                    >
+                                        {weeklyInsight}
+                                    </ReactMarkdown>
                                 </div>
                             ) : (
                                 <p className="text-sm text-neutral-400 text-center py-2 font-medium">Click refresh to analyze data.</p>
@@ -370,8 +390,25 @@ const AIChatPage = () => {
                                                 : 'bg-white border-neutral-200 text-neutral-800 dark:bg-dark-card dark:border-neutral-700 dark:text-neutral-200 rounded-bl-sm prose prose-sm dark:prose-invert max-w-none'
                                                 }`}>
                                                 {msg.role === 'assistant' ? (
-                                                    // Optional: If you want to use markdown rendering for bold text and lists returned by AI
-                                                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                                                    <ReactMarkdown 
+                                                        remarkPlugins={[remarkGfm]}
+                                                        components={{
+                                                            code({ node, inline, className, children, ...props }) {
+                                                                const match = /language-json-chart-(\w+)/.exec(className || '');
+                                                                if (!inline && match) {
+                                                                    try {
+                                                                        const chartData = JSON.parse(String(children).replace(/\n$/, ''));
+                                                                        return <ChartRenderer type={match[1]} data={chartData} />;
+                                                                    } catch (err) {
+                                                                        return <code className={className} {...props}>{children}</code>;
+                                                                    }
+                                                                }
+                                                                return <code className={className} {...props}>{children}</code>;
+                                                            }
+                                                        }}
+                                                    >
+                                                        {msg.content}
+                                                    </ReactMarkdown>
                                                 ) : (
                                                     msg.content
                                                 )}
