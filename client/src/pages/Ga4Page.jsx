@@ -84,7 +84,7 @@ const Ga4Page = () => {
         const interval = setInterval(() => {
             console.log('Auto-refreshing GA4 data...');
             loadData();
-        }, 10 * 60 * 1000);
+        }, 4 * 60 * 60 * 1000); // Sync with 4h Cron
 
         return () => clearInterval(interval);
     }, [isConnected, hasProperty, startDate, endDate, device, campaign, channel, activeSiteId]);

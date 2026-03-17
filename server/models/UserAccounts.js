@@ -14,6 +14,12 @@ const userAccountsSchema = new mongoose.Schema({
     facebookAdAccountId: { type: String },
     facebookAdAccountName: { type: String },
     facebookAdCurrency: { type: String },
+    
+    ga4HistoricalComplete: { type: Boolean, default: false },
+    gscHistoricalComplete: { type: Boolean, default: false },
+    googleAdsHistoricalComplete: { type: Boolean, default: false },
+    facebookAdsHistoricalComplete: { type: Boolean, default: false },
+    
     isHistoricalSyncComplete: { type: Boolean, default: false },
     lastDailySyncAt: { type: Date },
     syncStatus: { type: String, enum: ['idle', 'syncing', 'error'], default: 'idle' }

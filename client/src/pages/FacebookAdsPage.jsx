@@ -72,7 +72,7 @@ const FacebookAdsPage = () => {
         const interval = setInterval(() => {
             console.log('Auto-refreshing Facebook Ads data...');
             loadData();
-        }, 10 * 60 * 1000);
+        }, 30 * 60 * 1000); // Sync with 30m Cron
 
         return () => clearInterval(interval);
     }, [isConnected, hasAccount, startDate, endDate, device, campaign, activeSiteId]);

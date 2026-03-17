@@ -63,6 +63,16 @@ const DashboardPage = () => {
         loadDashboardData();
     }, [startDate, endDate, connectedSources, activeSiteId, device, campaign, channel]);
 
+    // Auto-refresh every 30 minutes
+    useEffect(() => {
+        const interval = setInterval(() => {
+            console.log('Auto-refreshing unified dashboard data...');
+            loadDashboardData();
+        }, 30 * 60 * 1000); // Sync with 30m Cron
+
+        return () => clearInterval(interval);
+    }, [startDate, endDate, connectedSources, activeSiteId, device, campaign, channel]);
+
     const loadDashboardData = async () => {
         setLoading(true);
         try {
@@ -284,7 +294,7 @@ const DashboardPage = () => {
                         {/* Main Charts & Data Section */}
                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                             {/* Chart Section */}
-                            <div id="growth-matrix" className="xl:col-span-2 glass-card rounded-[2.5rem] overflow-hidden flex flex-col min-h-[500px]">
+                            <div id="growth-matrix" className="xl:col-span-3 glass-card rounded-[2.5rem] overflow-hidden flex flex-col min-h-[500px]">
                                 <div className="px-10 py-8 border-b border-neutral-100 dark:border-neutral-800 flex flex-col sm:flex-row justify-between items-center gap-6 bg-white/50 dark:bg-dark-surface/50">
                                     <div className="flex-1">
                                         <div className="flex items-center gap-3 mb-1">
@@ -362,66 +372,6 @@ const DashboardPage = () => {
                                         </ResponsiveContainer>
                                     )}
                                 </div>
-                            </div>
-
-                            {/* Recent Insights Panel */}
-                            <div id="insights-panel" className="glass-card rounded-[2.5rem] p-10 flex flex-col h-full bg-white dark:bg-dark-card relative overflow-hidden">
-                                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity rotate-12">
-                                    <ChatBubbleLeftRightIcon className="w-32 h-32 text-brand-500" />
-                                </div>
-                                <div className="relative z-10 mb-8">
-                                    <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-400 dark:text-neutral-500 mb-2">Intelligence Stream</h3>
-                                    <h4 className="text-2xl font-black text-neutral-900 dark:text-white">Active Insights</h4>
-                                </div>
-
-                                <div className="space-y-6 relative z-10 flex-1">
-                                    {insights.length > 0 ? insights.map((item, i) => {
-                                        const IconNode = {
-                                            UsersIcon,
-                                            MagnifyingGlassIcon,
-                                            CheckCircleIcon,
-                                            CloudArrowUpIcon,
-                                            BanknotesIcon
-                                        }[item.icon] || SparklesIcon;
-
-                                        const colorMap = {
-                                            'brand': 'bg-brand-500/10 text-brand-500',
-                                            'semantic-green': 'bg-semantic-green-500/10 text-semantic-green-500',
-                                            'accent': 'bg-accent-500/10 text-accent-500',
-                                            'neutral': 'bg-neutral-500/10 text-neutral-500'
-                                        };
-
-                                        const colorClasses = colorMap[item.color] || 'bg-brand-500/10 text-brand-500';
-
-                                        return (
-                                            <div key={i} className="flex gap-5 p-5 rounded-3xl hover:bg-neutral-50 dark:hover:bg-dark-surface/50 transition-all group/item cursor-pointer border border-transparent hover:border-neutral-100 dark:hover:border-neutral-800">
-                                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 group-hover/item:scale-110 transition-transform ${colorClasses.split(' ')[0]}`}>
-                                                    <IconNode className={`w-6 h-6 ${colorClasses.split(' ')[1]}`} />
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <div className="flex justify-between items-center mb-1">
-                                                        <h4 className="text-sm font-black text-neutral-900 dark:text-white truncate">{item.title}</h4>
-                                                        <span className="text-[9px] font-black text-neutral-400 uppercase tracking-tighter shrink-0">Real-time</span>
-                                                    </div>
-                                                    <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 leading-relaxed group-hover/item:text-neutral-700 dark:group-hover/item:text-neutral-200 transition-colors">{item.desc}</p>
-                                                </div>
-                                            </div>
-                                        );
-                                    }) : (
-                                        <div className="flex flex-col items-center justify-center h-48 opacity-40">
-                                            <SparklesIcon className="w-12 h-12 mb-4" />
-                                            <p className="text-xs font-black uppercase tracking-widest text-neutral-400">Awaiting Signals</p>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <button
-                                    onClick={() => document.getElementById('top-pages-table')?.scrollIntoView({ behavior: 'smooth' })}
-                                    className="mt-8 py-4 w-full rounded-2xl border-2 border-neutral-100 dark:border-neutral-800 text-xs font-black text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-dark-surface hover:text-brand-600 transition-all flex items-center justify-center gap-2"
-                                >
-                                    Explore Full Intelligence Feed
-                                    <ArrowRightIcon className="w-4 h-4" />
-                                </button>
                             </div>
                         </div>
 

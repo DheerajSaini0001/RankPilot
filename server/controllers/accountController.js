@@ -89,18 +89,17 @@ export const selectAccounts = async (req, res) => {
 
     if (!account) return res.status(404).json({ message: 'Account not found' });
 
-    // Only trigger sync if IDs were provided in this update
     if (updates.ga4PropertyId) {
-        syncHistoricalData(account._id, 'ga4', 5).catch(e => console.error('BG Sync Fail GA4:', e));
+        syncHistoricalData(account._id, 'ga4').catch(e => console.error('Initial GA4 Sync Fail:', e));
     }
     if (updates.gscSiteUrl) {
-        syncHistoricalData(account._id, 'gsc', 5).catch(e => console.error('BG Sync Fail GSC:', e));
+        syncHistoricalData(account._id, 'gsc').catch(e => console.error('Initial GSC Sync Fail:', e));
     }
     if (updates.googleAdsCustomerId) {
-        syncHistoricalData(account._id, 'google-ads', 5).catch(e => console.error('BG Sync Fail Google Ads:', e));
+        syncHistoricalData(account._id, 'google-ads').catch(e => console.error('Initial Google Ads Sync Fail:', e));
     }
     if (updates.facebookAdAccountId) {
-        syncHistoricalData(account._id, 'facebook-ads', 5).catch(e => console.error('BG Sync Fail Facebook Ads:', e));
+        syncHistoricalData(account._id, 'facebook-ads').catch(e => console.error('Initial Facebook Ads Sync Fail:', e));
     }
 
     res.status(200).json({ message: 'Accounts selected', accounts: account });

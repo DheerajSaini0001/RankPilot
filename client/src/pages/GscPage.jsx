@@ -67,7 +67,7 @@ const GscPage = () => {
         const interval = setInterval(() => {
             console.log('Auto-refreshing GSC data...');
             loadData();
-        }, 10 * 60 * 1000);
+        }, 12 * 60 * 60 * 1000); // Sync with 12h Cron
 
         return () => clearInterval(interval);
     }, [activeGscSite, startDate, endDate, device, activeSiteId]);

@@ -5,36 +5,69 @@ import { runQuery as runGscQuery } from './gscService.js';
 import { runQuery as runGAdsQuery } from './googleAdsService.js';
 import { getInsights as getFbInsights } from './facebookAdsService.js';
 
-export const syncHistoricalData = async (accountId, source, years = 5) => {
+let isGscCronRunning = false;
+let isGa4CronRunning = false;
+let isGAdsCronRunning = false;
+let isFbCronRunning = false;
+
+export const syncHistoricalData = async (accountId, source) => {
     const acc = await UserAccounts.findById(accountId);
     if (!acc) return;
-    const userId = acc.userId;
 
-    console.log(`Starting historical sync for Account ${accountId} (User ${userId}), Source: ${source}, Years: ${years}`);
-    
-    const now = new Date();
-    const endDate = now.toISOString().split('T')[0];
-    const pastDate = new Date();
-    pastDate.setFullYear(now.getFullYear() - years);
-    const startDate = pastDate.toISOString().split('T')[0];
+    if (acc.syncStatus === 'syncing') {
+        console.log(`[Historical Sync] Skip: Account ${acc.siteName} is already syncing.`);
+        return;
+    }
+
+    const limits = {
+        'gsc': 1.5,
+        'ga4': 2,
+        'google-ads': 3,
+        'facebook-ads': 3
+    };
+
+    const years = limits[source] || 3;
+    console.log(`[Historical Sync] Started for ${acc.siteName} (${source}), Length: ${years}y`);
 
     try {
         await UserAccounts.findByIdAndUpdate(accountId, { syncStatus: 'syncing' });
-        
-        switch (source) {
-            case 'ga4': await syncGa4(acc, startDate, endDate); break;
-            case 'gsc': await syncGsc(acc, startDate, endDate); break;
-            case 'google-ads': await syncGoogleAds(acc, startDate, endDate); break;
-            case 'facebook-ads': await syncFacebookAds(acc, startDate, endDate); break;
+
+        const now = new Date();
+        const currentYear = now.getFullYear();
+
+        for (let i = 0; i < years; i++) {
+            const startYear = currentYear - i - 1;
+            const endYear = currentYear - i;
+
+            const startDate = `${startYear}-01-01`;
+            const endDate = i === 0 ? now.toISOString().split('T')[0] : `${startYear}-12-31`;
+
+            console.log(`[Historical Sync] Processing Chunk: ${startDate} to ${endDate}`);
+
+            switch (source) {
+                case 'ga4': await syncGa4(acc, startDate, endDate); break;
+                case 'gsc': await syncGsc(acc, startDate, endDate); break;
+                case 'google-ads': await syncGoogleAds(acc, startDate, endDate); break;
+                case 'facebook-ads': await syncFacebookAds(acc, startDate, endDate); break;
+            }
         }
 
-        await UserAccounts.findByIdAndUpdate(accountId, { 
-            isHistoricalSyncComplete: true, 
+        const updateFields = {
             syncStatus: 'idle',
-            lastDailySyncAt: new Date()
-        });
+            lastDailySyncAt: new Date(),
+            isHistoricalSyncComplete: true // Legacy support
+        };
+
+        if (source === 'ga4') updateFields.ga4HistoricalComplete = true;
+        if (source === 'gsc') updateFields.gscHistoricalComplete = true;
+        if (source === 'google-ads') updateFields.googleAdsHistoricalComplete = true;
+        if (source === 'facebook-ads') updateFields.facebookAdsHistoricalComplete = true;
+
+        await UserAccounts.findByIdAndUpdate(accountId, { $set: updateFields });
+
+        console.log(`[Historical Sync] Success for ${acc.siteName} (${source})`);
     } catch (err) {
-        console.error(`Historical Sync Failed for ${source} (Account: ${accountId}):`, err.message);
+        console.error(`[Historical Sync] ERROR for ${source}:`, err.message);
         await UserAccounts.findByIdAndUpdate(accountId, { syncStatus: 'error' });
     }
 };
@@ -45,21 +78,21 @@ const syncGa4 = async (acc, startDate, endDate) => {
 
     // Fetch granular data: Date + Channel + Source/Medium + Device + Location + Page + Browser/OS
     // Note: GA4 runReport has a 9 dimension limit per request
-    const report = await runGa4Report(userId, 'ultra_detail_sync', startDate, endDate, 
-        ['date', 'sessionDefaultChannelGroup', 'sessionSourceMedium', 'deviceCategory', 'country', 'browser', 'operatingSystem', 'pagePath', 'pageTitle'], 
+    const report = await runGa4Report(userId, 'ultra_detail_sync', startDate, endDate,
+        ['date', 'sessionDefaultChannelGroup', 'sessionSourceMedium', 'deviceCategory', 'country', 'browser', 'operatingSystem', 'pagePath', 'pageTitle'],
         ['activeUsers', 'sessions', 'bounceRate', 'screenPageViews', 'averageSessionDuration', 'conversions', 'totalRevenue', 'engagementRate']
     );
-    
+
     if (report.rows) {
         const operations = report.rows.map(row => {
-            const dateStr = row.dimensionValues[0].value; 
-            const formattedDate = `${dateStr.substring(0,4)}-${dateStr.substring(4,6)}-${dateStr.substring(6,8)}`;
+            const dateStr = row.dimensionValues[0].value;
+            const formattedDate = `${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6, 8)}`;
             return {
                 updateOne: {
-                    filter: { 
-                        userId, 
+                    filter: {
+                        userId,
                         platformAccountId: acc.ga4PropertyId,
-                        source: 'ga4', 
+                        source: 'ga4',
                         date: formattedDate,
                         'dimensions.channel': row.dimensionValues[1].value,
                         'dimensions.source': row.dimensionValues[2].value,
@@ -96,7 +129,7 @@ const syncGa4 = async (acc, startDate, endDate) => {
                 }
             };
         });
-        
+
         // Split into chunks of 1000 for safety
         for (let i = 0; i < operations.length; i += 1000) {
             const chunk = operations.slice(i, i + 1000);
@@ -112,16 +145,16 @@ const syncGsc = async (acc, startDate, endDate) => {
 
     // Fetch granular data: Date + Page + Query + Device + Country
     const res = await runGscQuery(userId, 'ultra_detail_sync', startDate, endDate, ['date', 'page', 'query', 'device', 'country']);
-    
+
     if (res.rows) {
         // Increase limit to 25000 rows for maximum detail
         const operations = res.rows.slice(0, 25000).map(row => {
             return {
                 updateOne: {
-                    filter: { 
-                        userId, 
+                    filter: {
+                        userId,
                         platformAccountId: acc.gscSiteUrl,
-                        source: 'gsc', 
+                        source: 'gsc',
                         date: row.keys[0],
                         'dimensions.page': row.keys[1],
                         'dimensions.query': row.keys[2],
@@ -146,7 +179,7 @@ const syncGsc = async (acc, startDate, endDate) => {
                 }
             };
         });
-        
+
         // Split into chunks of 1000 for safety
         for (let i = 0; i < operations.length; i += 1000) {
             const chunk = operations.slice(i, i + 1000);
@@ -185,10 +218,10 @@ const syncGoogleAds = async (acc, startDate, endDate) => {
     if (res && res.length > 0) {
         const operations = res.map(row => ({
             updateOne: {
-                filter: { 
-                    userId, 
+                filter: {
+                    userId,
                     platformAccountId: acc.googleAdsCustomerId,
-                    source: 'google-ads', 
+                    source: 'google-ads',
                     date: row.segments.date,
                     'dimensions.campaign': row.campaign.name,
                     'dimensions.campaignStatus': row.campaign.status,
@@ -219,7 +252,7 @@ const syncGoogleAds = async (acc, startDate, endDate) => {
                 upsert: true
             }
         }));
-        
+
         // Split into chunks of 1000 for safety
         for (let i = 0; i < operations.length; i += 1000) {
             const chunk = operations.slice(i, i + 1000);
@@ -234,7 +267,7 @@ const syncFacebookAds = async (acc, startDate, endDate) => {
     const userId = acc.userId;
 
     // Fetch by Date + Campaign + Ad Set + Ad + Device + Placement
-    const res = await getFbInsights(userId, 'ultra_detail_sync', startDate, endDate, 'ad', { 
+    const res = await getFbInsights(userId, 'ultra_detail_sync', startDate, endDate, 'ad', {
         time_increment: 1,
         breakdowns: ['device_platform', 'publisher_platform']
     });
@@ -242,10 +275,10 @@ const syncFacebookAds = async (acc, startDate, endDate) => {
     if (res && res.length > 0) {
         const operations = res.map(row => ({
             updateOne: {
-                filter: { 
-                    userId, 
+                filter: {
+                    userId,
                     platformAccountId: acc.facebookAdAccountId,
-                    source: 'facebook-ads', 
+                    source: 'facebook-ads',
                     date: row.date_start,
                     'dimensions.campaign': row.campaign_name,
                     'dimensions.adset': row.adset_name,
@@ -275,7 +308,7 @@ const syncFacebookAds = async (acc, startDate, endDate) => {
                 upsert: true
             }
         }));
-        
+
         // Split into chunks of 1000 for safety
         for (let i = 0; i < operations.length; i += 1000) {
             const chunk = operations.slice(i, i + 1000);
@@ -284,27 +317,117 @@ const syncFacebookAds = async (acc, startDate, endDate) => {
     }
 };
 
+const getSyncRange = () => {
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 2);
+    const threeDaysAgoStr = threeDaysAgo.toISOString().split('T')[0];
+    return { startDate: threeDaysAgoStr, endDate: todayStr };
+};
 
+// GSC Sync (Every 12 Hours)
+export const syncAllGsc = async () => {
+    if (isGscCronRunning) return;
+    isGscCronRunning = true;
+    console.log('[Cron] Starting GSC Sync...');
+    try {
+        // Only sync if historical data for GSC is already fetched
+        const users = await UserAccounts.find({
+            gscSiteUrl: { $exists: true, $ne: null },
+            gscHistoricalComplete: true
+        });
+        const { startDate, endDate } = getSyncRange();
+        for (const acc of users) {
+            try {
+                // If account is already syncing (e.g. historical), skip it in this cron cycle
+                if (acc.syncStatus === 'syncing') continue;
 
-// Runs a daily sync for all connected platforms for all users
-export const syncDailyForAllUsers = async () => {
-    const users = await UserAccounts.find({});
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const dateStr = yesterday.toISOString().split('T')[0];
-
-    for (const acc of users) {
-        try {
-            if (acc.ga4PropertyId) await syncGa4(acc, dateStr, dateStr);
-            if (acc.gscSiteUrl) await syncGsc(acc, dateStr, dateStr);
-            if (acc.googleAdsCustomerId) await syncGoogleAds(acc, dateStr, dateStr);
-            if (acc.facebookAdAccountId) await syncFacebookAds(acc, dateStr, dateStr);
-            
-            await UserAccounts.findByIdAndUpdate(acc._id, { lastDailySyncAt: new Date() });
-        } catch (e) {
-            console.error(`Daily Sync Partial Fail for account ${acc._id}:`, e.message);
+                await UserAccounts.findByIdAndUpdate(acc._id, { syncStatus: 'syncing' });
+                await syncGsc(acc, startDate, endDate);
+                await UserAccounts.findByIdAndUpdate(acc._id, { syncStatus: 'idle', lastDailySyncAt: new Date() });
+            } catch (e) { console.error(`GSC Sync Fail: ${acc._id}`, e.message); }
         }
-    }
+    } finally { isGscCronRunning = false; console.log('[Cron] GSC Sync Completed.'); }
+};
 
+// GA4 Sync (Every 4 Hours)
+export const syncAllGa4 = async () => {
+    if (isGa4CronRunning) return;
+    isGa4CronRunning = true;
+    console.log('[Cron] Starting GA4 Sync...');
+    try {
+        // Only sync if historical data for GA4 is already fetched
+        const users = await UserAccounts.find({
+            ga4PropertyId: { $exists: true, $ne: null },
+            ga4HistoricalComplete: true
+        });
+        const { startDate, endDate } = getSyncRange();
+        for (const acc of users) {
+            try {
+                if (acc.syncStatus === 'syncing') continue;
+
+                await UserAccounts.findByIdAndUpdate(acc._id, { syncStatus: 'syncing' });
+                await syncGa4(acc, startDate, endDate);
+                await UserAccounts.findByIdAndUpdate(acc._id, { syncStatus: 'idle', lastDailySyncAt: new Date() });
+            } catch (e) { console.error(`GA4 Sync Fail: ${acc._id}`, e.message); }
+        }
+    } finally { isGa4CronRunning = false; console.log('[Cron] GA4 Sync Completed.'); }
+};
+
+// Google Ads Sync (Every 1 Hour)
+export const syncAllGoogleAds = async () => {
+    if (isGAdsCronRunning) return;
+    isGAdsCronRunning = true;
+    console.log('[Cron] Starting Google Ads Sync...');
+    try {
+        // Only sync if historical data for Google Ads is already fetched
+        const users = await UserAccounts.find({
+            googleAdsCustomerId: { $exists: true, $ne: null },
+            googleAdsHistoricalComplete: true
+        });
+        const { startDate, endDate } = getSyncRange();
+        for (const acc of users) {
+            try {
+                if (acc.syncStatus === 'syncing') continue;
+
+                await UserAccounts.findByIdAndUpdate(acc._id, { syncStatus: 'syncing' });
+                await syncGoogleAds(acc, startDate, endDate);
+                await UserAccounts.findByIdAndUpdate(acc._id, { syncStatus: 'idle', lastDailySyncAt: new Date() });
+            } catch (e) { console.error(`Google Ads Sync Fail: ${acc._id}`, e.message); }
+        }
+    } finally { isGAdsCronRunning = false; console.log('[Cron] Google Ads Sync Completed.'); }
+};
+
+// Facebook Ads Sync (Every 30 Minutes)
+export const syncAllFacebookAds = async () => {
+    if (isFbCronRunning) return;
+    isFbCronRunning = true;
+    console.log('[Cron] Starting Facebook Ads Sync...');
+    try {
+        // Only sync if historical data for Facebook Ads is already fetched
+        const users = await UserAccounts.find({
+            facebookAdAccountId: { $exists: true, $ne: null },
+            facebookAdsHistoricalComplete: true
+        });
+        const { startDate, endDate } = getSyncRange();
+        for (const acc of users) {
+            try {
+                if (acc.syncStatus === 'syncing') continue;
+
+                await UserAccounts.findByIdAndUpdate(acc._id, { syncStatus: 'syncing' });
+                await syncFacebookAds(acc, startDate, endDate);
+                await UserAccounts.findByIdAndUpdate(acc._id, { syncStatus: 'idle', lastDailySyncAt: new Date() });
+            } catch (e) { console.error(`Facebook Ads Sync Fail: ${acc._id}`, e.message); }
+        }
+    } finally { isFbCronRunning = false; console.log('[Cron] Facebook Ads Sync Completed.'); }
+};
+
+// Keep original as a manual fallback
+export const syncDailyForAllUsers = async () => {
+    await syncAllFacebookAds();
+    await syncAllGoogleAds();
+    await syncAllGa4();
+    await syncAllGsc();
 };
 

@@ -72,7 +72,7 @@ const GoogleAdsPage = () => {
         const interval = setInterval(() => {
             console.log('Auto-refreshing Google Ads data...');
             loadData();
-        }, 10 * 60 * 1000);
+        }, 60 * 60 * 1000); // Sync with 1h Cron
 
         return () => clearInterval(interval);
     }, [isConnected, hasAccount, startDate, endDate, device, campaign, activeSiteId]);
