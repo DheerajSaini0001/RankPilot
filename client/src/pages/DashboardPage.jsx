@@ -148,16 +148,19 @@ const DashboardPage = () => {
                     {/* Main Content Area */}
                     <div className="flex flex-col space-y-8 min-w-0">
                         {/* Sophisticated Minimal Greeting Container */}
-                        <div className="bg-white/60 dark:bg-dark-card/60 backdrop-blur-xl border border-neutral-200/60 dark:border-neutral-800/60 rounded-[2.5rem] p-8 pb-10 shadow-sm relative overflow-hidden group">
+                        <div className="bg-white/60 dark:bg-dark-card/60 backdrop-blur-xl border border-neutral-200/60 dark:border-neutral-800/60 rounded-[2rem] p-5 lg:p-6 shadow-sm relative overflow-hidden group">
                             {/* Subtle decorative accent */}
                             <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-brand-500/10 transition-colors"></div>
                             
-                            <h1 className="text-2xl lg:text-4xl font-black tracking-tight text-neutral-900 dark:text-white leading-none relative z-10">
+                            <h1 className="text-xl lg:text-3xl font-black tracking-tight text-neutral-900 dark:text-white leading-none relative z-10">
                                 Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'}, 
                                 <span className="ml-2 bg-gradient-to-r from-brand-600 to-accent-500 bg-clip-text text-transparent animate-gradient-flow bg-300% capitalize">
                                     {user?.name || 'Pilot'}
                                 </span>
                             </h1>
+                            <p className="mt-2 text-xs font-bold text-neutral-500 dark:text-neutral-400 relative z-10">
+                                Track your performance and optimize your digital growth points in real-time.
+                            </p>
                         </div>
 
 

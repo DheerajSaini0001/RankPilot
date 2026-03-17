@@ -23,6 +23,7 @@ import {
 import { useAuthStore } from '../../store/authStore';
 import { useAccountsStore } from '../../store/accountsStore';
 import { useFilterStore } from '../../store/filterStore';
+import { useNotificationStore } from '../../store/notificationStore';
 import { listSites, getActiveAccounts, selectAccounts } from '../../api/accountApi';
 
 const DashboardLayout = ({ children }) => {
@@ -33,6 +34,12 @@ const DashboardLayout = ({ children }) => {
         activeSiteId, 
         setAccounts 
     } = useAccountsStore();
+    const { 
+        notifications, 
+        unreadCount, 
+        markAsRead, 
+        markAllRead 
+    } = useNotificationStore();
     const navigate = useNavigate();
     const isAdmin = user?.email === import.meta.env.VITE_SUPER_ADMIN_EMAIL;
 
@@ -79,6 +86,7 @@ const DashboardLayout = ({ children }) => {
 
 
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+    const [isNotifOpen, setIsNotifOpen] = useState(false);
     const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
 
     const toggleDark = () => {
@@ -240,15 +248,15 @@ const DashboardLayout = ({ children }) => {
             {/* Main Content */}
             <main className="flex-1 flex flex-col h-full bg-neutral-50 dark:bg-dark-bg relative overflow-hidden">
                 {/* Header */}
-                <header className="flex-shrink-0 flex items-center justify-between px-8 py-4 bg-white/50 dark:bg-dark-bg/50 backdrop-blur-xl border-b border-neutral-200 dark:border-neutral-800 z-20">
+                <header className="flex-shrink-0 flex items-center justify-between px-6 py-3 bg-white/50 dark:bg-dark-bg/50 backdrop-blur-xl border-b border-neutral-200 dark:border-neutral-800 z-20">
                     <div className="flex items-center gap-8 flex-1">
                         <div className="hidden xl:flex flex-col">
-                            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-neutral-400">
+                            <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400">
                                 <span>Platform</span>
                                 <span className="text-neutral-300">/</span>
                                 <span className="text-brand-500">Overview</span>
                             </div>
-                            <h2 className="text-lg font-black text-neutral-900 dark:text-white leading-tight">Insight Dashboard</h2>
+                            <h2 className="text-base font-black text-neutral-900 dark:text-white leading-tight">Insight Dashboard</h2>
                         </div>
 
                         <div className="hidden lg:flex flex-col flex-1 max-w-md relative group">
@@ -270,8 +278,8 @@ const DashboardLayout = ({ children }) => {
                                         <span className="text-xs font-black">×</span>
                                     </button>
                                 )}
-                                <div className="hidden sm:flex items-center gap-1.5 ml-1">
-                                    <kbd className="px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-[10px] font-black text-neutral-400 shadow-sm transition-colors group-focus-within:border-brand-500/30 group-focus-within:text-brand-500 uppercase">{navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'} K</kbd>
+                                <div className="hidden sm:flex items-center gap-1.5 ml-2">
+                                    <kbd className="px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-[10px] font-black text-neutral-400 shadow-sm transition-colors group-focus-within:border-brand-500/30 group-focus-within:text-brand-500 uppercase whitespace-nowrap">{navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'} K</kbd>
                                 </div>
                             </div>
 
@@ -352,10 +360,59 @@ const DashboardLayout = ({ children }) => {
                             <button onClick={toggleDark} className="p-2 text-neutral-500 hover:text-brand-500 dark:text-neutral-400 dark:hover:text-brand-400 transition-colors">
                                 {isDark ? <SunIcon className="w-5 h-5" strokeWidth={2} /> : <MoonIcon className="w-5 h-5" strokeWidth={2} />}
                             </button>
-                            <button className="p-2 text-neutral-500 hover:text-brand-500 dark:text-neutral-400 dark:hover:text-brand-400 transition-colors relative">
-                                <BellIcon className="w-5 h-5" strokeWidth={2} />
-                                <span className="absolute top-2 right-2 w-2 h-2 bg-semantic-error rounded-full border-2 border-white dark:border-dark-surface animate-bounce"></span>
-                            </button>
+                            <div className="relative">
+                                <button 
+                                    onClick={() => setIsNotifOpen(!isNotifOpen)}
+                                    className="p-2 text-neutral-500 hover:text-brand-500 dark:text-neutral-400 dark:hover:text-brand-400 transition-colors relative"
+                                >
+                                    <BellIcon className="w-5 h-5" strokeWidth={2} />
+                                    {unreadCount > 0 && (
+                                        <span className="absolute top-2 right-2 w-2 h-2 bg-semantic-error rounded-full border-2 border-white dark:border-dark-surface animate-bounce"></span>
+                                    )}
+                                </button>
+
+                                {isNotifOpen && (
+                                    <>
+                                        <div className="fixed inset-0 z-40" onClick={() => setIsNotifOpen(false)}></div>
+                                        <div className="absolute right-0 mt-3 w-80 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700/60 rounded-2xl shadow-2xl z-50 overflow-hidden transform animate-in fade-in slide-in-from-top-2 duration-200">
+                                            <div className="px-5 py-4 border-b border-neutral-100 dark:border-neutral-800/60 bg-neutral-50/50 dark:bg-dark-surface/50 flex justify-between items-center">
+                                                <h4 className="text-xs font-black uppercase tracking-widest text-neutral-900 dark:text-white">Notifications</h4>
+                                                {unreadCount > 0 && (
+                                                    <button onClick={markAllRead} className="text-[10px] font-black text-brand-600 hover:text-brand-500 transition-colors">Mark all as read</button>
+                                                )}
+                                            </div>
+                                            <div className="max-h-[350px] overflow-y-auto no-scrollbar">
+                                                {notifications.length === 0 ? (
+                                                    <div className="px-10 py-12 text-center">
+                                                        <div className="w-12 h-12 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mx-auto mb-3">
+                                                            <BellIcon className="w-6 h-6 text-neutral-400" />
+                                                        </div>
+                                                        <p className="text-xs font-bold text-neutral-500">No new alerts.</p>
+                                                    </div>
+                                                ) : (
+                                                    notifications.map((notif) => (
+                                                        <div 
+                                                            key={notif.id} 
+                                                            onClick={() => markAsRead(notif.id)}
+                                                            className={`px-5 py-4 border-b border-neutral-50 dark:border-neutral-800/40 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all cursor-pointer relative group ${!notif.isRead ? 'bg-brand-50/30 dark:bg-brand-500/5' : ''}`}
+                                                        >
+                                                            {!notif.isRead && <div className="absolute left-0 top-0 bottom-0 w-1 bg-brand-500"></div>}
+                                                            <div className="flex justify-between items-start mb-1">
+                                                                <h5 className={`text-[11px] font-black ${!notif.isRead ? 'text-neutral-900 dark:text-white' : 'text-neutral-500'}`}>{notif.title}</h5>
+                                                                <span className="text-[9px] font-bold text-neutral-400 whitespace-nowrap">{notif.time}</span>
+                                                            </div>
+                                                            <p className="text-[10px] font-medium text-neutral-500 leading-normal">{notif.message}</p>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                            <div className="p-3 bg-neutral-50/50 dark:bg-dark-surface/50 border-t border-neutral-100 dark:border-neutral-800/60 text-center">
+                                                <button className="text-[10px] font-black text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors">View all archives</button>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         </div>
 
                         <div className="h-8 w-[1px] bg-neutral-200 dark:bg-neutral-800 mx-2"></div>

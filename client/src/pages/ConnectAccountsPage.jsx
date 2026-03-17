@@ -163,9 +163,8 @@ const ConnectAccountsPage = () => {
                                 type="text"
                                 value={siteName}
                                 onChange={e => setSiteName(e.target.value)}
-                                disabled={isViewOnly && !!initialValues.siteName}
                                 placeholder="e.g. My Portfolio, Client XYZ"
-                                className={`w-full max-w-md text-lg font-bold rounded-xl border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-dark-surface text-neutral-900 dark:text-white focus:ring-brand-400 py-3 px-4 focus:outline-none focus:ring-2 shadow-sm ${isViewOnly && initialValues.siteName ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                className={`w-full max-w-md text-lg font-bold rounded-xl border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-dark-surface text-neutral-900 dark:text-white focus:ring-brand-400 py-3 px-4 focus:outline-none focus:ring-2 shadow-sm`}
                             />
                             {isViewOnly && <p className="text-[10px] text-brand-500 mt-2 font-black uppercase tracking-[0.2em]">Intelligent Security Mode Active</p>}
                             {!isViewOnly && <p className="text-xs text-neutral-500 mt-2 italic">* Use a unique name to distinguish multiple websites.</p>}
@@ -207,8 +206,8 @@ const ConnectAccountsPage = () => {
                                                 <select
                                                     value={selectedGa4}
                                                     onChange={e => setSelectedGa4(e.target.value)}
-                                                    disabled={isViewOnly && !!initialValues.ga4}
-                                                    className={`w-full text-sm rounded-lg border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-neutral-900 dark:text-white focus:ring-brand-400 py-2.5 px-3 focus:outline-none focus:ring-2 shadow-sm font-medium ${isViewOnly && initialValues.ga4 ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                                    disabled={!!initialValues.ga4}
+                                                    className={`w-full text-sm rounded-lg border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-neutral-900 dark:text-white focus:ring-brand-400 py-2.5 px-3 focus:outline-none focus:ring-2 shadow-sm font-medium ${initialValues.ga4 ? 'opacity-70 cursor-not-allowed' : ''}`}
                                                 >
                                                     <option value="">Select Property...</option>
                                                     {ga4Props.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -221,8 +220,8 @@ const ConnectAccountsPage = () => {
                                                 <select
                                                     value={selectedGsc}
                                                     onChange={e => setSelectedGsc(e.target.value)}
-                                                    disabled={isViewOnly && !!initialValues.gsc}
-                                                    className={`w-full text-sm rounded-lg border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-neutral-900 dark:text-white focus:ring-brand-400 py-2.5 px-3 focus:outline-none focus:ring-2 shadow-sm font-medium ${isViewOnly && initialValues.gsc ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                                    disabled={!!initialValues.gsc}
+                                                    className={`w-full text-sm rounded-lg border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-neutral-900 dark:text-white focus:ring-brand-400 py-2.5 px-3 focus:outline-none focus:ring-2 shadow-sm font-medium ${initialValues.gsc ? 'opacity-70 cursor-not-allowed' : ''}`}
                                                 >
                                                     <option value="">Select Site...</option>
                                                     {gscSites.map(s => <option key={s.siteUrl} value={s.siteUrl}>{s.siteUrl}</option>)}
@@ -235,8 +234,8 @@ const ConnectAccountsPage = () => {
                                                 <select
                                                     value={selectedGAds}
                                                     onChange={e => setSelectedGAds(e.target.value)}
-                                                    disabled={isViewOnly && !!initialValues.gAds}
-                                                    className={`w-full text-sm rounded-lg border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-neutral-900 dark:text-white focus:ring-brand-400 py-2.5 px-3 focus:outline-none focus:ring-2 shadow-sm font-medium ${isViewOnly && initialValues.gAds ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                                    disabled={!!initialValues.gAds}
+                                                    className={`w-full text-sm rounded-lg border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-neutral-900 dark:text-white focus:ring-brand-400 py-2.5 px-3 focus:outline-none focus:ring-2 shadow-sm font-medium ${initialValues.gAds ? 'opacity-70 cursor-not-allowed' : ''}`}
                                                 >
                                                     <option value="">Select Account...</option>
                                                     {gAdsAccounts.map(g => <option key={g} value={g}>{g}</option>)}
@@ -280,8 +279,8 @@ const ConnectAccountsPage = () => {
                                             <select
                                                 value={selectedFbAds}
                                                 onChange={e => setSelectedFbAds(e.target.value)}
-                                                disabled={isViewOnly && !!initialValues.fbAds}
-                                                className={`w-full text-sm rounded-lg border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-neutral-900 dark:text-white focus:ring-brand-400 py-2.5 px-3 focus:outline-none focus:ring-2 shadow-sm font-medium ${isViewOnly && initialValues.fbAds ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                                disabled={!!initialValues.fbAds}
+                                                className={`w-full text-sm rounded-lg border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-neutral-900 dark:text-white focus:ring-brand-400 py-2.5 px-3 focus:outline-none focus:ring-2 shadow-sm font-medium ${initialValues.fbAds ? 'opacity-70 cursor-not-allowed' : ''}`}
                                             >
                                                 <option value="">Select Ad Account...</option>
                                                 {fbAdAccounts.map(f => <option key={f.id} value={f.id}>{f.name} ({f.id})</option>)}

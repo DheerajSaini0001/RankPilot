@@ -85,7 +85,7 @@ const KpiCard = ({ title, value, change, changeText, valueSuffix, isPositive, Ic
                 )}
                 
                 {changeText && (
-                    <span className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 truncate italic tracking-tight">
+                    <span className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 whitespace-nowrap italic tracking-tight">
                         {changeText}
                     </span>
                  )}
