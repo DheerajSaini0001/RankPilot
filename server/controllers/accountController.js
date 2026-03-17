@@ -73,13 +73,17 @@ export const selectAccounts = async (req, res) => {
     const siteId = req.body.siteId;
     let account;
 
-    if (siteId) {
+    // Try finding by siteId if it looks like a valid ObjectId
+    if (siteId && siteId.match(/^[0-9a-fA-F]{24}$/)) {
         account = await UserAccounts.findOneAndUpdate(
             { _id: siteId, userId: req.user._id },
             { $set: updates },
             { returnDocument: 'after' }
         );
-    } else {
+    }
+
+    // Fallback: If no account found by ID (or no ID provided), upsert by Name
+    if (!account) {
         account = await UserAccounts.findOneAndUpdate(
             { userId: req.user._id, siteName: updates.siteName || 'My Website' },
             { $set: updates },
@@ -87,7 +91,7 @@ export const selectAccounts = async (req, res) => {
         );
     }
 
-    if (!account) return res.status(404).json({ message: 'Account not found' });
+    if (!account) return res.status(500).json({ message: 'Failed to create or update account' });
 
     if (updates.ga4PropertyId) {
         syncHistoricalData(account._id, 'ga4').catch(e => console.error('Initial GA4 Sync Fail:', e));
