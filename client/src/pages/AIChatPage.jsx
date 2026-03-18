@@ -245,7 +245,7 @@ const AIChatPage = () => {
 
     return (
         <DashboardLayout>
-            <div className="flex h-[calc(100vh-160px)] w-full max-w-7xl mx-auto overflow-hidden bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-2xl shadow-sm relative z-10">
+            <div className="flex h-[calc(100vh-115px)] w-full overflow-hidden bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-2xl shadow-sm relative z-10">
 
                 {/* Main Chat Area */}
                 <div className="flex-1 flex flex-col h-full bg-white dark:bg-dark-card relative shadow-sm overflow-hidden">
@@ -399,9 +399,9 @@ const AIChatPage = () => {
 
 
                     {/* Messages Scroll Area */}
-                    <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 relative z-10 custom-scrollbar scroll-smooth">
+                    <div className="flex-1 overflow-y-auto px-4 md:px-12 py-6 relative z-10 custom-scrollbar scroll-smooth">
                         {messages.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center min-h-full max-w-4xl mx-auto py-8">
+                            <div className="flex flex-col items-center justify-center min-h-full w-full mx-auto py-8">
 
                                 {/* Personalized Greeting */}
                                 <div className="flex items-center gap-4 mb-6 animate-fade-in-up">
@@ -429,7 +429,7 @@ const AIChatPage = () => {
                                 )}
 
                                 {/* Main Centered Input Box */}
-                                <div className="w-full max-w-6xl bg-white dark:bg-[#1e1e1e] border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none focus-within:ring-2 focus-within:ring-brand-500/20 focus-within:border-brand-500/50 transition-all duration-300 mb-4 animate-fade-in-up">
+                                <div className="w-full max-w-5xl bg-white dark:bg-[#1e1e1e] border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none focus-within:ring-2 focus-within:ring-brand-500/20 focus-within:border-brand-500/50 transition-all duration-300 mb-4 animate-fade-in-up">
                                     <textarea
                                         rows={2}
                                         value={query}
@@ -559,7 +559,7 @@ const AIChatPage = () => {
 
                             </div>
                         ) : (
-                            <div className="space-y-6 md:space-y-8 max-w-4xl mx-auto pb-4">
+                            <div className="space-y-6 md:space-y-8 w-full max-w-none mx-auto pb-4">
                                 {messages.map((msg, idx) => (
                                     <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} group animate-fade-in-up`}>
                                         <div className={`flex max-w-[90%] md:max-w-[80%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} items-start gap-4`}>
@@ -627,7 +627,7 @@ const AIChatPage = () => {
 
                     {/* Fixed Input Area at Bottom - ONLY show when chat is active */}
                     {messages.length > 0 && (
-                        <div className="p-4 md:p-6 bg-white dark:bg-dark-card border-t border-neutral-100 dark:border-neutral-800 shrink-0 relative z-20 animate-fade-in-up">                            <div className="max-w-4xl mx-auto mb-2.5 flex items-center justify-between px-1">
+                        <div className="p-4 md:p-6 bg-white dark:bg-dark-card border-t border-neutral-100 dark:border-neutral-800 shrink-0 relative z-20 animate-fade-in-up">                            <div className="max-w-5xl mx-auto mb-2.5 flex items-center justify-between px-1">
                                 <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
                                     <span className="text-[9px] font-black uppercase tracking-wider text-neutral-400 dark:text-neutral-500 whitespace-nowrap">Active Context:</span>
                                     <div className="flex items-center gap-1">
@@ -645,7 +645,7 @@ const AIChatPage = () => {
                                 </div>
                             </div>
 
-                            <form onSubmit={handleSendMessage} className="relative flex items-center w-full max-w-4xl mx-auto group">
+                            <form onSubmit={handleSendMessage} className="relative flex items-center w-full max-w-5xl mx-auto group">
                                 <div className="absolute left-3 flex items-center gap-1.5 z-10 transition-opacity">
                                     <button 
                                         type="button" 
@@ -686,7 +686,7 @@ const AIChatPage = () => {
                                     value={query}
                                     onChange={(e) => setQuery(e.target.value)}
                                     placeholder="Message RankPilot AI..."
-                                    className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 py-4 pl-28 pr-36 text-[15px] font-medium text-neutral-900 dark:text-white outline-none placeholder:text-neutral-500 rounded-2xl focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all shadow-inner"
+                                    className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 py-4 pl-36 pr-36 text-[15px] font-medium text-neutral-900 dark:text-white outline-none placeholder:text-neutral-500 rounded-2xl focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all shadow-inner"
                                     disabled={loading}
                                 />
                                 
