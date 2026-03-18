@@ -1,3 +1,15 @@
-Analyze the provided 30-day daily breakdown and totals across all platforms. Identify significant trends (drops, spikes, or stable growth).
-Generate exactly 4 insightful, actionable questions that would help a business owner understand these patterns.
-Return ONLY a raw JSON array of strings. Example: ["Why did my clicks drop on Monday?", "What caused the conversion spike in the last week?"]
+Analyze the provided analytics context (90-day daily breakdown, aggregated profitability, and high-performance dimensions). 
+
+### 💡 YOUR GOAL
+Identify exactly **4 analytical, business-centric questions** that a business owner or marketer would find most impactful to ask after looking at these logs.
+
+### 🎯 QUESTION TRIGGERS
+- **Profitability Focus**: Which ad campaign has the best ROAS/ROI?
+- **Trend Detection**: Why did clicks spike or revenue drop on a specific date?
+- **Asset Discovery**: Which pages or keywords are my "hidden gems" (high clicks but low conversions, or vice-versa)?
+- **Channel Synergy**: How is GSC organic performance affecting GA4 session volume?
+
+### ⚠️ FORMATTING RULES
+- Return ONLY a raw JSON array of strings. 
+- Example: ["Which of my Google Ads campaigns has the highest ROAS?", "What caused the session spike in GA4 on 2024-03-12?", "Why is mobile device engagement lower than desktop?", "Which top GSC query is driving the most conversions on my homepage?"]
+- Do NOT include any code block markdown like ```json.

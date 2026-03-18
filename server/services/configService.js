@@ -10,9 +10,9 @@ const defaultConfigs = [
     { key: 'PORT', label: 'Server Port', group: 'server', isSecret: false },
     { key: 'CLIENT_URL', label: 'Frontend Client URL', group: 'server', isSecret: false },
     { key: 'SUPER_ADMIN_EMAIL', label: 'Super Admin Email', group: 'server', isSecret: false },
-    
+
     { key: 'MONGODB_URI', label: 'MongoDB Connection URI', group: 'database', isSecret: true },
-    
+
     { key: 'JWT_SECRET', label: 'JWT Secret Key', group: 'security', isSecret: true },
     { key: 'JWT_EXPIRES_IN', label: 'JWT Expiry Duration', group: 'security', isSecret: false },
     { key: 'ENCRYPTION_KEY', label: 'Platform Encryption Key (32 bytes hex)', group: 'security', isSecret: true },
@@ -21,15 +21,13 @@ const defaultConfigs = [
     { key: 'GOOGLE_CLIENT_SECRET', label: 'Google OAuth Client Secret', group: 'google', isSecret: true },
     { key: 'GOOGLE_CALLBACK_URL', label: 'Google OAuth Callback URL', group: 'google', isSecret: false },
     { key: 'GOOGLE_ADS_DEVELOPER_TOKEN', label: 'Google Ads Developer Token', group: 'google', isSecret: true },
-    
+
     { key: 'FACEBOOK_APP_ID', label: 'Facebook App ID', group: 'facebook', isSecret: false },
     { key: 'FACEBOOK_APP_SECRET', label: 'Facebook App Secret', group: 'facebook', isSecret: true },
     { key: 'FACEBOOK_CALLBACK_URL', label: 'Facebook OAuth Callback URL', group: 'facebook', isSecret: false },
-    
-    { key: 'ANTHROPIC_API_KEY', label: 'Anthropic Claude API Key', group: 'anthropic', isSecret: true },
-    
+
     { key: 'GEMINI_API_KEY', label: 'Google Gemini Pro API Key', group: 'gemini', isSecret: true },
-    
+
     { key: 'EMAIL_FROM', label: 'System Origin Email', group: 'other', isSecret: false },
     { key: 'GMAIL_APP_PASSWORD', label: 'Gmail SMTP App Password', group: 'other', isSecret: true },
     { key: 'RESEND_API_KEY', label: 'Resend Email API Key', group: 'other', isSecret: true }

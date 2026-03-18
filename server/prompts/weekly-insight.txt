@@ -1,23 +1,32 @@
-Analyze the following 7-day analytics data and generate a professional, data-driven "Weekly Intelligence Summary".
+Analyze the following analytics logs and generate a professional, data-driven "90-Day Performance Strategy Report".
 
-Your summary MUST follow this structure:
+### 💡 THE MANDATORY STRUCTURE
 
-### 🚀 Weekly Momentum Overview
-Provide a 2-3 sentence high-level summary of the overall performance ecosystem. Are we trending up or down?
+#### 🚀 PLATFORM PERFORMANCE MOMENTUM (OVERALL DATA)
+Provide a 2-sentence high-level executive summary of the overall ecosystem. Are we generating **Growth**, **Stability**, or **Losses**?
 
-### 📈 Statistical Patterns & Shifts
-Look at the "Daily Metrics Breakdown" and identify specific days where performance spiked or dropped. Mention the data points (e.g., "On [Date], GA4 sessions increased by X%, likely due to [Source]").
+#### 📈 PROFITABILITY & EFFICIENCY ANALYSIS (ROI/ROAS)
+Look at the "Period Performance & Profitability" table. Compare **Spend vs Revenue/Value**. Is our Google/Meta Ads strategy profitable? Mention **ROAS**, **CTR**, and **CPC** figures.
 
-### 🔍 Channel-Specific Insights
-- **Organic Growth (GSC):** Analyze impressions vs. clicks and average position trends.
-- **Paid Performance (Ads):** If data is present, evaluate spend efficiency and conversion consistency.
-- **Engagement (GA4):** Analyze user retention and session volume patterns.
+#### 📈 HIGH-SIGNAL TRENDS & ANOMALIES (DAILY LOGS)
+Scan the "Historical Daily Logs" to identify specific spikes/drops. (e.g. "On [Date], Meta Ads impressions peaked, leading to a session growth of X% in GA4").
 
-### 💡 Strategic Recommendations
-Provide 2-3 actionable, high-impact steps the user should take next week based on this data.
+#### 🏆 TOP WINNING ASSETS (DIMENSIONS)
+Use "Business Breakdown" to call out the top performers:
+- **SEO Momentum (GSC):** Which 2-3 keywords are driving the most organic clicks?
+- **High-Converting Channels:** Which pages or campaigns are currently having the highest ROI focus?
 
-- Use clean Markdown with clear headings.
-- **IMPORTANT**: If you see a major trend, include at least one chart using the ```json-chart-line or ```json-chart-bar syntax.
-- Use **bold text** for important metrics and dates.
-- Keep observations grounded in the provided logs.
-- Do NOT include any conversational filler like "Here is your summary".
+#### 🎯 STRATEGIC GROWTH RECOMMENDATIONS
+Provide 3 high-impact, actionable steps for the user based on these logs.
+1.  **Stop/Scale**: Which campaign or channel needs more/less budget?
+2.  **Conversion Optimization**: Which page needs better design/content?
+3.  **Future Target**: Which high-potential keyword should we double down on?
+
+---
+
+### ✍️ ANALYTICAL STYLE & RULES
+- Use **Clean Markdown** with prominent headers.
+- **CHART REGISTRY**: If you see a major trend (e.g., clicks increasing or revenue dropping), include at least one chart using: ```json-chart-line or ```json-chart-bar.
+- Use **Bold** for all numbers and dates.
+- Keep observations grounded in **Actual Logs** only.
+- Do NOT include any introductory filler (e.g. "Here is your report").

@@ -12,6 +12,7 @@ class PromptBuilder {
 
     buildContext(data = {}) {
         if (!data) data = {};
+        
         let ctx = `## 📊 Analytics Deep-Scan (Database Logs)\n\n`;
 
         // Section 1: Platform Connectivity Status
@@ -24,55 +25,68 @@ class PromptBuilder {
         ctx += activeFlags.length > 0 ? activeFlags.join(" | ") + "\n\n" : "⚠️ No active platform data found.\n\n";
 
         // Helper for calculated metrics
-        const safeRatio = (num, den, multiplier = 1, suffix = '') => {
-            if (!den || den === 0) return `0${suffix}`;
-            return ((num / den) * multiplier).toFixed(2) + suffix;
+        const safeRatio = (num, den, multiplier = 1, prefix = '', suffix = '') => {
+            if (!den || den === 0) return `${prefix}0${suffix}`;
+            return prefix + ((num / den) * multiplier).toFixed(2) + suffix;
         };
 
-        // Section 2: Aggregated Period Totals (Using Tables for Intelligence)
-        ctx += `### 🗓️ Period Performance & Efficiency\n`;
-        ctx += `| Metric | Value | Platform | Efficiency/Ratio |\n| :--- | :--- | :--- | :--- |\n`;
+        // Section 2: Aggregated Period Totals (Market-Intel Table)
+        ctx += `### 🗓️ Period Performance & Profitability\n`;
+        ctx += `| Metric Group | Value | Platform | Efficiency / ROI |\n| :--- | :--- | :--- | :--- |\n`;
         
         if (data.ga4) {
-            ctx += `| Traffic | ${data.ga4.users} Users | GA4 | ${safeRatio(data.ga4.sessions, data.ga4.users)} ses/user |\n`;
-            ctx += `| Engagement | ${data.ga4.sessions} Sessions | GA4 | ${data.ga4.bounceRate}% Bounce \| ${data.ga4.engagementRate}% Engaged |\n`;
-            ctx += `| Retention | ${data.ga4.avgSessionDuration}s Avg Duration | GA4 | ${safeRatio(data.ga4.pageViews, data.ga4.sessions)} views/ses |\n`;
+            ctx += `| Traffic | **${data.ga4.users}** Users | GA4 | ${safeRatio(data.ga4.sessions, data.ga4.users)} ses/user |\n`;
+            ctx += `| Revenue | **$${data.ga4.revenue || 0}** | GA4 | ${data.ga4.engagementRate}% Engaged |\n`;
+            ctx += `| Retention | **${data.ga4.avgSessionDuration}s** Avg | GA4 | ${data.ga4.bounceRate}% Bounce |\n`;
         }
         if (data.gsc) {
-            ctx += `| Organic | ${data.gsc.clicks} Clicks | GSC | ${data.gsc.ctr}% CTR |\n`;
-            ctx += `| Visibility | ${data.gsc.impressions} Impr. | GSC | Pos: ${data.gsc.position} |\n`;
+            ctx += `| Organic | **${data.gsc.clicks}** Clicks | GSC | ${data.gsc.ctr}% CTR |\n`;
+            ctx += `| Visibility | **${data.gsc.impressions}** Impr. | GSC | Pos: ${data.gsc.position} |\n`;
         }
         if (data.googleAds) {
-            const cpc = safeRatio(data.googleAds.spend, data.googleAds.clicks, 1, '');
-            const convRate = safeRatio(data.googleAds.conversions, data.googleAds.clicks, 100, '%');
-            ctx += `| Search Ads | ${data.googleAds.currencyCode}${data.googleAds.spend} Spend | Google Ads | ${data.googleAds.currencyCode}${cpc} CPC |\n`;
-            ctx += `| Conversions | ${data.googleAds.conversions} Conv. | Google Ads | ${convRate} cvr |\n`;
-            ctx += `| Reach | ${data.googleAds.impressions} Impr. | Google Ads | ${data.googleAds.clicks} Clicks |\n`;
+            const sym = data.googleAds.currencyCode || '$';
+            const cpc = safeRatio(data.googleAds.spend, data.googleAds.clicks, 1, sym);
+            const roas = safeRatio(data.googleAds.conversionValue, data.googleAds.spend, 1, '', 'x ROAS');
+            ctx += `| Search Ads | **${sym}${data.googleAds.spend}** Spend | Google Ads | ${cpc} CPC |\n`;
+            ctx += `| Profits | **${sym}${data.googleAds.conversionValue}** Val | Google Ads | ${roas} |\n`;
+            ctx += `| Conversions | **${data.googleAds.conversions}** Conv. | Google Ads | ${data.googleAds.clicks} Clicks |\n`;
         }
         if (data.facebookAds) {
-            const cpc = safeRatio(data.facebookAds.spend, data.facebookAds.clicks, 1, '');
-            const convRate = safeRatio(data.facebookAds.conversions, data.facebookAds.clicks, 100, '%');
-            ctx += `| Meta Ads | ${data.facebookAds.currency}${data.facebookAds.spend} Spend | Meta Ads | ${data.facebookAds.currency}${cpc} CPC |\n`;
-            ctx += `| Conversions | ${data.facebookAds.conversions} Conv. | Meta Ads | ${convRate} cvr |\n`;
+            const sym = data.facebookAds.currency || '$';
+            const cpc = safeRatio(data.facebookAds.spend, data.facebookAds.clicks, 1, sym);
+            const reach = data.facebookAds.reach || 0;
+            ctx += `| Meta Ads | **${sym}${data.facebookAds.spend}** Spend | Meta Ads | ${cpc} CPC |\n`;
+            ctx += `| Reach | **${reach}** People | Meta Ads | Conv: ${data.facebookAds.conversions} |\n`;
         }
         ctx += `\n`;
 
-        // Section 3: Time-Series Trend Analysis
+        // Section 3: High-Signal Granular Dimensions (Winners & Losers)
+        if (data.topDimensions) {
+            ctx += `### 🏆 Business Breakdown (Top Performing Dimensions)\n`;
+            const { queries, pages, campaigns, devices, channels } = data.topDimensions;
+
+            if (queries?.length) ctx += `**Top Keywords (GSC):** ${queries.map(q => `${q.name} (${q.value} clicks)`).join(', ')}\n\n`;
+            if (pages?.length) ctx += `**Highest Traffic Pages:** ${pages.map(p => `${p.name} (${p.value} ses)`).join(', ')}\n\n`;
+            if (campaigns?.length) ctx += `**Best Performing Campaigns:** ${campaigns.map(c => `${c.name} (${c.value} res)`).join(', ')}\n\n`;
+            if (devices?.length) ctx += `**Device Segment:** ${devices.map(d => `${d.name} (${d.value} ses)`).join(', ')}\n\n`;
+            if (channels?.length) ctx += `**Traffic Channels:** ${channels.map(c => `${c.name} (${c.value} ses)`).join(', ')}\n\n`;
+        }
+
+        // Section 4: Time-Series Trend Analysis
         if (data.dailyBreakdown && Object.keys(data.dailyBreakdown).length > 0) {
-            ctx += `### 📈 Historical Daily Breakdown\n`;
-            ctx += `The following are chronological logs. Use these to identify specific spikes, drops, or growth patterns.\n\n`;
+            ctx += `### 📈 Historical Daily Logs\n`;
+            ctx += `Use these logs for chart generation and identifying day-over-day momentum shifts.\n\n`;
             
             Object.keys(data.dailyBreakdown).forEach(source => {
                 const sourceTitle = source.toUpperCase().replace('-', ' ');
                 ctx += `#### [${sourceTitle} Trend Log]:\n`;
-                ctx += `| Date | Metrics Map (Key: Value) |\n| :--- | :--- |\n`;
+                ctx += `| Date | Key Metrics (Value) |\n| :--- | :--- |\n`;
                 
                 const sortedLogs = [...data.dailyBreakdown[source]].sort((a, b) => new Date(a.date) - new Date(b.date));
-                
                 sortedLogs.forEach(day => {
                     const metrics = Object.entries(day.metrics)
                         .map(([k, v]) => `**${k}**: ${v}`)
-                        .join(' \| ');
+                        .join(' | ');
                     ctx += `| ${day.date} | ${metrics} |\n`;
                 });
                 ctx += `\n`;

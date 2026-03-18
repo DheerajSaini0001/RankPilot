@@ -65,7 +65,7 @@ const AdminPage = () => {
         }
     };
 
-    const groups = ['server', 'security', 'database', 'google', 'facebook', 'anthropic', 'gemini', 'other'];
+    const groups = ['server', 'security', 'database', 'google', 'facebook', 'gemini', 'other'];
 
     return (
         <DashboardLayout>

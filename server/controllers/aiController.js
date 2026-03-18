@@ -1,4 +1,3 @@
-import { callClaude } from '../services/claudeService.js';
 import { callGemini } from '../services/geminiService.js';
 import promptBuilder from '../services/promptBuilder.js';
 import Conversation from '../models/Conversation.js';
@@ -9,34 +8,43 @@ import DailyMetric from '../models/DailyMetric.js';
 
 const getAiResponse = async (prompt) => {
     const start = Date.now();
-    let result;
     try {
-        result = await callClaude(prompt);
+        const result = await callGemini(prompt);
+        result.latencyMs = Date.now() - start;
+        return result;
     } catch (err) {
-        try {
-            result = await callGemini(prompt);
-        } catch (fallbackErr) {
-            const error = new Error('AI service temporarily unavailable');
-            error.statusCode = 503;
-            throw error;
-        }
+        console.error("Gemini AI Error:", err.message);
+        const isQuotaError = err.message.includes('429');
+        const error = new Error(isQuotaError 
+            ? 'Gemini Quota Exceeded (429). Your daily free tier limit has been reached. Please wait a minute.' 
+            : 'Gemini AI service is currently unavailable. Please try again later.');
+        error.statusCode = isQuotaError ? 429 : 503;
+        throw error;
     }
-    result.latencyMs = Date.now() - start;
-    return result;
 };
 
 const fetchPlatformData = async (userId, startDate, endDate, siteId, activeSources = []) => {
+
+    if (!startDate || !endDate) {
+        const tzOffset = (new Date()).getTimezoneOffset() * 60000;
+        const nowLocal = new Date(Date.now() - tzOffset);
+        if (!endDate) endDate = nowLocal.toISOString().split('T')[0];
+        if (!startDate) {
+            const date = new Date(nowLocal);
+            date.setDate(date.getDate() - 90);
+            startDate = date.toISOString().split('T')[0];
+        }
+    }
+
     let data = {};
     const query = siteId ? { _id: siteId, userId } : { userId };
     const userAcc = await UserAccounts.findOne(query).sort({ updatedAt: -1 });
     if (!userAcc) return data;
 
     const sourceMap = {
-        'google': ['ga4', 'gsc', 'google-ads'],
-        'facebook': ['facebook-ads'],
-        'google_ads': ['google-ads'],
+        'ga4': ['ga4'],
+        'gsc': ['gsc'],
         'google-ads': ['google-ads'],
-        'meta': ['facebook-ads'],
         'facebook-ads': ['facebook-ads']
     };
     const dbSources = activeSources.flatMap(s => sourceMap[s] || [s]);
@@ -60,7 +68,16 @@ const fetchPlatformData = async (userId, startDate, endDate, siteId, activeSourc
     if (dailyLogs.length > 0) {
         const aggregated = {};
         const sourceTotals = {};
-        const sourceEntryCount = {}; // For calculating averages (bounce rate, position)
+        const sourceEntryCount = {};
+        
+        // Dimension tracking
+        const dimensions = {
+            queries: {},
+            pages: {},
+            campaigns: {},
+            devices: {},
+            channels: {}
+        };
 
         dailyLogs.forEach(log => {
             const key = `${log.source}_${log.date}`;
@@ -88,7 +105,36 @@ const fetchPlatformData = async (userId, startDate, endDate, siteId, activeSourc
                     sourceTotals[log.source][m] = (sourceTotals[log.source][m] || 0) + log.metrics[m];
                 }
             });
+
+            // Dimension Aggregation
+            if (log.dimensions) {
+                const d = log.dimensions;
+                const m = log.metrics;
+                
+                if (d.query) dimensions.queries[d.query] = (dimensions.queries[d.query] || 0) + (m.clicks || 0);
+                if (d.page || d.pagePath) {
+                    const page = d.page || d.pagePath;
+                    dimensions.pages[page] = (dimensions.pages[page] || 0) + (m.sessions || m.clicks || 0);
+                }
+                if (d.campaign) dimensions.campaigns[d.campaign] = (dimensions.campaigns[d.campaign] || 0) + (m.conversions || m.clicks || 0);
+                if (d.device) dimensions.devices[d.device] = (dimensions.devices[d.device] || 0) + (m.sessions || m.clicks || 0);
+                if (d.channel) dimensions.channels[d.channel] = (dimensions.channels[d.channel] || 0) + (m.sessions || 0);
+            }
         });
+
+        // Helper to get top items
+        const getTop = (obj, limit = 10) => Object.entries(obj)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, limit)
+            .map(([name, value]) => ({ name, value }));
+
+        data.topDimensions = {
+            queries: getTop(dimensions.queries),
+            pages: getTop(dimensions.pages),
+            campaigns: getTop(dimensions.campaigns),
+            devices: getTop(dimensions.devices),
+            channels: getTop(dimensions.channels)
+        };
 
         // Format Daily Breakdown for AI
         data.dailyBreakdown = Object.values(aggregated).reduce((acc, item) => {
@@ -104,6 +150,7 @@ const fetchPlatformData = async (userId, startDate, endDate, siteId, activeSourc
                 users: sourceTotals['ga4'].users || 0,
                 sessions: sourceTotals['ga4'].sessions || 0,
                 pageViews: sourceTotals['ga4'].pageViews || 0,
+                revenue: (sourceTotals['ga4'].revenue || 0).toFixed(2),
                 bounceRate: (sourceTotals['ga4'].bounceRate / count).toFixed(2),
                 avgSessionDuration: (sourceTotals['ga4'].avgSessionDuration / count).toFixed(1) || 0,
                 engagementRate: (sourceTotals['ga4'].engagementRate / count).toFixed(2) || 0
@@ -124,7 +171,8 @@ const fetchPlatformData = async (userId, startDate, endDate, siteId, activeSourc
                 spend: (sourceTotals['google-ads'].spend || 0).toFixed(2),
                 impressions: sourceTotals['google-ads'].impressions || 0,
                 clicks: sourceTotals['google-ads'].clicks || 0,
-                conversions: sourceTotals['google-ads'].conversions || 0
+                conversions: sourceTotals['google-ads'].conversions || 0,
+                conversionValue: (sourceTotals['google-ads'].conversionValue || 0).toFixed(2)
             };
         }
         if (sourceTotals['facebook-ads']) {
@@ -133,7 +181,8 @@ const fetchPlatformData = async (userId, startDate, endDate, siteId, activeSourc
                 spend: (sourceTotals['facebook-ads'].spend || 0).toFixed(2),
                 impressions: sourceTotals['facebook-ads'].impressions || 0,
                 clicks: sourceTotals['facebook-ads'].clicks || 0,
-                conversions: sourceTotals['facebook-ads'].conversions || 0
+                conversions: sourceTotals['facebook-ads'].conversions || 0,
+                reach: sourceTotals['facebook-ads'].reach || 0
             };
         }
     }
@@ -146,18 +195,26 @@ export const askAi = async (req, res) => {
     let { question, conversationId, activeSources, siteId } = req.body;
 
     const tzOffset = (new Date()).getTimezoneOffset() * 60000;
-    const localISOTime = (new Date(Date.now() - tzOffset)).toISOString().slice(0, 10);
-    const dateExtractionPrompt = `Extract the specific date range mentioned in this user question: "${question}". Today's date is ${localISOTime}. If the user mentions 'today', 'last 10 days', 'yesterday' etc., calculate the exact 'startDate' and 'endDate' in YYYY-MM-DD format. If NO specific date timeframe is mentioned, return a broad range backward facing: {"startDate": "2023-01-01", "endDate": "${localISOTime}"}. Return ONLY a raw JSON strictly matching: {"startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD"}`;
+    const now = new Date(Date.now() - tzOffset);
+    const localISOTime = now.toISOString().slice(0, 10);
+    
+    const defaultStart = new Date(now);
+    defaultStart.setDate(defaultStart.getDate() - 90);
+    const fallbackStart = defaultStart.toISOString().slice(0, 10);
 
-    let startDate = '2023-01-01';
+    const dateExtractionPrompt = `Extract the date range for this question: "${question}". Today is ${localISOTime}.
+    If the user mentions 'today', 'last 10 days', 'yesterday' etc., calculate the exact 'startDate' and 'endDate'.
+    IMPORTANT: If the user asks to "compare" with another period (e.g. "compare last 10 days to last month"), provide a wide 'startDate' that COVERS BOTH periods.
+    Return ONLY JSON: {"startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD"}.
+    Fallback if no date is mentioned: {"startDate": "${fallbackStart}", "endDate": "${localISOTime}"}`;
+
+    let startDate = fallbackStart;
     let endDate = localISOTime;
 
     try {
         const extractionResult = await getAiResponse(dateExtractionPrompt);
-        const content = extractionResult.content;
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        const jsonStr = jsonMatch ? jsonMatch[0] : content;
-        const parsed = JSON.parse(jsonStr);
+        const jsonMatch = extractionResult.content.match(/\{[\s\S]*\}/);
+        const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : extractionResult.content);
         if (parsed.startDate && parsed.endDate) {
             startDate = parsed.startDate;
             endDate = parsed.endDate;
@@ -187,8 +244,6 @@ export const askAi = async (req, res) => {
 
     const aiResult = await getAiResponse(prompt);
 
-    // Robust JSON extraction for date (if needed in future results, but here logic applies to extractionResult)
-    // Applying preservation of markdown for final content
     let cleanContent = aiResult.content
         .replace(/(\r?\n)*.*response is advisory only.*/gi, '')
         .trim();
@@ -249,27 +304,32 @@ export const refreshWeeklyInsight = async (req, res) => {
     const data = await fetchPlatformData(req.user._id, dateRangeStart, dateRangeEnd, siteId, []);
 
     const prompt = promptBuilder.buildWeeklyInsightPrompt(data);
-    const aiResult = await getAiResponse(prompt);
+    
+    try {
+        const aiResult = await getAiResponse(prompt);
+        let cleanContent = aiResult.content
+            .replace(/(\r?\n)*.*response is advisory only.*/gi, '')
+            .trim();
 
-    let cleanContent = aiResult.content
-        .replace(/(\r?\n)*.*response is advisory only.*/gi, '')
-        .trim();
+        const sourceMap = { ga4: 'ga4', gsc: 'gsc', googleAds: 'google-ads', facebookAds: 'facebook-ads' };
+        const discoveredSources = Object.keys(data).filter(k => sourceMap[k]).map(k => sourceMap[k]);
 
-    const sourceMap = { ga4: 'ga4', gsc: 'gsc', googleAds: 'google-ads', facebookAds: 'facebook-ads' };
-    const discoveredSources = Object.keys(data).filter(k => sourceMap[k]).map(k => sourceMap[k]);
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        const insight = await WeeklyInsight.findOneAndUpdate(
+            { userId: req.user._id, siteId: siteId || null },
+            { 
+                content: cleanContent, 
+                sources: discoveredSources.length > 0 ? discoveredSources : ['ga4'],
+                expiresAt 
+            },
+            { upsert: true, returnDocument: 'after' }
+        );
 
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    const insight = await WeeklyInsight.findOneAndUpdate(
-        { userId: req.user._id, siteId: siteId || null },
-        { 
-            content: cleanContent, 
-            sources: discoveredSources.length > 0 ? discoveredSources : ['ga4'],
-            expiresAt 
-        },
-        { upsert: true, returnDocument: 'after' }
-    );
-
-    res.status(200).json(insight);
+        res.status(200).json(insight);
+    } catch (err) {
+        // Return 503 so frontend knows to show "Try again later"
+        res.status(err.statusCode || 503).json({ message: err.message });
+    }
 };
 
 export const getSuggestedQuestions = async (req, res) => {
@@ -290,6 +350,13 @@ export const getSuggestedQuestions = async (req, res) => {
     const aiResult = await getAiResponse(prompt);
 
     let questions = [];
+    const fallbacks = [
+        "Audit my GSC performance to find high-impression keywords with low CTR.",
+        "Analyze my GA4 conversion funnel to identify where I'm losing potential customers.",
+        "Evaluate my Google Ads budget efficiency and identify the highest ROI campaigns.",
+        "Review my Meta Ads performance to compare ROAS across different audiences."
+    ];
+
     try {
         const content = aiResult.content;
         const jsonMatch = content.match(/\[[\s\S]*\]/);
@@ -298,12 +365,14 @@ export const getSuggestedQuestions = async (req, res) => {
         if (!Array.isArray(questions)) questions = [];
     } catch (e) {
         console.error("AI Suggestions Parse Error:", e);
-        questions = [
-            "How is my ROI looking compared to last month?", 
-            "Can you explain any recent traffic drops?", 
-            "Which source is performing best lately?", 
-            "What should I focus on for next week?"
-        ];
+        questions = fallbacks;
+    }
+
+    // Ensure exactly 4 questions
+    if (questions.length < 4) {
+        questions = [...questions, ...fallbacks.slice(questions.length)].slice(0, 4);
+    } else {
+        questions = questions.slice(0, 4);
     }
 
     res.status(200).json({ questions });
