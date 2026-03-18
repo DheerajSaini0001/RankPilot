@@ -13,14 +13,14 @@ export const listAdAccounts = async (userId) => {
     return adAccounts;
 };
 
-export const getInsights = async (userId, reportType, startDate, endDate, level, extraParams) => {
-    const account = await UserAccounts.findOne({ userId });
-    if (!account || !account.facebookAdAccountId) throw new Error('SOURCE_NOT_CONNECTED');
+export const getInsights = async (userId, adAccountId, reportType, startDate, endDate, level, extraParams) => {
+    // Caller provide adAccountId.
+    if (!adAccountId) throw new Error('FACEBOOK_AD_ACCOUNT_ID_MISSING');
 
     const accessToken = await getValidFacebookToken(userId);
     bizSdk.FacebookAdsApi.init(accessToken);
     const AdAccount = bizSdk.AdAccount;
-    const adAccount = new AdAccount(account.facebookAdAccountId);
+    const adAccount = new AdAccount(adAccountId);
 
     const res = await adAccount.getInsights(['spend', 'impressions', 'clicks', 'reach', 'cpc', 'cpm', 'ctr', 'actions', 'action_values'], {
         time_range: { since: startDate, until: endDate },
@@ -30,3 +30,4 @@ export const getInsights = async (userId, reportType, startDate, endDate, level,
 
     return res;
 };
+

@@ -21,15 +21,15 @@ export const listProperties = async (userId) => {
 };
 
 // Implements other ga4 queries...
-export const runReport = async (userId, reportType, startDate, endDate, dimensions, metrics) => {
-    const account = await UserAccounts.findOne({ userId });
-    if (!account || !account.ga4PropertyId) throw new Error('SOURCE_NOT_CONNECTED');
+export const runReport = async (userId, propertyId, reportType, startDate, endDate, dimensions, metrics) => {
+    // We no longer find the account here. Caller must provide the propertyId.
+    if (!propertyId) throw new Error('GA4_PROPERTY_ID_MISSING');
 
     const auth = await getValidGoogleToken(userId);
     const analyticsdata = google.analyticsdata({ version: 'v1beta', auth });
 
     const res = await analyticsdata.properties.runReport({
-        property: account.ga4PropertyId,
+        property: propertyId,
         requestBody: {
             dateRanges: [{ startDate, endDate }],
             dimensions: dimensions.map(d => ({ name: d })),
@@ -39,3 +39,4 @@ export const runReport = async (userId, reportType, startDate, endDate, dimensio
 
     return res.data;
 };
+

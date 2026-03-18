@@ -178,7 +178,19 @@ export const getGa4Summary = async (req, res) => {
 
     try {
         const filter = await buildMatchFilter(userId, 'ga4', req.query);
-        const [overview, timeseries, traffic, pages, ga4BreakdownsDevices, ga4BreakdownsLocations] = await Promise.all([
+        
+        // Calculate previous period
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const diff = end - start;
+        const prevEnd = new Date(start.getTime() - (24 * 60 * 60 * 1000));
+        const prevStart = new Date(prevEnd.getTime() - diff);
+        const prevStartDate = prevStart.toISOString().split('T')[0];
+        const prevEndDate = prevEnd.toISOString().split('T')[0];
+        
+        const prevFilter = await buildMatchFilter(userId, 'ga4', { ...req.query, startDate: prevStartDate, endDate: prevEndDate });
+
+        const [overview, priorOverview, timeseries, traffic, pages, ga4BreakdownsDevices, ga4BreakdownsLocations] = await Promise.all([
             DailyMetric.aggregate([
                 { $match: filter },
                 { $group: {
@@ -191,8 +203,25 @@ export const getGa4Summary = async (req, res) => {
                 }}
             ]),
             DailyMetric.aggregate([
+                { $match: prevFilter },
+                { $group: {
+                    _id: null,
+                    users: { $sum: "$metrics.users" },
+                    sessions: { $sum: "$metrics.sessions" },
+                    bounceRate: { $avg: "$metrics.bounceRate" },
+                    avgSessionDuration: { $avg: "$metrics.avgSessionDuration" },
+                    pageViews: { $sum: "$metrics.pageViews" }
+                }}
+            ]),
+            DailyMetric.aggregate([
                 { $match: filter },
-                { $group: { _id: "$date", sessions: { $sum: "$metrics.sessions" } } },
+                { $group: { 
+                    _id: "$date", 
+                    sessions: { $sum: "$metrics.sessions" },
+                    pageViews: { $sum: "$metrics.pageViews" },
+                    users: { $sum: "$metrics.users" },
+                    bounceRate: { $avg: "$metrics.bounceRate" }
+                } },
                 { $sort: { _id: 1 } }
             ]),
             DailyMetric.aggregate([
@@ -237,7 +266,14 @@ export const getGa4Summary = async (req, res) => {
 
         res.status(200).json({
             overview: overview[0] || { users: 0, sessions: 0, bounceRate: 0, avgSessionDuration: 0, pageViews: 0 },
-            timeseries: timeseries.map(d => ({ date: d._id, sessions: d.sessions })),
+            priorOverview: priorOverview[0] || { users: 0, sessions: 0, bounceRate: 0, avgSessionDuration: 0, pageViews: 0 },
+            timeseries: timeseries.map(d => ({ 
+                date: d._id, 
+                sessions: d.sessions,
+                pageViews: d.pageViews || 0,
+                users: d.users || 0,
+                bounceRate: (d.bounceRate || 0) * 100 // Scale to pct
+            })),
             traffic: traffic.map(d => ({ channel: d._id.channel, source: d._id.source, sessions: d.sessions, users: d.users })),
             pages: pages.map(d => ({ path: d._id.path, title: d._id.title, views: d.views, users: d.users })),
             breakdowns: {
@@ -250,13 +286,23 @@ export const getGa4Summary = async (req, res) => {
     }
 };
 
+
 export const getGscSummary = async (req, res) => {
     const { startDate, endDate } = req.query;
     const userId = req.user._id;
 
     try {
         const filter = await buildMatchFilter(userId, 'gsc', req.query);
-        const [overview, timeseries, queries, pages, deviceBreakdown] = await Promise.all([
+
+        // Previous period
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const diff = end - start;
+        const prevEnd = new Date(start.getTime() - (24 * 60 * 60 * 1000));
+        const prevStart = new Date(prevEnd.getTime() - diff);
+        const prevFilter = await buildMatchFilter(userId, 'gsc', { ...req.query, startDate: prevStart.toISOString().split('T')[0], endDate: prevEnd.toISOString().split('T')[0] });
+
+        const [overview, priorOverview, timeseries, queries, pages, deviceBreakdown, countryBreakdown] = await Promise.all([
             DailyMetric.aggregate([
                 { $match: filter },
                 { $group: {
@@ -267,8 +313,22 @@ export const getGscSummary = async (req, res) => {
                 }}
             ]),
             DailyMetric.aggregate([
+                { $match: prevFilter },
+                { $group: {
+                    _id: null,
+                    clicks: { $sum: "$metrics.clicks" },
+                    impressions: { $sum: "$metrics.impressions" },
+                    position: { $avg: "$metrics.position" }
+                }}
+            ]),
+            DailyMetric.aggregate([
                 { $match: filter },
-                { $group: { _id: "$date", clicks: { $sum: "$metrics.clicks" }, impressions: { $sum: "$metrics.impressions" } } },
+                { $group: { 
+                    _id: "$date", 
+                    clicks: { $sum: "$metrics.clicks" }, 
+                    impressions: { $sum: "$metrics.impressions" },
+                    position: { $avg: "$metrics.position" }
+                } },
                 { $sort: { _id: 1 } }
             ]),
             DailyMetric.aggregate([
@@ -280,14 +340,15 @@ export const getGscSummary = async (req, res) => {
                     position: { $avg: "$metrics.position" }
                 }},
                 { $sort: { clicks: -1 } },
-                { $limit: 10 }
+                { $limit: 20 }
             ]),
             DailyMetric.aggregate([
                 { $match: filter },
                 { $group: {
                     _id: "$dimensions.page",
                     clicks: { $sum: "$metrics.clicks" },
-                    impressions: { $sum: "$metrics.impressions" }
+                    impressions: { $sum: "$metrics.impressions" },
+                    position: { $avg: "$metrics.position" }
                 }},
                 { $sort: { clicks: -1 } },
                 { $limit: 10 }
@@ -295,22 +356,39 @@ export const getGscSummary = async (req, res) => {
             DailyMetric.aggregate([
                 { $match: filter },
                 { $group: { _id: "$dimensions.device", value: { $sum: "$metrics.clicks" } } }
+            ]),
+            DailyMetric.aggregate([
+                { $match: filter },
+                { $group: { _id: "$dimensions.country", value: { $sum: "$metrics.clicks" } } },
+                { $sort: { value: -1 } },
+                { $limit: 10 }
             ])
         ]);
 
 
         const ov = overview[0] || { clicks: 0, impressions: 0, position: 0 };
+        const pov = priorOverview[0] || { clicks: 0, impressions: 0, position: 0 };
+
         res.status(200).json({
             overview: { ...ov, ctr: ov.impressions > 0 ? ov.clicks / ov.impressions : 0 },
-            timeseries: timeseries.map(d => ({ date: d._id, clicks: d.clicks, impressions: d.impressions })),
+            priorOverview: { ...pov, ctr: pov.impressions > 0 ? pov.clicks / pov.impressions : 0 },
+            timeseries: timeseries.map(d => ({ 
+                date: d._id, 
+                clicks: d.clicks, 
+                impressions: d.impressions, 
+                position: d.position || 0,
+                ctr: d.impressions > 0 ? d.clicks / d.impressions : 0
+            })),
             queries: queries.map(d => ({ query: d._id, clicks: d.clicks, impressions: d.impressions, ctr: d.impressions > 0 ? d.clicks / d.impressions : 0, position: d.position })),
-            pages: pages.map(d => ({ page: d._id, clicks: d.clicks, impressions: d.impressions, ctr: d.impressions > 0 ? d.clicks / d.impressions : 0 })),
-            devices: deviceBreakdown.map(d => ({ name: d._id || 'unknown', value: d.value }))
+            pages: pages.map(d => ({ page: d._id, clicks: d.clicks, impressions: d.impressions, ctr: d.impressions > 0 ? d.clicks / d.impressions : 0, position: d.position })),
+            devices: deviceBreakdown.map(d => ({ name: d._id || 'unknown', value: d.value })),
+            countries: countryBreakdown.map(d => ({ name: d._id || 'unknown', value: d.value }))
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
+
 
 export const getGoogleAdsSummary = async (req, res) => {
     const { startDate, endDate } = req.query;

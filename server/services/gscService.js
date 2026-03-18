@@ -10,15 +10,15 @@ export const listSites = async (userId) => {
     return res.data.siteEntry || [];
 };
 
-export const runQuery = async (userId, reportType, startDate, endDate, dimensions) => {
-    const account = await UserAccounts.findOne({ userId });
-    if (!account || !account.gscSiteUrl) throw new Error('SOURCE_NOT_CONNECTED');
+export const runQuery = async (userId, siteUrl, reportType, startDate, endDate, dimensions) => {
+    // Caller provide siteUrl.
+    if (!siteUrl) throw new Error('GSC_SITE_URL_MISSING');
 
     const auth = await getValidGoogleToken(userId);
     const searchconsole = google.webmasters({ version: 'v3', auth });
 
     const res = await searchconsole.searchanalytics.query({
-        siteUrl: account.gscSiteUrl,
+        siteUrl: siteUrl,
         requestBody: {
             startDate,
             endDate,
@@ -28,3 +28,4 @@ export const runQuery = async (userId, reportType, startDate, endDate, dimension
 
     return res.data;
 };
+

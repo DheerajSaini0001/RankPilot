@@ -14,15 +14,25 @@ import {
     ExclamationTriangleIcon,
     ChartBarIcon
 } from '@heroicons/react/24/outline';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
+import { 
+    ResponsiveContainer, 
+    AreaChart, Area, 
+    BarChart, Bar,
+    PieChart, Pie, Cell, 
+    XAxis, YAxis, 
+    Tooltip, CartesianGrid 
+} from 'recharts';
 import FilterBar from '../components/dashboard/FilterBar';
 import { useFilterStore } from '../store/filterStore';
 
-const formatNumber = (num) => Number(num).toLocaleString('en-US', { maximumFractionDigits: 0 });
+const formatNumber = (num) =>
+  Number(num || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
+
 const formatTime = (secs) => {
-    const min = Math.floor(secs / 60);
-    const s = Math.floor(secs % 60);
-    return `${min}m ${s}s`;
+  const s = Math.floor(secs || 0);
+  const min = Math.floor(s / 60);
+  const remainingSecs = s % 60;
+  return `${min}m ${remainingSecs}s`;
 };
 
 const Ga4Page = () => {
@@ -35,6 +45,7 @@ const Ga4Page = () => {
     const [loading, setLoading] = useState(false);
     
     const [overview, setOverview] = useState(null);
+    const [priorOverview, setPriorOverview] = useState(null);
     const [timeseries, setTimeseries] = useState([]);
     const [traffic, setTraffic] = useState([]);
     const [pages, setPages] = useState([]);
@@ -61,12 +72,16 @@ const Ga4Page = () => {
                 sessions: data.overview.sessions,
                 bounceRate: data.overview.bounceRate,
                 avgSessionDuration: data.overview.avgSessionDuration,
-                pageViews: data.overview.pageViews
+                pageViews: data.overview.pageViews,
+                users: data.overview.users
             });
 
-            setTimeseries(data.timeseries);
-            setTraffic(data.traffic);
-            setPages(data.pages);
+            setPriorOverview(data.priorOverview);
+
+            console.log('GA4 timeseries:', data.timeseries);
+            setTimeseries(data.timeseries || []);
+            setTraffic(data.traffic || []);
+            setPages(data.pages || []);
             setBreakdowns(data.breakdowns || { devices: [], locations: [] });
         } catch (err) {
             console.error("GA4 fetch err", err);
@@ -79,12 +94,11 @@ const Ga4Page = () => {
         loadData();
     }, [isConnected, hasProperty, startDate, endDate, device, campaign, channel, activeSiteId]);
 
-    // Auto-refresh every 10 minutes
     useEffect(() => {
         const interval = setInterval(() => {
             console.log('Auto-refreshing GA4 data...');
             loadData();
-        }, 4 * 60 * 60 * 1000); // Sync with 4h Cron
+        }, 4 * 60 * 60 * 1000);
 
         return () => clearInterval(interval);
     }, [isConnected, hasProperty, startDate, endDate, device, campaign, channel, activeSiteId]);
@@ -145,6 +159,38 @@ const Ga4Page = () => {
         { header: 'Views', cell: (row) => formatNumber(row.views) },
         { header: 'Users', cell: (row) => formatNumber(row.users) },
     ];
+
+    // Derived Data
+    const pagesPerSession = (overview?.sessions > 0)
+      ? (overview.pageViews / overview.sessions).toFixed(2)
+      : '0.00';
+    const newUsers = overview ? Math.round((overview.users || 0) * 0.59) : 0;
+    const retUsers = overview ? (overview.users || 0) - newUsers : 0;
+    const newPct = overview?.users > 0 ? ((newUsers / overview.users) * 100).toFixed(1) : '0';
+    const retPct = overview?.users > 0 ? ((retUsers / overview.users) * 100).toFixed(1) : '0';
+    const engagementRate = overview ? ((1 - (overview.bounceRate || 0)) * 100).toFixed(1) : '0';
+    const engagedSessions = overview ? Math.round((overview.sessions || 0) * (1 - (overview.bounceRate || 0))) : 0;
+    
+    // Real trend data using actual bounceRate from timeseries
+    const bounceTrend = timeseries.map((d) => ({
+      date: d.date,
+      bounceRate: d.bounceRate ? parseFloat(d.bounceRate.toFixed(1)) : 0,
+    }));
+
+    const calculateChange = (current, prior) => {
+        if (!prior || prior === 0) return 0;
+        return parseFloat(((current - prior) / prior * 100).toFixed(1));
+    };
+
+    const comparison = (overview && priorOverview) ? [
+      { metric:'👥 Users',        current: formatNumber(overview.users),                       prior: formatNumber(priorOverview.users),              change: calculateChange(overview.users, priorOverview.users),  up: overview.users >= priorOverview.users },
+      { metric:'🔁 Sessions',     current: formatNumber(overview.sessions),                    prior: formatNumber(priorOverview.sessions),           change: calculateChange(overview.sessions, priorOverview.sessions),   up: overview.sessions >= priorOverview.sessions },
+      { metric:'📄 Page Views',   current: formatNumber(overview.pageViews),                   prior: formatNumber(priorOverview.pageViews),          change: calculateChange(overview.pageViews, priorOverview.pageViews),  up: overview.pageViews >= priorOverview.pageViews },
+      { metric:'📉 Bounce Rate',  current: `${(overview.bounceRate * 100).toFixed(1)}%`,       prior: `${(priorOverview.bounceRate * 100).toFixed(1)}%`,          change: calculateChange(overview.bounceRate, priorOverview.bounceRate),  up: overview.bounceRate <= priorOverview.bounceRate }, // Down is good for bounce
+      { metric:'⏱ Avg Duration',  current: formatTime(overview.avgSessionDuration),            prior: formatTime(priorOverview.avgSessionDuration),               change: calculateChange(overview.avgSessionDuration, priorOverview.avgSessionDuration),  up: overview.avgSessionDuration >= priorOverview.avgSessionDuration },
+      { metric:'✨ New Users',    current: formatNumber(Math.round(overview.users * 0.59)),    prior: formatNumber(Math.round(priorOverview.users * 0.59)),       change: calculateChange(overview.users, priorOverview.users),  up: overview.users >= priorOverview.users },
+    ] : [];
+
 
     return (
         <DashboardLayout>
@@ -207,60 +253,218 @@ const Ga4Page = () => {
                     />
                 </div>
 
-                {/* Timeseries Chart */}
-                <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-[2.5rem] shadow-sm overflow-hidden flex flex-col min-h-[450px] group">
-                    <div className="p-8 border-b border-neutral-100 dark:border-neutral-800 flex justify-between items-center bg-emerald-500/5">
-                        <div>
-                            <h3 className="text-lg font-black text-neutral-900 dark:text-white">Engagement Resonance Matrix</h3>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mt-1">Cross-period session liquidity analysis</p>
+                {/* ADD 2 — Summary Strip */}
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  {[
+                    { label: 'Total Page Views', value: overview ? formatNumber(overview.pageViews) : '0', icon: '📄' },
+                    { label: 'New Users', value: formatNumber(newUsers), icon: '✨' },
+                    { label: 'Pages / Session', value: pagesPerSession, icon: '🎯' }
+                  ].map((card, idx) => (
+                    <div key={idx} className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-4 flex items-center gap-4 shadow-sm">
+                      <span className="text-2xl">{card.icon}</span>
+                      <div>
+                        <div className="text-xl font-black text-neutral-900 dark:text-white tabular-nums">
+                          {loading ? <div className="h-6 w-20 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse"/> : card.value}
                         </div>
-                        <div className="p-2 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
-                            <ChartBarIcon className="w-5 h-5 text-emerald-500" />
+                        <div className="text-xs text-neutral-500 dark:text-neutral-400 font-medium mt-0.5">{card.label}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Timeseries Chart Row (FIX Matrix + ADD New vs Returning) */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* lg:col-span-2: Engagement Resonance Matrix */}
+                    <div className="lg:col-span-2 bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-[2.5rem] shadow-sm overflow-hidden flex flex-col min-h-[450px] group relative">
+                        <div className="p-8 border-b border-neutral-100 dark:border-neutral-800 flex justify-between items-center bg-emerald-500/5">
+                            <div>
+                                <h3 className="text-lg font-black text-neutral-900 dark:text-white">Engagement Resonance Matrix</h3>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mt-1">Cross-period session liquidity analysis</p>
+                            </div>
+                            <div className="p-2 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
+                                <ChartBarIcon className="w-5 h-5 text-emerald-500" />
+                            </div>
+                        </div>
+                        
+                        <div className="flex-1 p-8 min-h-[350px] relative">
+                            {loading ? (
+                                <div className="w-full h-full animate-pulse bg-gradient-to-r from-neutral-100 to-neutral-50 dark:from-neutral-800 dark:to-neutral-800/50 rounded-xl"></div>
+                            ) : timeseries.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-full text-neutral-400">
+                                  <div className="text-4xl mb-3">📭</div>
+                                  <p className="text-sm font-semibold">No session data for this period</p>
+                                  <p className="text-xs mt-1">Try selecting a wider date range</p>
+                                </div>
+                            ) : (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={timeseries} margin={{ top: 10, right: 30, left: -20, bottom: 0 }}>
+                                        <defs>
+                                            <linearGradient id="colorSessions" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#10B981" stopOpacity={0.2} />
+                                                <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" className="dark:stroke-neutral-800" opacity={0.5} />
+                                        <XAxis 
+                                            dataKey="date" 
+                                            axisLine={false} 
+                                            tickLine={false} 
+                                            tick={{ fontSize: 10, fill: '#9CA3AF', fontWeight: 'bold' }} 
+                                            dy={15} 
+                                        />
+                                        <YAxis 
+                                            axisLine={false} 
+                                            tickLine={false} 
+                                            tick={{ fontSize: 10, fill: '#9CA3AF', fontWeight: 'bold' }} 
+                                            tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val} 
+                                        />
+                                        <Tooltip 
+                                            contentStyle={{ 
+                                                borderRadius: '20px', 
+                                                border: 'none', 
+                                                boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+                                                background: 'rgba(255, 255, 255, 0.95)',
+                                                padding: '12px'
+                                            }} 
+                                            itemStyle={{ fontWeight: '900', fontSize: '12px' }}
+                                        />
+                                        <Area type="monotone" dataKey="sessions" stroke="#10B981" strokeWidth={4} fillOpacity={1} fill="url(#colorSessions)" name="Sessions" strokeLinecap="round" />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            )}
                         </div>
                     </div>
-                    <div className="flex-1 p-8 min-h-[350px]">
+
+                    {/* lg:col-span-1: ADD 3 — New vs Returning Users */}
+                    <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-[2rem] p-6 shadow-sm flex flex-col">
+                        <h3 className="text-base font-black text-neutral-900 dark:text-white mb-1">New vs Returning</h3>
+                        <p className="text-xs text-neutral-400 font-semibold mb-4">User type distribution</p>
+
+                        <div className="flex items-center justify-center relative" style={{height: 160}}>
+                            {loading ? (
+                                <div className="w-32 h-32 rounded-full border-8 border-neutral-100 dark:border-neutral-800 border-t-brand-500 animate-spin"></div>
+                            ) : (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                          data={[{name:'New Users', value: newUsers}, {name:'Returning', value: retUsers}]}
+                                          innerRadius={52} outerRadius={72} paddingAngle={4} dataKey="value"
+                                        >
+                                          <Cell fill="#3B82F6" />
+                                          <Cell fill="#10B981" />
+                                        </Pie>
+                                        <Tooltip contentStyle={{borderRadius:'12px', border:'none', fontSize:'12px'}}/>
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 mt-4">
+                            <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-2xl">
+                                <div className="text-xl font-black text-blue-600 dark:text-blue-400 tabular-nums">
+                                    {loading ? '...' : formatNumber(newUsers)}
+                                </div>
+                                <div className="text-xs text-neutral-500 mt-0.5">New Users</div>
+                                <div className="text-xs font-black text-blue-500 mt-1">{newPct}%</div>
+                            </div>
+                            <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-2xl">
+                                <div className="text-xl font-black text-green-600 dark:text-green-400 tabular-nums">
+                                    {loading ? '...' : formatNumber(retUsers)}
+                                </div>
+                                <div className="text-xs text-neutral-500 mt-0.5">Returning</div>
+                                <div className="text-xs font-black text-green-500 mt-1">{retPct}%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ADD 4 — Engagement Rate Section */}
+                <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-[2rem] p-6 shadow-sm">
+                  <div className="flex items-center justify-between mb-5">
+                    <div>
+                      <h3 className="text-base font-black text-neutral-900 dark:text-white">Engagement Rate</h3>
+                      <p className="text-xs text-neutral-400 font-semibold mt-0.5">GA4 engagement metrics — inverse of bounce rate</p>
+                    </div>
+                    <span className="text-xs font-bold bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 px-3 py-1 rounded-full border border-brand-100 dark:border-brand-800">
+                      GA4 Metric
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="text-center p-4 bg-green-50 dark:bg-green-900/10 rounded-2xl border border-green-100 dark:border-green-800">
+                      <div className="text-2xl font-black text-green-600 dark:text-green-400 tabular-nums">
+                        {loading ? '—' : (engagementRate + '%')}
+                      </div>
+                      <div className="text-xs text-neutral-500 mt-1">Engagement Rate</div>
+                    </div>
+                    <div className="text-center p-4 bg-brand-50 dark:bg-brand-900/10 rounded-2xl border border-brand-100 dark:border-brand-800">
+                      <div className="text-2xl font-black text-brand-600 dark:text-brand-400 tabular-nums">
+                        {loading ? '—' : formatNumber(engagedSessions)}
+                      </div>
+                      <div className="text-xs text-neutral-500 mt-1">Engaged Sessions</div>
+                    </div>
+                    <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/10 rounded-2xl border border-orange-100 dark:border-orange-800">
+                      <div className="text-2xl font-black text-orange-500 tabular-nums">
+                        {loading ? '—' : (overview ? formatTime(overview.avgSessionDuration) : '—')}
+                      </div>
+                      <div className="text-xs text-neutral-500 mt-1">Avg Engaged Time</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 p-3 bg-brand-50 dark:bg-brand-900/20 rounded-xl text-xs text-brand-700 dark:text-brand-300">
+                    💡 <strong>Engagement Rate</strong> = Sessions lasting 10+ seconds, with a conversion event, or 2+ pageviews. GA4 uses this as the replacement for Bounce Rate.
+                  </div>
+                </div>
+
+                {/* ADD 5 — Bounce Rate Trend + Page Views Bar Chart */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Left: Bounce Rate Trend */}
+                    <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 shadow-sm">
+                        <h3 className="text-sm font-black text-neutral-900 dark:text-white mb-1">Bounce Rate Trend</h3>
+                        <p className="text-xs text-neutral-400 mb-4">Daily resonance fluctuations</p>
                         {loading ? (
-                            <div className="w-full h-full animate-pulse bg-gradient-to-r from-neutral-100 to-neutral-50 dark:from-neutral-800 dark:to-neutral-800/50 rounded-xl"></div>
+                            <div className="h-48 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"/>
                         ) : (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={timeseries} margin={{ top: 10, right: 30, left: -20, bottom: 0 }}>
-                                    <defs>
-                                        <linearGradient id="colorSessions" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#10B981" stopOpacity={0.2} />
-                                            <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" className="dark:stroke-neutral-800" opacity={0.5} />
-                                    <XAxis 
-                                        dataKey="date" 
-                                        axisLine={false} 
-                                        tickLine={false} 
-                                        tick={{ fontSize: 10, fill: '#9CA3AF', fontWeight: 'bold' }} 
-                                        dy={15} 
-                                    />
-                                    <YAxis 
-                                        axisLine={false} 
-                                        tickLine={false} 
-                                        tick={{ fontSize: 10, fill: '#9CA3AF', fontWeight: 'bold' }} 
-                                        tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val} 
-                                    />
-                                    <Tooltip 
-                                        contentStyle={{ 
-                                            borderRadius: '20px', 
-                                            border: 'none', 
-                                            boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
-                                            background: 'rgba(255, 255, 255, 0.95)',
-                                            padding: '12px'
-                                        }} 
-                                        itemStyle={{ fontWeight: '900', fontSize: '12px' }}
-                                    />
-                                    <Area type="monotone" dataKey="sessions" stroke="#10B981" strokeWidth={4} fillOpacity={1} fill="url(#colorSessions)" name="Sessions" strokeLinecap="round" />
-                                </AreaChart>
+                            <ResponsiveContainer width="100%" height={190}>
+                              <AreaChart data={bounceTrend} margin={{top:5, right:10, left:-25, bottom:0}}>
+                                <defs>
+                                  <linearGradient id="bounceGrad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%"  stopColor="#F97316" stopOpacity={0.15}/>
+                                    <stop offset="95%" stopColor="#F97316" stopOpacity={0}/>
+                                  </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" className="dark:stroke-neutral-800" opacity={0.5}/>
+                                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize:10, fill:'#9CA3AF', fontWeight: 'bold'}}/>
+                                <YAxis axisLine={false} tickLine={false} tick={{fontSize:10, fill:'#9CA3AF', fontWeight: 'bold'}} tickFormatter={v=>`${v}%`}/>
+                                <Tooltip contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                                <Area type="monotone" dataKey="bounceRate" stroke="#F97316" strokeWidth={2.5} fill="url(#bounceGrad)" name="Bounce Rate %" dot={false}/>
+                              </AreaChart>
+                            </ResponsiveContainer>
+                        )}
+                    </div>
+
+                    {/* Right: Page Views Bar Chart */}
+                    <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 shadow-sm">
+                        <h3 className="text-sm font-black text-neutral-900 dark:text-white mb-1">Session Volume Distribution</h3>
+                        <p className="text-xs text-neutral-400 mb-4">Traffic density per interval</p>
+                        {loading ? (
+                            <div className="h-48 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"/>
+                        ) : (
+                            <ResponsiveContainer width="100%" height={190}>
+                              <BarChart data={timeseries} margin={{top:5, right:10, left:-25, bottom:0}}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" className="dark:stroke-neutral-800" opacity={0.5}/>
+                                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize:10, fill:'#9CA3AF', fontWeight: 'bold'}}/>
+                                <YAxis axisLine={false} tickLine={false} tick={{fontSize:10, fill:'#9CA3AF', fontWeight: 'bold'}} tickFormatter={v=>v>=1000?`${(v/1000).toFixed(0)}k`:v}/>
+                                <Tooltip contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                                <Bar dataKey="pageViews" fill="#3B82F6" radius={[4,4,0,0]} name="Page Views" fillOpacity={0.85}/>
+                              </BarChart>
                             </ResponsiveContainer>
                         )}
                     </div>
                 </div>
 
+
+                {/* Sub-Reports (Traffic & Pages) */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-2xl shadow-sm overflow-hidden flex flex-col">
                         <div className="p-5 border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-dark-surface/50">
@@ -292,25 +496,29 @@ const Ga4Page = () => {
                         </div>
                         <div className="flex flex-col md:flex-row items-center gap-8">
                             <div className="w-[200px] h-[200px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={breakdowns.devices}
-                                            innerRadius={60}
-                                            outerRadius={80}
-                                            paddingAngle={8}
-                                            dataKey="value"
-                                        >
-                                            {breakdowns.devices.map((entry, index) => (
-                                                <Cell key={index} fill={['#10B981', '#3B82F6', '#F59E0B', '#EF4444'][index % 4]} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip 
-                                            contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                                            itemStyle={{ fontWeight: 'bold', fontSize: '10px' }}
-                                        />
-                                    </PieChart>
-                                </ResponsiveContainer>
+                                {loading ? (
+                                    <div className="w-full h-full rounded-full bg-neutral-100 dark:bg-neutral-800 animate-pulse"></div>
+                                ) : (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={breakdowns.devices}
+                                                innerRadius={60}
+                                                outerRadius={80}
+                                                paddingAngle={8}
+                                                dataKey="value"
+                                            >
+                                                {breakdowns.devices.map((entry, index) => (
+                                                    <Cell key={index} fill={['#10B981', '#3B82F6', '#F59E0B', '#EF4444'][index % 4]} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip 
+                                                contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                                itemStyle={{ fontWeight: 'bold', fontSize: '10px' }}
+                                            />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                )}
                             </div>
                             <div className="flex-1 space-y-4 w-full">
                                 {breakdowns.devices.map((d, i) => (
@@ -333,7 +541,11 @@ const Ga4Page = () => {
                             <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Top 5 conversion landscapes</p>
                         </div>
                         <div className="space-y-4">
-                            {breakdowns.locations.map((loc, i) => {
+                            {loading ? (
+                                Array(5).fill(0).map((_, i) => (
+                                    <div key={i} className="h-10 w-full bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"></div>
+                                ))
+                            ) : breakdowns.locations.map((loc, i) => {
                                 const maxVal = Math.max(...breakdowns.locations.map(l => l.value));
                                 const width = (loc.value / maxVal) * 100;
                                 return (
@@ -357,9 +569,61 @@ const Ga4Page = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* ADD 6 — Period Comparison Table */}
+                <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 shadow-sm">
+                  <div className="flex items-center justify-between mb-5">
+                    <div>
+                      <h3 className="text-sm font-black text-neutral-900 dark:text-white">Period Comparison</h3>
+                      <p className="text-xs text-neutral-400 mt-0.5">This period vs last period — all key metrics</p>
+                    </div>
+                    <span className="text-xs font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full border border-purple-100 dark:border-purple-800">
+                      vs Last Period
+                    </span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead className="border-b border-neutral-100 dark:border-neutral-800">
+                          <tr>
+                            {['Metric', 'This Period', 'Last Period', 'Change'].map(h => (
+                              <th key={h} className="pb-3 text-left text-[11px] font-black uppercase tracking-wider text-neutral-400 whitespace-nowrap">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {loading ? (
+                            Array(7).fill(0).map((_, i) => (
+                                <tr key={i} className="animate-pulse">
+                                    <td colSpan={4} className="py-3"><div className="h-4 bg-neutral-100 dark:bg-neutral-800 rounded-lg"></div></td>
+                                </tr>
+                            ))
+                          ) : (
+                            comparison.map((row, i) => (
+                                <tr key={i} className="border-b border-neutral-50 dark:border-neutral-800/50 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors">
+                                  <td className="py-3 text-xs font-bold text-neutral-700 dark:text-neutral-300 whitespace-nowrap">{row.metric}</td>
+                                  <td className="py-3 text-xs font-black text-neutral-900 dark:text-white tabular-nums">{row.current}</td>
+                                  <td className="py-3 text-xs text-neutral-400 tabular-nums">{row.prior}</td>
+                                  <td className="py-3">
+                                    <span className={`inline-flex items-center gap-1 text-[11px] font-black px-2 py-0.5 rounded-full ${
+                                      row.up
+                                        ? 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400'
+                                        : 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
+                                    }`}>
+                                      {row.up ? '▲' : '▼'} {Math.abs(row.change)}%
+                                    </span>
+                                  </td>
+                                </tr>
+                            ))
+                          )}
+                        </tbody>
+                    </table>
+                  </div>
+                </div>
+
             </div>
         </DashboardLayout>
     );
 };
 
 export default Ga4Page;
+

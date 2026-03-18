@@ -78,10 +78,11 @@ const syncGa4 = async (acc, startDate, endDate) => {
 
     // Fetch granular data: Date + Channel + Source/Medium + Device + Location + Page + Browser/OS
     // Note: GA4 runReport has a 9 dimension limit per request
-    const report = await runGa4Report(userId, 'ultra_detail_sync', startDate, endDate,
+    const report = await runGa4Report(userId, acc.ga4PropertyId, 'ultra_detail_sync', startDate, endDate,
         ['date', 'sessionDefaultChannelGroup', 'sessionSourceMedium', 'deviceCategory', 'country', 'browser', 'operatingSystem', 'pagePath', 'pageTitle'],
         ['activeUsers', 'sessions', 'bounceRate', 'screenPageViews', 'averageSessionDuration', 'conversions', 'totalRevenue', 'engagementRate']
     );
+
 
     if (report.rows) {
         const operations = report.rows.map(row => {
@@ -144,7 +145,8 @@ const syncGsc = async (acc, startDate, endDate) => {
     const userId = acc.userId;
 
     // Fetch granular data: Date + Page + Query + Device + Country
-    const res = await runGscQuery(userId, 'ultra_detail_sync', startDate, endDate, ['date', 'page', 'query', 'device', 'country']);
+    const res = await runGscQuery(userId, acc.gscSiteUrl, 'ultra_detail_sync', startDate, endDate, ['date', 'page', 'query', 'device', 'country']);
+
 
     if (res.rows) {
         // Increase limit to 25000 rows for maximum detail
@@ -213,7 +215,8 @@ const syncGoogleAds = async (acc, startDate, endDate) => {
         FROM customer 
         WHERE segments.date BETWEEN '${startDate}' AND '${endDate}'
     `;
-    const res = await runGAdsQuery(userId, 'ultra_detail_sync', startDate, endDate, query);
+    const res = await runGAdsQuery(userId, acc.googleAdsCustomerId, 'ultra_detail_sync', startDate, endDate, query);
+
 
     if (res && res.length > 0) {
         const operations = res.map(row => ({
@@ -267,10 +270,11 @@ const syncFacebookAds = async (acc, startDate, endDate) => {
     const userId = acc.userId;
 
     // Fetch by Date + Campaign + Ad Set + Ad + Device + Placement
-    const res = await getFbInsights(userId, 'ultra_detail_sync', startDate, endDate, 'ad', {
+    const res = await getFbInsights(userId, acc.facebookAdAccountId, 'ultra_detail_sync', startDate, endDate, 'ad', {
         time_increment: 1,
         breakdowns: ['device_platform', 'publisher_platform']
     });
+
 
     if (res && res.length > 0) {
         const operations = res.map(row => ({

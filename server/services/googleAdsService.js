@@ -26,16 +26,17 @@ export const listAccounts = async (userId) => {
     return res.resource_names.map(name => name.split('/')[1]);
 };
 
-export const runQuery = async (userId, reportType, startDate, endDate, queryStr) => {
-    const account = await UserAccounts.findOne({ userId });
-    if (!account || !account.googleAdsCustomerId) throw new Error('SOURCE_NOT_CONNECTED');
+export const runQuery = async (userId, customerId, reportType, startDate, endDate, queryStr) => {
+    // Caller provide customerId.
+    if (!customerId) throw new Error('GOOGLE_ADS_CUSTOMER_ID_MISSING');
 
     const client = await getClient(userId);
     const realClient = client.Customer({
-        customer_id: account.googleAdsCustomerId,
+        customer_id: customerId,
         refresh_token: client.refresh_token
     });
 
     const res = await realClient.query(queryStr);
     return res;
 };
+
