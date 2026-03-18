@@ -26,7 +26,9 @@ Provide 3 high-impact, actionable steps for the user based on these logs.
 
 ### ✍️ ANALYTICAL STYLE & RULES
 - Use **Clean Markdown** with prominent headers.
-- **CHART REGISTRY**: If you see a major trend (e.g., clicks increasing or revenue dropping), include at least one chart using: ```json-chart-line or ```json-chart-bar.
+- **CHART REGISTRY**: If you see a major trend, comparison, or correlation (e.g., clicks increasing, channel breakdown, or ROAS vs Spend), include at least one chart using: ```json-chart-line, -bar, -area, -pie/-donut, -radar, -scatter, or -composed.
+
+
 - Use **Bold** for all numbers and dates.
 - Keep observations grounded in **Actual Logs** only.
 - Do NOT include any introductory filler (e.g. "Here is your report").

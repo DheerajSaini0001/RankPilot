@@ -36,7 +36,7 @@ const fetchPlatformData = async (userId, startDate, endDate, siteId, activeSourc
         }
     }
 
-    let data = {};
+    let data = { startDate, endDate, today: new Date().toISOString().split('T')[0] };
     const query = siteId ? { _id: siteId, userId } : { userId };
     const userAcc = await UserAccounts.findOne(query).sort({ updatedAt: -1 });
     if (!userAcc) return data;

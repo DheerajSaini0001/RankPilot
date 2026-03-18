@@ -13,7 +13,12 @@ class PromptBuilder {
     buildContext(data = {}) {
         if (!data) data = {};
         
-        let ctx = `## 📊 Analytics Deep-Scan (Database Logs)\n\n`;
+        let ctx = `## 📊 Analytics Deep-Scan (Database Logs)\n`;
+        if (data.startDate && data.endDate) {
+            ctx += `**Analysis Period:** ${data.startDate} to ${data.endDate} (Today: ${data.today || 'N/A'})\n\n`;
+        } else {
+            ctx += `\n`;
+        }
 
         // Section 1: Platform Connectivity Status
         ctx += `### 📡 Data Sources Active\n`;
@@ -21,7 +26,7 @@ class PromptBuilder {
         if (data.ga4) activeFlags.push("✅ Google Analytics 4");
         if (data.gsc) activeFlags.push("✅ Search Console");
         if (data.googleAds) activeFlags.push("✅ Google Ads");
-        if (data.facebookAds) activeFlags.push("✅ Facebook Ads");
+        if (data.facebookAds) activeFlags.push("✅ Meta Ads");
         ctx += activeFlags.length > 0 ? activeFlags.join(" | ") + "\n\n" : "⚠️ No active platform data found.\n\n";
 
         // Helper for calculated metrics
@@ -62,14 +67,38 @@ class PromptBuilder {
 
         // Section 3: High-Signal Granular Dimensions (Winners & Losers)
         if (data.topDimensions) {
-            ctx += `### 🏆 Business Breakdown (Top Performing Dimensions)\n`;
+            ctx += `### 🏆 Business Breakdown (Dimension Leaderboards)\n`;
             const { queries, pages, campaigns, devices, channels } = data.topDimensions;
 
-            if (queries?.length) ctx += `**Top Keywords (GSC):** ${queries.map(q => `${q.name} (${q.value} clicks)`).join(', ')}\n\n`;
-            if (pages?.length) ctx += `**Highest Traffic Pages:** ${pages.map(p => `${p.name} (${p.value} ses)`).join(', ')}\n\n`;
-            if (campaigns?.length) ctx += `**Best Performing Campaigns:** ${campaigns.map(c => `${c.name} (${c.value} res)`).join(', ')}\n\n`;
-            if (devices?.length) ctx += `**Device Segment:** ${devices.map(d => `${d.name} (${d.value} ses)`).join(', ')}\n\n`;
-            if (channels?.length) ctx += `**Traffic Channels:** ${channels.map(c => `${c.name} (${c.value} ses)`).join(', ')}\n\n`;
+            if (queries?.length) {
+                ctx += `#### Top Keywords (GSC):\n| Keyword | Clicks |\n| :--- | :--- |\n`;
+                queries.slice(0, 10).forEach(q => ctx += `| ${q.name} | ${q.value} |\n`);
+                ctx += `\n`;
+            }
+
+            if (pages?.length) {
+                ctx += `#### Highest Traffic Pages:\n| Page Path | Sessions |\n| :--- | :--- |\n`;
+                pages.slice(0, 10).forEach(p => ctx += `| ${p.name} | ${p.value} |\n`);
+                ctx += `\n`;
+            }
+
+            if (campaigns?.length) {
+                ctx += `#### Best Performing Campaigns:\n| Campaign | Results |\n| :--- | :--- |\n`;
+                campaigns.slice(0, 10).forEach(c => ctx += `| ${c.name} | ${c.value} |\n`);
+                ctx += `\n`;
+            }
+
+            if (channels?.length) {
+                ctx += `#### Traffic Channels:\n| Channel | Sessions |\n| :--- | :--- |\n`;
+                channels.forEach(c => ctx += `| ${c.name} | ${c.value} |\n`);
+                ctx += `\n`;
+            }
+
+            if (devices?.length) {
+                ctx += `#### Device Segment:\n| Device | Sessions |\n| :--- | :--- |\n`;
+                devices.forEach(d => ctx += `| ${d.name} | ${d.value} |\n`);
+                ctx += `\n`;
+            }
         }
 
         // Section 4: Time-Series Trend Analysis
@@ -93,8 +122,16 @@ class PromptBuilder {
             });
         }
 
+        // Section 5: AI Visualization Guidelines
+        ctx += `### 💡 Visualization Logic\n`;
+        ctx += `- **Line Charts**: Use for Daily Logs to show growth/decline over time.\n`;
+        ctx += `- **Bar Charts**: Use for comparing Top Keywords, Pages, or Campaigns.\n`;
+        ctx += `- **Pie/Donut Charts**: Use for Channel or Device distribution.\n`;
+        ctx += `- **Composed Charts**: Use when comparing two related metrics (e.g., Bar for Revenue, Line for Users).\n\n`;
+
         return ctx;
     }
+
 
     buildAskPrompt(question, data) {
         return `${this.prompts.system}\n\n${this.buildContext(data)}\n\nUser Question: ${question}`;

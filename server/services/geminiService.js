@@ -5,7 +5,7 @@ export const callGemini = async (prompt) => {
     const GEMINI_API_KEY = await configService.get('GEMINI_API_KEY');
 
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
@@ -13,7 +13,7 @@ export const callGemini = async (prompt) => {
 
     return {
         content: text,
-        model: "gemini-2.0-flash-lite",
+        model: "gemini-2.5-flash",
         tokensUsed: response.usageMetadata?.totalTokenCount || 0
     };
 };
