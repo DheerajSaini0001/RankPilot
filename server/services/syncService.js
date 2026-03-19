@@ -303,7 +303,8 @@ const syncFacebookAds = async (acc, startDate, endDate) => {
                         impressions: parseFloat(row.impressions || 0),
                         clicks: parseFloat(row.clicks || 0),
                         reach: parseFloat(row.reach || 0),
-                        conversions: parseFloat(row.conversions?.[0]?.value || 0),
+                        conversions: parseFloat(row.conversions?.[0]?.value || row.actions?.find(a => a.action_type === 'offsite_conversion.fb_pixel_purchase')?.value || 0),
+                        purchase_value: parseFloat(row.action_values?.find(a => a.action_type === 'offsite_conversion.fb_pixel_purchase')?.value || 0),
                         frequency: parseFloat(row.frequency || 0),
                         cpc: parseFloat(row.cpc || 0),
                         ctr: parseFloat(row.ctr || 0)

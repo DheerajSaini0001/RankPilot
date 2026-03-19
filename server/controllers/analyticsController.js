@@ -70,9 +70,9 @@ export const getDashboardSummary = async (req, res) => {
 
         const [ga4Data, gscData, adsData, ga4Ts, gscTs, adsTs, prevGa4Data, prevGscData, prevAdsData, topPages] = await Promise.all([
             // Current Period
-            DailyMetric.aggregate([ { $match: ga4Filter }, { $group: { _id: null, activeUsers: { $sum: "$metrics.users" }, sessions: { $sum: "$metrics.sessions" }, screenPageViews: { $sum: "$metrics.pageViews" }, bounceRate: { $avg: "$metrics.bounceRate" } }} ]),
+            DailyMetric.aggregate([ { $match: ga4Filter }, { $group: { _id: null, users: { $sum: "$metrics.users" }, sessions: { $sum: "$metrics.sessions" }, pageViews: { $sum: "$metrics.pageViews" }, bounceRate: { $avg: "$metrics.bounceRate" }, avgSessionDuration: { $avg: "$metrics.avgSessionDuration" } }} ]),
             DailyMetric.aggregate([ { $match: gscFilter }, { $group: { _id: null, clicks: { $sum: "$metrics.clicks" }, impressions: { $sum: "$metrics.impressions" }, position: { $avg: "$metrics.position" } }} ]),
-            DailyMetric.aggregate([ { $match: adsFilter }, { $group: { _id: "$source", spend: { $sum: "$metrics.spend" }, impressions: { $sum: "$metrics.impressions" }, clicks: { $sum: "$metrics.clicks" }, conversions: { $sum: "$metrics.conversions" } }} ]),
+            DailyMetric.aggregate([ { $match: adsFilter }, { $group: { _id: "$source", spend: { $sum: "$metrics.spend" }, impressions: { $sum: "$metrics.impressions" }, clicks: { $sum: "$metrics.clicks" }, conversions: { $sum: "$metrics.conversions" }, reach: { $sum: "$metrics.reach" }, purchaseValue: { $sum: "$metrics.purchase_value" } }} ]),
             
             // Timeseries
             DailyMetric.aggregate([ { $match: tsGa4Filter }, { $group: { _id: "$date", sessions: { $sum: "$metrics.sessions" } }}, { $sort: { _id: 1 } } ]),
@@ -94,7 +94,7 @@ export const getDashboardSummary = async (req, res) => {
                     bounceRate: { $avg: "$metrics.bounceRate" }
                 }},
                 { $sort: { views: -1 } },
-                { $limit: 5 }
+                { $limit: 10 }
             ])
         ]);
 
@@ -113,11 +113,25 @@ export const getDashboardSummary = async (req, res) => {
         });
         const combinedTs = Object.values(tsMap).sort((a,b) => a.date.localeCompare(b.date));
 
-        const ga4 = ga4Data[0] || { activeUsers: 0, sessions: 0, screenPageViews: 0, bounceRate: 0 };
-        const gsc = gscData[0] || { clicks: 0, impressions: 0, position: 0 };
+        const ga4 = ga4Data[0] || { users: 0, sessions: 0, pageViews: 0, bounceRate: 0, avgSessionDuration: 0 };
+        const gscRaw = gscData[0] || { clicks: 0, impressions: 0, position: 0 };
+        const gsc = { ...gscRaw, avgPosition: gscRaw.position, ctr: gscRaw.impressions > 0 ? gscRaw.clicks / gscRaw.impressions : 0 };
+
         const adsDataAgg = adsData || [];
-        const gAds = adsDataAgg.find(r => r._id === 'google-ads') || { spend: 0, impressions: 0, clicks: 0, conversions: 0 };
-        const fbAds = adsDataAgg.find(r => r._id === 'facebook-ads') || { spend: 0, impressions: 0, clicks: 0, conversions: 0 };
+        const gAdsRaw = adsDataAgg.find(r => r._id === 'google-ads') || { spend: 0, impressions: 0, clicks: 0, conversions: 0 };
+        const gAds = {
+            ...gAdsRaw,
+            ctr: gAdsRaw.impressions > 0 ? gAdsRaw.clicks / gAdsRaw.impressions : 0,
+            cpc: gAdsRaw.clicks > 0 ? gAdsRaw.spend / gAdsRaw.clicks : 0
+        };
+
+        const fbAdsRaw = adsDataAgg.find(r => r._id === 'facebook-ads') || { spend: 0, impressions: 0, clicks: 0, conversions: 0, reach: 0, purchaseValue: 0 };
+        const fbAds = {
+            ...fbAdsRaw,
+            ctr: fbAdsRaw.impressions > 0 ? fbAdsRaw.clicks / fbAdsRaw.impressions : 0,
+            cpc: fbAdsRaw.clicks > 0 ? fbAdsRaw.spend / fbAdsRaw.clicks : 0,
+            roas: fbAdsRaw.spend > 0 ? (fbAdsRaw.purchaseValue || (fbAdsRaw.conversions * 50)) / fbAdsRaw.spend : 0
+        };
 
         const prevGa4 = prevGa4Data[0] || { sessions: 0 };
         const prevGsc = prevGscData[0] || { clicks: 0 };
@@ -162,7 +176,7 @@ export const getDashboardSummary = async (req, res) => {
                 visitors: p.users,
                 views: p.views,
                 bounce: ((p.bounceRate || 0) * 100).toFixed(0) + '%',
-                share: ga4.screenPageViews > 0 ? Math.round((p.views / ga4.screenPageViews) * 100) : 0
+                share: ga4.pageViews > 0 ? Math.round((p.views / ga4.pageViews) * 100) : 0
             })),
             insights: insights.slice(0, 3)
         });
@@ -409,7 +423,13 @@ export const getGoogleAdsSummary = async (req, res) => {
             ]),
             DailyMetric.aggregate([
                 { $match: filter },
-                { $group: { _id: "$date", cost: { $sum: "$metrics.spend" }, clicks: { $sum: "$metrics.clicks" } } },
+                { $group: { 
+                    _id: "$date", 
+                    cost: { $sum: "$metrics.spend" }, 
+                    clicks: { $sum: "$metrics.clicks" },
+                    impressions: { $sum: "$metrics.impressions" },
+                    conversions: { $sum: "$metrics.conversions" }
+                } },
                 { $sort: { _id: 1 } }
             ]),
             DailyMetric.aggregate([
@@ -446,9 +466,16 @@ export const getGoogleAdsSummary = async (req, res) => {
             overview: {
                 ...ov,
                 ctr: ov.impressions > 0 ? ov.clicks / ov.impressions : 0,
-                cpc: ov.clicks > 0 ? ov.cost / ov.clicks : 0
+                cpc: ov.clicks > 0 ? ov.cost / ov.clicks : 0,
+                conversionRate: ov.clicks > 0 ? ov.conversions / ov.clicks : 0
             },
-            timeseries: timeseries.map(d => ({ date: d._id, cost: d.cost, clicks: d.clicks })),
+            timeseries: timeseries.map(d => ({ 
+                date: d._id, 
+                cost: d.cost, 
+                clicks: d.clicks,
+                impressions: d.impressions,
+                conversions: d.conversions
+            })),
             devices: deviceBreakdown.map(d => ({ name: d._id || 'unknown', value: d.value })),
             campaigns: campaigns.map(d => ({ 
                 name: d._id.name, 
@@ -488,12 +515,20 @@ export const getFacebookAdsSummary = async (req, res) => {
                     spend: { $sum: "$metrics.spend" },
                     impressions: { $sum: "$metrics.impressions" },
                     clicks: { $sum: "$metrics.clicks" },
-                    conversions: { $sum: "$metrics.conversions" }
+                    conversions: { $sum: "$metrics.conversions" },
+                    reach: { $sum: "$metrics.reach" },
+                    purchase_value: { $sum: "$metrics.purchase_value" }
                 }}
             ]),
             DailyMetric.aggregate([
                 { $match: filter },
-                { $group: { _id: "$date", spend: { $sum: "$metrics.spend" }, clicks: { $sum: "$metrics.clicks" } } },
+                { $group: { 
+                    _id: "$date", 
+                    spend: { $sum: "$metrics.spend" }, 
+                    clicks: { $sum: "$metrics.clicks" },
+                    impressions: { $sum: "$metrics.impressions" },
+                    reach: { $sum: "$metrics.reach" }
+                } },
                 { $sort: { _id: 1 } }
             ]),
             DailyMetric.aggregate([
@@ -503,7 +538,8 @@ export const getFacebookAdsSummary = async (req, res) => {
                     spend: { $sum: "$metrics.spend" },
                     impressions: { $sum: "$metrics.impressions" },
                     clicks: { $sum: "$metrics.clicks" },
-                    conversions: { $sum: "$metrics.conversions" }
+                    conversions: { $sum: "$metrics.conversions" },
+                    reach: { $sum: "$metrics.reach" }
                 }},
                 { $sort: { spend: -1 } }
             ]),
@@ -514,7 +550,8 @@ export const getFacebookAdsSummary = async (req, res) => {
                     spend: { $sum: "$metrics.spend" },
                     impressions: { $sum: "$metrics.impressions" },
                     clicks: { $sum: "$metrics.clicks" },
-                    conversions: { $sum: "$metrics.conversions" }
+                    conversions: { $sum: "$metrics.conversions" },
+                    reach: { $sum: "$metrics.reach" }
                 }},
                 { $sort: { spend: -1 } },
                 { $limit: 10 }
@@ -526,14 +563,21 @@ export const getFacebookAdsSummary = async (req, res) => {
         ]);
 
 
-        const ov = overview[0] || { spend: 0, impressions: 0, clicks: 0, conversions: 0 };
+        const ov = overview[0] || { spend: 0, impressions: 0, clicks: 0, conversions: 0, reach: 0, purchase_value: 0 };
         res.status(200).json({
             overview: {
                 ...ov,
                 ctr: ov.impressions > 0 ? (ov.clicks / ov.impressions) * 100 : 0,
-                cpc: ov.clicks > 0 ? ov.spend / ov.clicks : 0
+                cpc: ov.clicks > 0 ? ov.spend / ov.clicks : 0,
+                roas: ov.spend > 0 ? (ov.purchase_value || (ov.conversions * 50)) / ov.spend : 0
             },
-            timeseries: timeseries.map(d => ({ date: d._id, spend: d.spend, clicks: d.clicks })),
+            timeseries: timeseries.map(d => ({ 
+                date: d._id, 
+                spend: d.spend, 
+                clicks: d.clicks,
+                impressions: d.impressions,
+                reach: d.reach || 0
+            })),
             devices: deviceBreakdown.map(d => ({ name: d._id || 'unknown', value: d.value })),
             campaigns: campaigns.map(d => ({ 
                 name: d._id, 
@@ -541,6 +585,7 @@ export const getFacebookAdsSummary = async (req, res) => {
                 impressions: d.impressions, 
                 clicks: d.clicks,
                 conversions: d.conversions,
+                reach: d.reach || 0,
                 ctr: d.impressions > 0 ? (d.clicks / d.impressions) * 100 : 0,
                 cpc: d.clicks > 0 ? d.spend / d.clicks : 0
             })),
@@ -550,6 +595,7 @@ export const getFacebookAdsSummary = async (req, res) => {
                 impressions: d.impressions, 
                 clicks: d.clicks,
                 conversions: d.conversions,
+                reach: d.reach || 0,
                 ctr: d.impressions > 0 ? (d.clicks / d.impressions) * 100 : 0,
                 cpc: d.clicks > 0 ? d.spend / d.clicks : 0
             }))

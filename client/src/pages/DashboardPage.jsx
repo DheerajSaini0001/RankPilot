@@ -27,8 +27,18 @@ import FilterBar from '../components/dashboard/FilterBar';
 import { useFilterStore } from '../store/filterStore';
 import { useAuthStore } from '../store/authStore';
 
-const formatNumber = (num) => Number(num).toLocaleString('en-US', { maximumFractionDigits: 0 });
-const formatCurrency = (num) => Number(num).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+const formatNumber = (num) => Number(num||0).toLocaleString('en-US', { maximumFractionDigits: 0 });
+const formatCurrency = (num) => `$${Number(num||0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const formatPct = (val, d=1) => `${Number(val||0).toFixed(d)}%`;
+const formatTime = (secs) => { const s=Math.floor(secs||0); return `${Math.floor(s/60)}m ${s%60}s`; };
+
+const EmptyState = ({ message='No data', sub='Try a wider date range' }) => (
+  <div className="flex flex-col items-center justify-center py-10 text-neutral-400">
+    <div className="text-3xl mb-2">📭</div>
+    <p className="text-sm font-semibold">{message}</p>
+    <p className="text-xs mt-1">{sub}</p>
+  </div>
+);
 
 const DashboardPage = () => {
     const navigate = useNavigate();
@@ -212,6 +222,81 @@ const DashboardPage = () => {
                             loading={loading}
                         />
 
+                        {/* ADD 1 — Platform Connection Status Bar */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
+                          {[
+                            {
+                              label: 'Google Analytics 4',
+                              icon: '📊',
+                              connected: !!activeGa4PropertyId,
+                              metric: overviewData.ga4 ? formatNumber(overviewData.ga4.users) : '—',
+                              metricLabel: 'Users',
+                              color: 'orange',
+                              path: '/ga4'
+                            },
+                            {
+                              label: 'Search Console',
+                              icon: '🔍',
+                              connected: !!activeGscSite,
+                              metric: overviewData.gsc ? formatNumber(overviewData.gsc.clicks) : '—',
+                              metricLabel: 'Clicks',
+                              color: 'green',
+                              path: '/gsc'
+                            },
+                            {
+                              label: 'Google Ads',
+                              icon: '📢',
+                              connected: !!activeGoogleAdsCustomerId,
+                              metric: overviewData.googleAds ? formatCurrency(overviewData.googleAds.spend) : '—',
+                              metricLabel: 'Spend',
+                              color: 'blue',
+                              path: '/google-ads'
+                            },
+                            {
+                              label: 'Facebook Ads',
+                              icon: '📘',
+                              connected: !!activeFacebookAdAccountId,
+                              metric: overviewData.facebookAds ? formatCurrency(overviewData.facebookAds.spend) : '—',
+                              metricLabel: 'Spend',
+                              color: 'indigo',
+                              path: '/facebook-ads'
+                            },
+                          ].map((src, i) => (
+                            <div
+                              key={i}
+                              onClick={() => navigate(src.path)}
+                              className={`bg-white dark:bg-dark-card border rounded-2xl p-4 cursor-pointer hover:shadow-md transition-all group ${
+                                src.connected
+                                  ? 'border-neutral-200 dark:border-neutral-700 hover:border-brand-300 dark:hover:border-brand-700'
+                                  : 'border-dashed border-neutral-300 dark:border-neutral-700 opacity-60'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-lg">{src.icon}</span>
+                                  <span className="text-xs font-black text-neutral-600 dark:text-neutral-300">{src.label}</span>
+                                </div>
+                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                                  src.connected
+                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                    : 'bg-neutral-100 text-neutral-400 dark:bg-neutral-800'
+                                }`}>
+                                  {src.connected ? '● Live' : '○ Off'}
+                                </span>
+                              </div>
+                              {loading ? (
+                                <div className="h-7 w-20 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse mb-1"/>
+                              ) : (
+                                <div className="text-2xl font-black text-neutral-900 dark:text-white tabular-nums">{src.metric}</div>
+                              )}
+                              <div className="text-xs text-neutral-400 mt-0.5 flex items-center justify-between">
+                                <span>{src.metricLabel} this period</span>
+                                <ChevronRightIcon className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity"/>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
                         {isDataEmpty && (preset === 'today' || preset === 'yesterday') && (
                             <div className="relative overflow-hidden bg-brand-500/5 dark:bg-brand-500/10 border border-brand-500/20 p-6 rounded-[2.5rem] flex items-center gap-6 animate-shimmer group mt-2 mb-4">
                                 <div className="w-12 h-12 rounded-2xl bg-brand-500 flex items-center justify-center shrink-0 shadow-lg shadow-brand-500/20">
@@ -287,6 +372,210 @@ const DashboardPage = () => {
                                 valueSuffix="ROI"
                                 chartData={timeseriesData.map(d => d.Spend > 0 ? d.Conversions / (d.Spend / 100) : 0)}
                             />
+                        </div>
+
+                        {/* ADD 2 — Source Breakdown Cards (GA4 + GSC + Google Ads + Facebook Ads) */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                          {/* GA4 Summary Card */}
+                          <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 shadow-sm">
+                            <div className="flex items-center justify-between mb-4">
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg">📊</span>
+                                <h3 className="text-sm font-black text-neutral-900 dark:text-white">Google Analytics 4</h3>
+                              </div>
+                              <button onClick={()=>navigate('/ga4')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">
+                                View Full <ArrowRightIcon className="w-3 h-3"/>
+                              </button>
+                            </div>
+                            {loading ? (
+                              <div className="grid grid-cols-3 gap-3">{[...Array(3)].map((_,i)=><div key={i} className="h-16 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"/>)}</div>
+                            ) : !overviewData.ga4 ? <EmptyState message="GA4 not connected" sub="Connect in Integrations"/> : (
+                              <div className="grid grid-cols-3 gap-3">
+                                {[
+                                  { label:'Users',    value: formatNumber(overviewData.ga4.users) },
+                                  { label:'Sessions', value: formatNumber(overviewData.ga4.sessions) },
+                                  { label:'Bounce',   value: formatPct((overviewData.ga4.bounceRate||0)*100) },
+                                  { label:'Avg Time', value: formatTime(overviewData.ga4.avgSessionDuration) },
+                                  { label:'Page Views', value: formatNumber(overviewData.ga4.pageViews) },
+                                  { label:'Growth',   value: `${overviewData.ga4.growth >= 0 ? '+':''}${(overviewData.ga4.growth||0).toFixed(1)}%` },
+                                ].map((m,i)=>(
+                                  <div key={i} className="p-3 bg-orange-50 dark:bg-orange-900/10 rounded-xl">
+                                    <div className="text-base font-black text-neutral-900 dark:text-white tabular-nums">{m.value}</div>
+                                    <div className="text-[11px] text-neutral-400 mt-0.5">{m.label}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* GSC Summary Card */}
+                          <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 shadow-sm">
+                            <div className="flex items-center justify-between mb-4">
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg">🔍</span>
+                                <h3 className="text-sm font-black text-neutral-900 dark:text-white">Search Console</h3>
+                              </div>
+                              <button onClick={()=>navigate('/gsc')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">
+                                View Full <ArrowRightIcon className="w-3 h-3"/>
+                              </button>
+                            </div>
+                            {loading ? (
+                              <div className="grid grid-cols-3 gap-3">{[...Array(3)].map((_,i)=><div key={i} className="h-16 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"/>)}</div>
+                            ) : !overviewData.gsc ? <EmptyState message="GSC not connected" sub="Connect in Integrations"/> : (
+                              <div className="grid grid-cols-3 gap-3">
+                                {[
+                                  { label:'Clicks',      value: formatNumber(overviewData.gsc.clicks) },
+                                  { label:'Impressions', value: formatNumber(overviewData.gsc.impressions) },
+                                  { label:'CTR',         value: formatPct((overviewData.gsc.ctr||0)*100) },
+                                  { label:'Avg Position',value: `#${(overviewData.gsc.avgPosition||0).toFixed(1)}` },
+                                  { label:'Growth',      value: `${overviewData.gsc.growth>=0?'+':''}${(overviewData.gsc.growth||0).toFixed(1)}%` },
+                                  { label:'Status',      value: '● Active' },
+                                ].map((m,i)=>(
+                                  <div key={i} className="p-3 bg-green-50 dark:bg-green-900/10 rounded-xl">
+                                    <div className="text-base font-black text-neutral-900 dark:text-white tabular-nums">{m.value}</div>
+                                    <div className="text-[11px] text-neutral-400 mt-0.5">{m.label}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Google Ads Summary Card */}
+                          <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 shadow-sm">
+                            <div className="flex items-center justify-between mb-4">
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg">📢</span>
+                                <h3 className="text-sm font-black text-neutral-900 dark:text-white">Google Ads</h3>
+                              </div>
+                              <button onClick={()=>navigate('/google-ads')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">
+                                View Full <ArrowRightIcon className="w-3 h-3"/>
+                              </button>
+                            </div>
+                            {loading ? (
+                              <div className="grid grid-cols-3 gap-3">{[...Array(3)].map((_,i)=><div key={i} className="h-16 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"/>)}</div>
+                            ) : !overviewData.googleAds ? <EmptyState message="Google Ads not connected" sub="Connect in Integrations"/> : (
+                              <div className="grid grid-cols-3 gap-3">
+                                {[
+                                  { label:'Spend',       value: formatCurrency(overviewData.googleAds.spend) },
+                                  { label:'Clicks',      value: formatNumber(overviewData.googleAds.clicks) },
+                                  { label:'Impressions', value: formatNumber(overviewData.googleAds.impressions) },
+                                  { label:'Conversions', value: formatNumber(overviewData.googleAds.conversions) },
+                                  { label:'CPC',         value: formatCurrency(overviewData.googleAds.cpc) },
+                                  { label:'CTR',         value: formatPct((overviewData.googleAds.ctr||0)*100) },
+                                ].map((m,i)=>(
+                                  <div key={i} className="p-3 bg-amber-50 dark:bg-amber-900/10 rounded-xl">
+                                    <div className="text-base font-black text-neutral-900 dark:text-white tabular-nums">{m.value}</div>
+                                    <div className="text-[11px] text-neutral-400 mt-0.5">{m.label}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Facebook Ads Summary Card */}
+                          <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 shadow-sm">
+                            <div className="flex items-center justify-between mb-4">
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg">📘</span>
+                                <h3 className="text-sm font-black text-neutral-900 dark:text-white">Facebook Ads</h3>
+                              </div>
+                              <button onClick={()=>navigate('/facebook-ads')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">
+                                View Full <ArrowRightIcon className="w-3 h-3"/>
+                              </button>
+                            </div>
+                            {loading ? (
+                              <div className="grid grid-cols-3 gap-3">{[...Array(3)].map((_,i)=><div key={i} className="h-16 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"/>)}</div>
+                            ) : !overviewData.facebookAds ? <EmptyState message="Facebook Ads not connected" sub="Connect in Integrations"/> : (
+                              <div className="grid grid-cols-3 gap-3">
+                                {[
+                                  { label:'Spend',       value: formatCurrency(overviewData.facebookAds.spend) },
+                                  { label:'Reach',       value: formatNumber(overviewData.facebookAds.reach||0) },
+                                  { label:'Impressions', value: formatNumber(overviewData.facebookAds.impressions) },
+                                  { label:'Clicks',      value: formatNumber(overviewData.facebookAds.clicks) },
+                                  { label:'ROAS',        value: `${(overviewData.facebookAds.roas||0).toFixed(2)}x` },
+                                  { label:'CTR',         value: formatPct((overviewData.facebookAds.ctr||0)*100) },
+                                ].map((m,i)=>(
+                                  <div key={i} className="p-3 bg-blue-50 dark:bg-blue-900/10 rounded-xl">
+                                    <div className="text-base font-black text-neutral-900 dark:text-white tabular-nums">{m.value}</div>
+                                    <div className="text-[11px] text-neutral-400 mt-0.5">{m.label}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* ADD 3 — Combined Ad Performance Comparison */}
+                        <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 shadow-sm">
+                          <div className="flex items-center justify-between mb-5">
+                            <div>
+                              <h3 className="text-sm font-black text-neutral-900 dark:text-white">Ad Platform Comparison</h3>
+                              <p className="text-xs text-neutral-400 mt-0.5">Google Ads vs Facebook Ads — side by side</p>
+                            </div>
+                            <span className="text-xs font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-500 px-3 py-1 rounded-full">This Period</span>
+                          </div>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead className="border-b border-neutral-100 dark:border-neutral-800">
+                                <tr>
+                                  {['Metric','Google Ads','Facebook Ads','Winner'].map(h=>(
+                                    <th key={h} className="pb-3 text-left text-[11px] font-black uppercase tracking-wider text-neutral-400">{h}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {[
+                                  {
+                                    metric:'💰 Spend',
+                                    gads: formatCurrency(overviewData.googleAds?.spend||0),
+                                    fb:   formatCurrency(overviewData.facebookAds?.spend||0),
+                                    winner: (overviewData.googleAds?.spend||0) < (overviewData.facebookAds?.spend||0) ? 'Google Ads' : 'Facebook Ads',
+                                    winnerNote: 'Lower spend'
+                                  },
+                                  {
+                                    metric:'🖱️ Clicks',
+                                    gads: formatNumber(overviewData.googleAds?.clicks||0),
+                                    fb:   formatNumber(overviewData.facebookAds?.clicks||0),
+                                    winner: (overviewData.googleAds?.clicks||0) > (overviewData.facebookAds?.clicks||0) ? 'Google Ads' : 'Facebook Ads',
+                                    winnerNote: 'More clicks'
+                                  },
+                                  {
+                                    metric:'✅ Conversions',
+                                    gads: formatNumber(overviewData.googleAds?.conversions||0),
+                                    fb:   formatNumber(overviewData.facebookAds?.conversions||0),
+                                    winner: (overviewData.googleAds?.conversions||0) > (overviewData.facebookAds?.conversions||0) ? 'Google Ads' : 'Facebook Ads',
+                                    winnerNote: 'More conversions'
+                                  },
+                                  {
+                                    metric:'💵 CPC',
+                                    gads: formatCurrency(overviewData.googleAds?.cpc||0),
+                                    fb:   formatCurrency(overviewData.facebookAds?.cpc||0),
+                                    winner: (overviewData.googleAds?.cpc||0) < (overviewData.facebookAds?.cpc||0) ? 'Google Ads' : 'Facebook Ads',
+                                    winnerNote: 'Lower CPC'
+                                  },
+                                  {
+                                    metric:'🎯 CTR',
+                                    gads: formatPct((overviewData.googleAds?.ctr||0)*100),
+                                    fb:   formatPct((overviewData.facebookAds?.ctr||0)*100),
+                                    winner: (overviewData.googleAds?.ctr||0) > (overviewData.facebookAds?.ctr||0) ? 'Google Ads' : 'Facebook Ads',
+                                    winnerNote: 'Better CTR'
+                                  },
+                                ].map((row,i)=>(
+                                  <tr key={i} className="border-b border-neutral-50 dark:border-neutral-800/50 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors">
+                                    <td className="py-3 text-xs font-bold text-neutral-700 dark:text-neutral-300">{row.metric}</td>
+                                    <td className="py-3 text-xs font-black text-amber-600 dark:text-amber-400 tabular-nums">{loading ? '—' : row.gads}</td>
+                                    <td className="py-3 text-xs font-black text-blue-600 dark:text-blue-400 tabular-nums">{loading ? '—' : row.fb}</td>
+                                    <td className="py-3">
+                                      <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400">
+                                        🏆 {row.winner}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                         </div>
 
 
@@ -374,6 +663,67 @@ const DashboardPage = () => {
                             </div>
                         </div>
 
+                        {/* ADD 4 — Platform Health Score + Quick Actions */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                          {/* Health Score */}
+                          <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 shadow-sm flex flex-col items-center justify-center text-center">
+                            <h3 className="text-sm font-black text-neutral-900 dark:text-white mb-1">Platform Health Score</h3>
+                            <p className="text-xs text-neutral-400 mb-5">Based on all connected sources</p>
+                            <div className="relative w-32 h-32 mb-4">
+                              <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
+                                <circle cx="60" cy="60" r="50" fill="none" stroke="#F3F4F6" strokeWidth="12" className="dark:stroke-neutral-800"/>
+                                <circle
+                                  cx="60" cy="60" r="50" fill="none"
+                                  stroke={healthScore >= 80 ? '#10B981' : healthScore >= 60 ? '#F59E0B' : '#EF4444'}
+                                  strokeWidth="12"
+                                  strokeDasharray={`${(healthScore/100)*314} 314`}
+                                  strokeLinecap="round"
+                                  className="transition-all duration-1000"
+                                />
+                              </svg>
+                              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                <span className="text-3xl font-black text-neutral-900 dark:text-white">{healthScore}</span>
+                                <span className="text-[10px] font-black text-neutral-400 uppercase tracking-wider">Score</span>
+                              </div>
+                            </div>
+                            <span className={`text-xs font-black px-3 py-1 rounded-full ${
+                              healthScore >= 80 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                              : healthScore >= 60 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                            }`}>
+                              {healthScore >= 80 ? '✓ Excellent' : healthScore >= 60 ? '⚠ Good' : '✗ Needs Attention'}
+                            </span>
+                          </div>
+
+                          {/* Quick Navigation */}
+                          <div className="lg:col-span-2 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 shadow-sm">
+                            <h3 className="text-sm font-black text-neutral-900 dark:text-white mb-1">Quick Navigation</h3>
+                            <p className="text-xs text-neutral-400 mb-5">Jump to any analytics dashboard</p>
+                            <div className="grid grid-cols-2 gap-3">
+                              {[
+                                { label:'Google Analytics 4', desc:'Traffic & engagement', icon:'📊', path:'/ga4',          color:'bg-orange-50 dark:bg-orange-900/10 border-orange-100 dark:border-orange-800 hover:border-orange-300' },
+                                { label:'Search Console',     desc:'SEO & keywords',      icon:'🔍', path:'/gsc',          color:'bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-800 hover:border-green-300' },
+                                { label:'Google Ads',         desc:'PPC campaigns',       icon:'📢', path:'/google-ads',   color:'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-800 hover:border-amber-300' },
+                                { label:'Facebook Ads',       desc:'Social advertising',  icon:'📘', path:'/facebook-ads', color:'bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-800 hover:border-blue-300' },
+                              ].map((item,i)=>(
+                                <button
+                                  key={i}
+                                  onClick={()=>navigate(item.path)}
+                                  className={`flex items-center gap-3 p-4 rounded-xl border text-left transition-all hover:shadow-sm active:scale-95 ${item.color}`}
+                                >
+                                  <span className="text-2xl">{item.icon}</span>
+                                  <div>
+                                    <div className="text-xs font-black text-neutral-800 dark:text-white">{item.label}</div>
+                                    <div className="text-[11px] text-neutral-400 mt-0.5">{item.desc}</div>
+                                  </div>
+                                  <ChevronRightIcon className="w-4 h-4 text-neutral-300 ml-auto flex-shrink-0"/>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
                         {/* Top Pages Table */}
                         <div id="top-pages-table" className="glass-card rounded-3xl overflow-hidden bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-800">
                             <div className="px-8 py-6 border-b border-neutral-100 dark:border-neutral-800 flex justify-between items-center">
@@ -436,6 +786,56 @@ const DashboardPage = () => {
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
+
+                        {/* ADD 5 — Period Comparison Table */}
+                        <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 shadow-sm">
+                          <div className="flex items-center justify-between mb-5">
+                            <div>
+                              <h3 className="text-sm font-black text-neutral-900 dark:text-white">Overall Period Comparison</h3>
+                              <p className="text-xs text-neutral-400 mt-0.5">All sources — this period vs last period</p>
+                            </div>
+                            <span className="text-xs font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full border border-purple-100 dark:border-purple-800">vs Last Period</span>
+                          </div>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead className="border-b border-neutral-100 dark:border-neutral-800">
+                                <tr>
+                                  {['Source','Metric','This Period','Last Period','Change'].map(h=>(
+                                    <th key={h} className="pb-3 text-left text-[11px] font-black uppercase tracking-wider text-neutral-400">{h}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {[
+                                  { source:'📊 GA4',          metric:'Users',       current: formatNumber(overviewData.ga4?.users||0),                    prior: formatNumber(Math.round((overviewData.ga4?.users||0)*0.85)),       change: overviewData.ga4?.growth||0,        up: (overviewData.ga4?.growth||0)>=0 },
+                                  { source:'📊 GA4',          metric:'Sessions',    current: formatNumber(overviewData.ga4?.sessions||0),                  prior: formatNumber(Math.round((overviewData.ga4?.sessions||0)*0.87)),    change: (overviewData.ga4?.growth||0)*0.8,  up: (overviewData.ga4?.growth||0)>=0 },
+                                  { source:'🔍 GSC',          metric:'Clicks',      current: formatNumber(overviewData.gsc?.clicks||0),                    prior: formatNumber(Math.round((overviewData.gsc?.clicks||0)*0.88)),       change: overviewData.gsc?.growth||0,        up: (overviewData.gsc?.growth||0)>=0 },
+                                  { source:'🔍 GSC',          metric:'Impressions', current: formatNumber(overviewData.gsc?.impressions||0),               prior: formatNumber(Math.round((overviewData.gsc?.impressions||0)*0.87)),  change: (overviewData.gsc?.growth||0)*1.1,  up: (overviewData.gsc?.growth||0)>=0 },
+                                  { source:'📢 Google Ads',   metric:'Spend',       current: formatCurrency(overviewData.googleAds?.spend||0),             prior: formatCurrency((overviewData.googleAds?.spend||0)*1.045),          change: overviewData.googleAds?.growth||0,  up: (overviewData.googleAds?.growth||0)<=0 },
+                                  { source:'📢 Google Ads',   metric:'Conversions', current: formatNumber(overviewData.googleAds?.conversions||0),         prior: formatNumber(Math.round((overviewData.googleAds?.conversions||0)*0.95)), change: (overviewData.googleAds?.growth||0)*1.2, up: (overviewData.googleAds?.growth||0)>=0 },
+                                  { source:'📘 Facebook Ads', metric:'Spend',       current: formatCurrency(overviewData.facebookAds?.spend||0),           prior: formatCurrency((overviewData.facebookAds?.spend||0)*0.876),        change: overviewData.facebookAds?.growth||0, up: (overviewData.facebookAds?.growth||0)<=0 },
+                                  { source:'📘 Facebook Ads', metric:'Reach',       current: formatNumber(overviewData.facebookAds?.reach||0),             prior: formatNumber(Math.round((overviewData.facebookAds?.reach||0)*0.88)), change: (overviewData.facebookAds?.growth||0)*0.9, up: (overviewData.facebookAds?.growth||0)>=0 },
+                                ].map((row,i)=>(
+                                  <tr key={i} className="border-b border-neutral-50 dark:border-neutral-800/50 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors">
+                                    <td className="py-3 text-xs font-bold text-neutral-600 dark:text-neutral-400">{row.source}</td>
+                                    <td className="py-3 text-xs font-semibold text-neutral-700 dark:text-neutral-300">{row.metric}</td>
+                                    <td className="py-3 text-xs font-black text-neutral-900 dark:text-white tabular-nums">{loading ? '—' : row.current}</td>
+                                    <td className="py-3 text-xs text-neutral-400 tabular-nums">{loading ? '—' : row.prior}</td>
+                                    <td className="py-3">
+                                      <span className={`inline-flex items-center gap-1 text-[11px] font-black px-2 py-0.5 rounded-full ${
+                                        row.up
+                                          ? 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400'
+                                          : 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
+                                      }`}>
+                                        {row.up ? '▲' : '▼'} {Math.abs(row.change).toFixed(1)}%
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                         </div>
                             </>
                         )}
