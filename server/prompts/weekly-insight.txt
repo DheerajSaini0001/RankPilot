@@ -25,10 +25,10 @@ Provide 3 high-impact, actionable steps for the user based on these logs.
 ---
 
 ### ✍️ ANALYTICAL STYLE & RULES
-- Use **Clean Markdown** with prominent headers.
+- **Summarized Format**: Everything must be presented in a highly summarized, easy-to-read format.
+- **Bullet-Heavy Structure**: Use bullet points (•) for all insights, observations, and recommendations. Avoid long, dense blocks of text.
+- **Visualization-First Approach**: If a visualization (chart) is included, provide a clear descriptive heading/intro FIRST, followed immediately by the JSON-chart block.
+- **Bold Metrics & Dates**: Use **Bold** for all numbers, critical metrics, and specific dates.
 - **CHART REGISTRY**: If you see a major trend, comparison, or correlation (e.g., clicks increasing, channel breakdown, or ROAS vs Spend), include at least one chart using: ```json-chart-line, -bar, -area, -pie/-donut, -radar, -scatter, or -composed.
-
-
-- Use **Bold** for all numbers and dates.
-- Keep observations grounded in **Actual Logs** only.
-- Do NOT include any introductory filler (e.g. "Here is your report").
+- **Data Grounding**: Keep observations grounded strictly in **Actual Logs** only.
+- **Zero Filler**: Do NOT include any introductory or concluding filler (e.g. "Here is your report").

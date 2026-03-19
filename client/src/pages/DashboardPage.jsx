@@ -41,7 +41,6 @@ const DashboardPage = () => {
     const [topPages, setTopPages] = useState([]);
     const [insights, setInsights] = useState([]);
     const [selectedMetric, setSelectedMetric] = useState('Sessions');
-    const [showSummary, setShowSummary] = useState(false);
 
     const downloadCSV = () => {
         if (!topPages.length) return;
@@ -55,9 +54,6 @@ const DashboardPage = () => {
         a.click();
     };
 
-    const handleExecutiveSummary = () => {
-        setShowSummary(true);
-    };
 
     useEffect(() => {
         loadDashboardData();
@@ -447,65 +443,6 @@ const DashboardPage = () => {
                 </div>
             </DashboardLayout>
 
-            {/* Executive Summary Modal Overlay */}
-            {showSummary && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-xl bg-black/40 animate-fade-in">
-                    <div className="bg-white dark:bg-dark-card w-full max-w-2xl rounded-[3rem] shadow-2xl overflow-hidden animate-slide-up border border-white/20">
-                        <div className="p-10 border-b border-neutral-100 dark:border-neutral-800 flex justify-between items-center bg-brand-500/5">
-                            <div>
-                                <h2 className="text-2xl font-black text-neutral-900 dark:text-white">Executive Intelligence Summary</h2>
-                                <p className="text-sm font-bold text-neutral-400 italic">Automated analysis of current period performance</p>
-                            </div>
-                            <button onClick={() => setShowSummary(false)} className="w-12 h-12 rounded-2xl bg-neutral-100 dark:bg-dark-bg flex items-center justify-center hover:bg-semantic-rose-500 hover:text-white transition-all">
-                                <span className="text-2xl">×</span>
-                            </button>
-                        </div>
-                        <div className="p-10 space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
-                            <section>
-                                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-brand-500 mb-4">Core Performance</h3>
-                                <p className="text-sm font-bold text-neutral-600 dark:text-neutral-300 leading-relaxed">
-                                    Your ecosystem is currently operating with a **Health Score of {healthScore}**.
-                                    Total traffic is {trafficGrowth >= 0 ? 'up' : 'down'} by **{Math.abs(trafficGrowth).toFixed(1)}%**,
-                                    reaching a total volume of **{formatNumber(totalTraffic)} sessions**.
-                                </p>
-                            </section>
-                            <section>
-                                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-accent-500 mb-4">Marketing Efficiency</h3>
-                                <p className="text-sm font-bold text-neutral-600 dark:text-neutral-300 leading-relaxed">
-                                    With a total investment of **{formatCurrency(totalAdSpend)}**, your campaigns have generated **{formatNumber(totalConversions)} conversions**.
-                                    The current efficiency multiplier stands at **{(totalAdSpend > 0 ? totalConversions / (totalAdSpend / 100) : 0).toFixed(1)}x ROI**.
-                                </p>
-                            </section>
-                            <section>
-                                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-neutral-400 mb-4">Key Action Items</h3>
-                                <ul className="space-y-3">
-                                    {insights.map((ins, i) => (
-                                        <li key={i} className="flex gap-3 text-xs font-bold text-neutral-500 dark:text-neutral-400">
-                                            <span className="text-brand-500">•</span>
-                                            {ins.desc}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </section>
-                        </div>
-                        <div className="p-10 bg-neutral-50 dark:bg-dark-surface/50 flex gap-4">
-                            <button
-                                onClick={() => {
-                                    const text = `Executive Summary\n\nHealth Score: ${healthScore}\nTraffic: ${formatNumber(totalTraffic)} (${trafficGrowth.toFixed(1)}%)\nConversions: ${formatNumber(totalConversions)}\nROI: ${(totalAdSpend > 0 ? totalConversions / (totalAdSpend / 100) : 0).toFixed(1)}x`;
-                                    navigator.clipboard.writeText(text);
-                                    alert('Summary copied to clipboard!');
-                                }}
-                                className="flex-1 py-4 bg-brand-600 text-white rounded-2xl font-black shadow-lg shadow-brand-500/20 hover:bg-brand-500 transition-all"
-                            >
-                                Copy to Clipboard
-                            </button>
-                            <button onClick={() => setShowSummary(false)} className="px-8 py-4 bg-white dark:bg-dark-bg border border-neutral-200 dark:border-neutral-800 rounded-2xl font-black text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 transition-all">
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </>
     );
 };

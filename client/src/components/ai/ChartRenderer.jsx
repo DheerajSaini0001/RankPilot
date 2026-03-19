@@ -285,9 +285,9 @@ const ChartRenderer = ({ type, data }) => {
 
 
   return (
-    <div className="my-6 w-full h-[280px] bg-neutral-50 dark:bg-dark-surface/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 shadow-sm animate-in fade-in zoom-in duration-500">
+    <div className="w-full h-[320px] bg-white dark:bg-[#1a1a1a] border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 shadow-xl relative animate-in fade-in zoom-in duration-700">
       {data.title && (
-        <h4 className="text-xs font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-4 text-center">
+        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-500 mb-8 text-center bg-neutral-50 dark:bg-dark-bg/50 py-2 rounded-xl">
           {data.title}
         </h4>
       )}

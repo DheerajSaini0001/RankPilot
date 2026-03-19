@@ -188,34 +188,102 @@ const AIChatPage = () => {
         setQuery('');
 
         const newMessages = [...messages, { role: 'user', content: currentQuery }];
-        setMessages(newMessages);
+        setMessages([...newMessages, { role: 'assistant', content: '', isLoading: true }]);
         setLoading(true);
 
-        setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-        }, 100);
+        const scrollToEnd = () => {
+            setTimeout(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }, 50);
+        };
+        scrollToEnd();
 
         try {
-            const res = await askAi({
-                question: currentQuery,
-                activeSources: selectedSources,
-                conversationId: activeConversationId,
-                siteId: activeSiteId
+            const token = useAuthStore.getState().token;
+            const apiBase = import.meta.env.VITE_API_BASE_URL || '/api';
+            const response = await fetch(`${apiBase}/ai/ask`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    question: currentQuery,
+                    activeSources: selectedSources,
+                    conversationId: activeConversationId,
+                    siteId: activeSiteId
+                })
             });
 
-            if (!activeConversationId && res.data.conversationId) {
-                setActiveConversationId(res.data.conversationId);
-                loadConversations();
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || errorData.message || `Server error: ${response.status}`);
             }
 
-            setMessages([...newMessages, { role: 'assistant', content: res.data.answer }]);
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let accumulatedContent = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            if (data.chunk) {
+                                accumulatedContent += data.chunk;
+                                setMessages(prev => {
+                                    const updated = [...prev];
+                                    const lastMsg = updated[updated.length - 1];
+                                    if (lastMsg && lastMsg.role === 'assistant') {
+                                        updated[updated.length - 1] = { ...lastMsg, content: accumulatedContent, isLoading: false };
+                                    }
+                                    return updated;
+                                });
+                                scrollToEnd();
+                            }
+                            if (data.done) {
+                                if (!activeConversationId && data.conversationId) {
+                                    setActiveConversationId(data.conversationId);
+                                    loadConversations();
+                                }
+                            }
+                            if (data.error) throw new Error(data.error);
+                        } catch (parseError) {
+                            // Partial JSON skip
+                        }
+                    }
+                }
+            }
         } catch (err) {
             console.error("AI Error:", err);
-            const errorMessage = err.response?.data?.message || "I'm sorry, I encountered an error while analyzing your data. Please check your source connections and try again.";
-            setMessages([...newMessages, {
-                role: 'assistant',
-                content: errorMessage
-            }]);
+            
+            // Map technical error codes to user-friendly messages
+            const getFriendlyError = (msg) => {
+                if (msg.includes('API_KEY_INVALID')) return "Your AI access key is invalid. Please check your settings.";
+                if (msg.includes('QuotaFailure') || msg.includes('limit') || msg.includes('429')) return "We've hit our AI usage limit. Please try again in 1-2 minutes.";
+                if (msg.includes('Network') || msg.includes('fetch')) return "It seems you're offline or the connection is unstable. Please check your internet.";
+                if (msg.includes('safety')) return "Sorry, I can't process that specific request due to safety policies.";
+                return "Something went wrong while talking to the AI. Please try again shortly.";
+            };
+
+            const friendlyMsg = getFriendlyError(err.message || "");
+
+            setMessages(prev => {
+                const updated = [...prev];
+                updated[updated.length - 1] = { 
+                    role: 'assistant', 
+                    content: `⚠️ **Update**: ${friendlyMsg}`,
+                    isLoading: false,
+                    isError: true
+                };
+                return updated;
+            });
         } finally {
             setLoading(false);
         }
@@ -245,7 +313,7 @@ const AIChatPage = () => {
 
     return (
         <DashboardLayout>
-            <div className="flex h-[calc(100vh-115px)] w-full overflow-hidden bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-2xl shadow-sm relative z-10">
+            <div className="flex h-[calc(100vh-145px)] w-full max-w-7xl mx-auto overflow-hidden bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-2xl shadow-sm relative z-10">
 
                 {/* Main Chat Area */}
                 <div className="flex-1 flex flex-col h-full bg-white dark:bg-dark-card relative shadow-sm overflow-hidden">
@@ -559,7 +627,7 @@ const AIChatPage = () => {
 
                             </div>
                         ) : (
-                            <div className="space-y-6 md:space-y-8 w-full max-w-none mx-auto pb-4">
+                            <div className="space-y-6 md:space-y-8 w-full max-w-5xl mx-auto pb-4">
                                 {messages.map((msg, idx) => (
                                     <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} group animate-fade-in-up`}>
                                         <div className={`flex max-w-[90%] md:max-w-[80%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} items-start gap-4`}>
@@ -574,30 +642,80 @@ const AIChatPage = () => {
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className={`px-2 py-1 leading-relaxed ${msg.role === 'user'
+                                            <div className={`px-2 py-1 leading-relaxed markdown-content ${msg.role === 'user'
                                                 ? 'text-neutral-900 dark:text-white font-medium prose-sm'
                                                 : 'text-neutral-800 dark:text-neutral-200 prose prose-neutral dark:prose-invert max-w-none'
                                                 }`}>
                                                 {msg.role === 'assistant' ? (
-                                                    <ReactMarkdown
-                                                        remarkPlugins={[remarkGfm]}
-                                                        components={{
-                                                            code({ node, inline, className, children, ...props }) {
-                                                                const match = /language-json-chart-(\w+)/.exec(className || '');
-                                                                if (!inline && match) {
-                                                                    try {
-                                                                        const chartData = JSON.parse(String(children).replace(/\n$/, ''));
-                                                                        return <ChartRenderer type={match[1]} data={chartData} />;
-                                                                    } catch (err) {
-                                                                        return <code className={className} {...props}>{children}</code>;
+                                                    msg.content ? (
+                                                        <ReactMarkdown
+                                                            remarkPlugins={[remarkGfm]}
+                                                            components={{
+                                                                code({ node, inline, className, children, ...props }) {
+                                                                    const match = /language-json-chart-(\w+)/.exec(className || '');
+                                                                    if (!inline && match) {
+                                                                        try {
+                                                                            const chartData = JSON.parse(String(children).replace(/\n$/, ''));
+                                                                            return (
+                                                                                <div className="my-10 w-full overflow-hidden animate-fade-in">
+                                                                                    <ChartRenderer type={match[1]} data={chartData} />
+                                                                                </div>
+                                                                            );
+                                                                        } catch (err) {
+                                                                            // Return a subtle placeholder while JSON is streaming/invalid
+                                                                            return (
+                                                                                <div className="my-4 p-4 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl flex items-center justify-center bg-neutral-50/50 dark:bg-neutral-900/50">
+                                                                                    <div className="flex items-center gap-3">
+                                                                                        <div className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />
+                                                                                        <span className="text-xs font-medium text-neutral-500 italic uppercase tracking-widest">Generating {match[1]} visualization...</span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            );
+                                                                        }
                                                                     }
-                                                                }
-                                                                return <code className={className} {...props}>{children}</code>;
+                                                                    return <code className={className} {...props}>{children}</code>;
+                                                                },
+                                                                ul: ({ children }) => <ul className="!list-none !p-0 !m-0 !pl-0 space-y-2 mb-4">{children}</ul>,
+                                                                ol: ({ children }) => <ol className="!list-decimal !p-0 !m-0 !pl-5 mb-4 space-y-2 marker:text-brand-600 dark:marker:text-brand-400 marker:font-bold">{children}</ol>,
+                                                                li: ({ children, ordered }) => {
+                                                                    if (ordered) {
+                                                                        return (
+                                                                            <li className="list-item text-[15px] leading-relaxed text-neutral-700 dark:text-neutral-100/90 mb-2 !ml-0">
+                                                                                {children}
+                                                                            </li>
+                                                                        );
+                                                                    }
+                                                                    return (
+                                                                        <li className="!list-none !p-0 !m-0 relative !pl-0 text-[15px] leading-relaxed text-neutral-700 dark:text-neutral-100/90 group mb-2">
+                                                                            <span className="absolute -left-5 top-[10px] h-1.5 w-1.5 rounded-full bg-brand-500 shadow-[0_0_8px_rgba(59,130,246,0.3)]" />
+                                                                            <div className="!m-0 !p-0 inline-block w-full">{children}</div>
+                                                                        </li>
+                                                                    );
+                                                                },
+                                                                p: ({ children }) => <p className="!m-0 !p-0 leading-relaxed text-neutral-800 dark:text-neutral-200">{children}</p>,
+                                                                h1: ({ children }) => <h1 className="text-xl font-black !m-0 !mb-4 tracking-tight text-neutral-900 dark:text-white">{children}</h1>,
+                                                                h2: ({ children }) => <h2 className="text-lg font-extrabold !m-0 !mb-3 tracking-tight text-neutral-800 dark:text-neutral-100">{children}</h2>,
+                                                                h3: ({ children }) => <h3 className="text-base font-bold !m-0 !mb-2 text-neutral-800 dark:text-neutral-100">{children}</h3>,
+                                                                strong: ({ children }) => <strong className="font-bold text-neutral-900 dark:text-white">{children}</strong>
+                                                            }}
+                                                        >
+                                                            {msg.content
+                                                                .replace(/^[•*]\s*$/gm, '')
+                                                                .replace(/•\s*/g, '- ')
+                                                                .replace(/^\s*[•*]\s*/gm, '- ')
+                                                                .replace(/- \s*\n/g, '- ')
+                                                                .replace(/(\n\d+\.)\s*[•*]\s*/g, '$1 ')
+                                                                .replace(/([.!?])\s+(- \s*)/g, '$1\n$2')
+                                                                .replace(/\n{3,}/g, '\n\n')
                                                             }
-                                                        }}
-                                                    >
-                                                        {msg.content}
-                                                    </ReactMarkdown>
+                                                        </ReactMarkdown>
+                                                    ) : (
+                                                        <div className="flex items-center space-x-2 py-2">
+                                                            <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                                            <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                                            <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                                                        </div>
+                                                    )
                                                 ) : (
                                                     msg.content
                                                 )}
@@ -606,20 +724,6 @@ const AIChatPage = () => {
                                     </div>
                                 ))}
 
-                                {loading && (
-                                    <div className="flex justify-start">
-                                        <div className="flex items-start gap-4 max-w-[80%]">
-                                            <div className="w-9 h-9 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center animate-pulse">
-                                                <SparklesIcon className="w-5 h-5 text-neutral-400" />
-                                            </div>
-                                            <div className="px-5 py-4 flex items-center space-x-2">
-                                                <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                                                <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                                                <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
                                 <div ref={messagesEndRef} className="h-10" />
                             </div>
                         )}

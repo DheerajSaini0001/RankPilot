@@ -1,4 +1,4 @@
-import { callGemini } from '../services/geminiService.js';
+import { callGemini, callGeminiStream } from '../services/geminiService.js';
 import promptBuilder from '../services/promptBuilder.js';
 import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
@@ -242,22 +242,37 @@ export const askAi = async (req, res) => {
 
     await Message.create({ conversationId: convId, role: 'user', content: question });
 
-    const aiResult = await getAiResponse(prompt);
+    // Enable SSE
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
 
-    let cleanContent = aiResult.content
-        .replace(/(\r?\n)*.*response is advisory only.*/gi, '')
-        .trim();
+    let fullContent = "";
+    try {
+        const streamResult = await callGeminiStream(prompt, (chunk) => {
+            fullContent += chunk;
+            res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
+        });
 
-    const aiMsg = await Message.create({
-        conversationId: convId,
-        role: 'assistant',
-        content: cleanContent,
-        model: aiResult.model,
-        tokensUsed: aiResult.tokensUsed,
-        latencyMs: aiResult.latencyMs
-    });
+        const cleanContent = fullContent
+            .replace(/(\r?\n)*.*response is advisory only.*/gi, '')
+            .trim();
 
-    res.status(200).json({ answer: cleanContent, conversationId: convId, messageId: aiMsg._id });
+        const aiMsg = await Message.create({
+            conversationId: convId,
+            role: 'assistant',
+            content: cleanContent,
+            model: streamResult.model,
+            latencyMs: Date.now() - now
+        });
+
+        res.write(`data: ${JSON.stringify({ done: true, conversationId: convId, messageId: aiMsg._id, answer: cleanContent })}\n\n`);
+        res.end();
+    } catch (err) {
+        console.error("Streaming AI Error:", err);
+        res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
+        res.end();
+    }
 };
 
 export const getConversations = async (req, res) => {
