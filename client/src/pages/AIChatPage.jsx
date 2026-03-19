@@ -33,6 +33,113 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import ChartRenderer from '../components/ai/ChartRenderer';
 
+const MarkdownComponents = {
+    code({ node, inline, className, children, ...props }) {
+        const match = /language-json-chart-(\w+)/.exec(className || '');
+        if (!inline && match) {
+            try {
+                const chartData = JSON.parse(String(children).replace(/\n$/, ''));
+                return (
+                    <div className="my-10 w-full overflow-hidden animate-fade-in">
+                        <ChartRenderer type={match[1]} data={chartData} />
+                    </div>
+                );
+            } catch (err) {
+                // Return a subtle placeholder while JSON is streaming/invalid
+                return (
+                    <div className="my-4 p-4 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl flex items-center justify-center bg-neutral-50/50 dark:bg-neutral-900/50">
+                        <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />
+                            <span className="text-xs font-medium text-neutral-500 italic uppercase tracking-widest">Generating {match[1]} visualization...</span>
+                        </div>
+                    </div>
+                );
+            }
+        }
+        return <code className={className} {...props}>{children}</code>;
+    },
+    ul: ({ children }) => <ul className="!list-none !p-0 !m-0 !pl-0 space-y-2 mb-4">{children}</ul>,
+    ol: ({ children }) => <ol className="!list-decimal !p-0 !m-0 !pl-5 mb-4 space-y-2 marker:text-brand-600 dark:marker:text-brand-400 marker:font-bold">{children}</ol>,
+    li: ({ children, ordered }) => {
+        if (ordered) {
+            return (
+                <li className="list-item text-[15px] leading-relaxed text-neutral-700 dark:text-neutral-100/90 mb-2 !ml-0">
+                    {children}
+                </li>
+            );
+        }
+        return (
+            <li className="!list-none !p-0 !m-0 relative !pl-0 text-[15px] leading-relaxed text-neutral-700 dark:text-neutral-100/90 group mb-2">
+                <span className="absolute -left-5 top-[10px] h-1.5 w-1.5 rounded-full bg-brand-500 shadow-[0_0_8px_rgba(59,130,246,0.3)]" />
+                <div className="!m-0 !p-0 inline-block w-full">{children}</div>
+            </li>
+        );
+    },
+    p: ({ children }) => <p className="!m-0 !p-0 leading-relaxed text-neutral-800 dark:text-neutral-200">{children}</p>,
+    h1: ({ children }) => <h1 className="text-xl font-black !m-0 !mb-4 tracking-tight text-neutral-900 dark:text-white">{children}</h1>,
+    h2: ({ children }) => <h2 className="text-lg font-extrabold !m-0 !mb-3 tracking-tight text-neutral-800 dark:text-neutral-100">{children}</h2>,
+    h3: ({ children }) => <h3 className="text-base font-bold !m-0 !mb-2 text-neutral-800 dark:text-neutral-100">{children}</h3>,
+    strong: ({ children }) => <strong className="font-bold text-neutral-900 dark:text-white">{children}</strong>
+};
+
+const ChatMessage = React.memo(({ msg, userName }) => {
+    const isUser = msg.role === 'user';
+    
+    return (
+        <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} group animate-fade-in-up`}>
+            <div className={`flex max-w-[90%] md:max-w-[80%] ${isUser ? 'flex-row-reverse' : 'flex-row'} items-start gap-4`}>
+                <div className="shrink-0 mt-1">
+                    {isUser ? (
+                        <div className="w-9 h-9 rounded-full bg-neutral-800 text-white flex items-center justify-center text-xs font-bold border-2 border-white shadow-sm">
+                            {userName?.charAt(0) || 'U'}
+                        </div>
+                    ) : (
+                        <div className="w-9 h-9 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center shadow-sm border border-neutral-200 dark:border-neutral-700">
+                            <SparklesIcon className="w-5 h-5 text-brand-600" />
+                        </div>
+                    )}
+                </div>
+                <div className={`px-2 py-1 leading-relaxed markdown-content ${isUser
+                    ? 'text-neutral-900 dark:text-white font-medium prose-sm'
+                    : 'text-neutral-800 dark:text-neutral-200 prose prose-neutral dark:prose-invert max-w-none'
+                    }`}>
+                    {!isUser ? (
+                        msg.content ? (
+                            <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={MarkdownComponents}
+                            >
+                                {msg.content
+                                    .replace(/^[•*]\s*$/gm, '')
+                                    .replace(/•\s*/g, '- ')
+                                    .replace(/^\s*[•*]\s*/gm, '- ')
+                                    .replace(/- \s*\n/g, '- ')
+                                    .replace(/(\n\d+\.)\s*[•*]\s*/g, '$1 ')
+                                    .replace(/([.!?])\s+(- \s*)/g, '$1\n$2')
+                                    .replace(/\n{3,}/g, '\n\n')
+                                }
+                            </ReactMarkdown>
+                        ) : msg.isLoading ? (
+                            <div className="flex items-center space-x-2 py-2">
+                                <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                            </div>
+                        ) : (
+                            <div className="py-2 text-neutral-400 font-medium italic text-[14px] flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 animate-pulse" />
+                                No response generated by the server. Please check your data connectivity or try again in a moment.
+                            </div>
+                        )
+                    ) : (
+                        msg.content
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+});
+
 const AIChatPage = () => {
     const { connectedSources, activeSiteId } = useAccountsStore();
     const { user } = useAuthStore();
@@ -265,20 +372,21 @@ const AIChatPage = () => {
             
             // Map technical error codes to user-friendly messages
             const getFriendlyError = (msg) => {
-                if (msg.includes('API_KEY_INVALID')) return "Your AI access key is invalid. Please check your settings.";
-                if (msg.includes('QuotaFailure') || msg.includes('limit') || msg.includes('429')) return "We've hit our AI usage limit. Please try again in 1-2 minutes.";
-                if (msg.includes('Network') || msg.includes('fetch')) return "It seems you're offline or the connection is unstable. Please check your internet.";
-                if (msg.includes('safety')) return "Sorry, I can't process that specific request due to safety policies.";
-                return "Something went wrong while talking to the AI. Please try again shortly.";
+                if (msg.includes('API_KEY_INVALID')) return "There's a configuration issue with the AI connection. Please contact support or check your settings.";
+                if (msg.includes('QuotaFailure') || msg.includes('limit') || msg.includes('429')) return "RankPilot is currently handling a high volume of requests. Please wait a minute before sending your next query.";
+                if (msg.includes('Network') || msg.includes('fetch')) return "I'm having trouble connecting to the analytics server. Please check your internet connection.";
+                if (msg.includes('safety')) return "I can't provide information on that specific topic as it falls outside my safety guidelines.";
+                return "I encountered an unexpected error while analyzing your data. Let's try that again in a few seconds.";
             };
 
             const friendlyMsg = getFriendlyError(err.message || "");
+            const rawError = err.message || "Unknown error";
 
             setMessages(prev => {
                 const updated = [...prev];
                 updated[updated.length - 1] = { 
                     role: 'assistant', 
-                    content: `⚠️ **Update**: ${friendlyMsg}`,
+                    content: `${friendlyMsg}\n\n---\n*Technical details: ${rawError}*`,
                     isLoading: false,
                     isError: true
                 };
@@ -286,6 +394,17 @@ const AIChatPage = () => {
             });
         } finally {
             setLoading(false);
+            setMessages(prev => {
+                const updated = [...prev];
+                const lastIdx = updated.length - 1;
+                if (lastIdx >= 0 && updated[lastIdx].role === 'assistant') {
+                    updated[lastIdx] = { 
+                        ...updated[lastIdx], 
+                        isLoading: false 
+                    };
+                }
+                return updated;
+            });
         }
     };
 
@@ -627,105 +746,17 @@ const AIChatPage = () => {
 
                             </div>
                         ) : (
-                            <div className="space-y-6 md:space-y-8 w-full max-w-5xl mx-auto pb-4">
-                                {messages.map((msg, idx) => (
-                                    <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} group animate-fade-in-up`}>
-                                        <div className={`flex max-w-[90%] md:max-w-[80%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} items-start gap-4`}>
-                                            <div className="shrink-0 mt-1">
-                                                {msg.role === 'user' ? (
-                                                    <div className="w-9 h-9 rounded-full bg-neutral-800 text-white flex items-center justify-center text-xs font-bold border-2 border-white shadow-sm">
-                                                        {user?.name?.charAt(0) || 'U'}
-                                                    </div>
-                                                ) : (
-                                                    <div className="w-9 h-9 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center shadow-sm border border-neutral-200 dark:border-neutral-700">
-                                                        <SparklesIcon className="w-5 h-5 text-brand-600" />
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className={`px-2 py-1 leading-relaxed markdown-content ${msg.role === 'user'
-                                                ? 'text-neutral-900 dark:text-white font-medium prose-sm'
-                                                : 'text-neutral-800 dark:text-neutral-200 prose prose-neutral dark:prose-invert max-w-none'
-                                                }`}>
-                                                {msg.role === 'assistant' ? (
-                                                    msg.content ? (
-                                                        <ReactMarkdown
-                                                            remarkPlugins={[remarkGfm]}
-                                                            components={{
-                                                                code({ node, inline, className, children, ...props }) {
-                                                                    const match = /language-json-chart-(\w+)/.exec(className || '');
-                                                                    if (!inline && match) {
-                                                                        try {
-                                                                            const chartData = JSON.parse(String(children).replace(/\n$/, ''));
-                                                                            return (
-                                                                                <div className="my-10 w-full overflow-hidden animate-fade-in">
-                                                                                    <ChartRenderer type={match[1]} data={chartData} />
-                                                                                </div>
-                                                                            );
-                                                                        } catch (err) {
-                                                                            // Return a subtle placeholder while JSON is streaming/invalid
-                                                                            return (
-                                                                                <div className="my-4 p-4 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl flex items-center justify-center bg-neutral-50/50 dark:bg-neutral-900/50">
-                                                                                    <div className="flex items-center gap-3">
-                                                                                        <div className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />
-                                                                                        <span className="text-xs font-medium text-neutral-500 italic uppercase tracking-widest">Generating {match[1]} visualization...</span>
-                                                                                    </div>
-                                                                                </div>
-                                                                            );
-                                                                        }
-                                                                    }
-                                                                    return <code className={className} {...props}>{children}</code>;
-                                                                },
-                                                                ul: ({ children }) => <ul className="!list-none !p-0 !m-0 !pl-0 space-y-2 mb-4">{children}</ul>,
-                                                                ol: ({ children }) => <ol className="!list-decimal !p-0 !m-0 !pl-5 mb-4 space-y-2 marker:text-brand-600 dark:marker:text-brand-400 marker:font-bold">{children}</ol>,
-                                                                li: ({ children, ordered }) => {
-                                                                    if (ordered) {
-                                                                        return (
-                                                                            <li className="list-item text-[15px] leading-relaxed text-neutral-700 dark:text-neutral-100/90 mb-2 !ml-0">
-                                                                                {children}
-                                                                            </li>
-                                                                        );
-                                                                    }
-                                                                    return (
-                                                                        <li className="!list-none !p-0 !m-0 relative !pl-0 text-[15px] leading-relaxed text-neutral-700 dark:text-neutral-100/90 group mb-2">
-                                                                            <span className="absolute -left-5 top-[10px] h-1.5 w-1.5 rounded-full bg-brand-500 shadow-[0_0_8px_rgba(59,130,246,0.3)]" />
-                                                                            <div className="!m-0 !p-0 inline-block w-full">{children}</div>
-                                                                        </li>
-                                                                    );
-                                                                },
-                                                                p: ({ children }) => <p className="!m-0 !p-0 leading-relaxed text-neutral-800 dark:text-neutral-200">{children}</p>,
-                                                                h1: ({ children }) => <h1 className="text-xl font-black !m-0 !mb-4 tracking-tight text-neutral-900 dark:text-white">{children}</h1>,
-                                                                h2: ({ children }) => <h2 className="text-lg font-extrabold !m-0 !mb-3 tracking-tight text-neutral-800 dark:text-neutral-100">{children}</h2>,
-                                                                h3: ({ children }) => <h3 className="text-base font-bold !m-0 !mb-2 text-neutral-800 dark:text-neutral-100">{children}</h3>,
-                                                                strong: ({ children }) => <strong className="font-bold text-neutral-900 dark:text-white">{children}</strong>
-                                                            }}
-                                                        >
-                                                            {msg.content
-                                                                .replace(/^[•*]\s*$/gm, '')
-                                                                .replace(/•\s*/g, '- ')
-                                                                .replace(/^\s*[•*]\s*/gm, '- ')
-                                                                .replace(/- \s*\n/g, '- ')
-                                                                .replace(/(\n\d+\.)\s*[•*]\s*/g, '$1 ')
-                                                                .replace(/([.!?])\s+(- \s*)/g, '$1\n$2')
-                                                                .replace(/\n{3,}/g, '\n\n')
-                                                            }
-                                                        </ReactMarkdown>
-                                                    ) : (
-                                                        <div className="flex items-center space-x-2 py-2">
-                                                            <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                                                            <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                                                            <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                                                        </div>
-                                                    )
-                                                ) : (
-                                                    msg.content
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
+                                <div className="space-y-6 md:space-y-8 w-full max-w-5xl mx-auto pb-4">
+                                    {messages.map((msg, idx) => (
+                                        <ChatMessage 
+                                            key={idx} 
+                                            msg={msg} 
+                                            userName={user?.name}
+                                        />
+                                    ))}
 
-                                <div ref={messagesEndRef} className="h-10" />
-                            </div>
+                                    <div ref={messagesEndRef} className="h-10" />
+                                </div>
                         )}
                     </div>
 

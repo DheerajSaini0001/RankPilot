@@ -1,3 +1,4 @@
+import React from 'react';
 import {
   LineChart,
   Line,
@@ -298,5 +299,5 @@ const ChartRenderer = ({ type, data }) => {
   );
 };
 
-export default ChartRenderer;
+export default React.memo(ChartRenderer);
 

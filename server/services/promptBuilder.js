@@ -122,12 +122,12 @@ class PromptBuilder {
             });
         }
 
-        // Section 5: AI Visualization Guidelines
-        ctx += `### 💡 Visualization Logic\n`;
-        ctx += `- **Line Charts**: Use for Daily Logs to show growth/decline over time.\n`;
-        ctx += `- **Bar Charts**: Use for comparing Top Keywords, Pages, or Campaigns.\n`;
-        ctx += `- **Pie/Donut Charts**: Use for Channel or Device distribution.\n`;
-        ctx += `- **Composed Charts**: Use when comparing two related metrics (e.g., Bar for Revenue, Line for Users).\n\n`;
+        // Section 5: AI Visualization Guidelines (Conditional)
+        ctx += `### 💡 Optional Visualization Logic\n`;
+        ctx += `- **Line Charts**: Use ONLY for complex daily trends when requested.\n`;
+        ctx += `- **Bar Charts**: Use ONLY for comparing Top dimensions when a visual comparison is requested.\n`;
+        ctx += `- **Pie/Donut Charts**: Use for Channel/Device share if specifically requested.\n`;
+        ctx += `**CRITICAL**: If the user asks for a simple list (like "top keywords"), provide it as a text table or list ONLY. No chart.\n\n`;
 
         return ctx;
     }
