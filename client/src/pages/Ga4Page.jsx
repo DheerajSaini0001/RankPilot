@@ -471,7 +471,7 @@ const Ga4Page = () => {
                             <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Traffic Sources</h3>
                         </div>
                         <div className="p-0">
-                            <DataTable columns={trafficColumns} data={filteredTraffic} loading={loading} />
+                            <DataTable columns={trafficColumns} data={filteredTraffic} loading={loading} initialLimit={5} />
                         </div>
                     </div>
                     
@@ -480,7 +480,7 @@ const Ga4Page = () => {
                             <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Top Pages</h3>
                         </div>
                         <div className="p-0">
-                            <DataTable columns={pageColumns} data={filteredPages} loading={loading} />
+                            <DataTable columns={pageColumns} data={filteredPages} loading={loading} initialLimit={5} />
                         </div>
                     </div>
                 </div>

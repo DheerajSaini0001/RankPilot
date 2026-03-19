@@ -188,6 +188,24 @@ const GoogleAdsPage = () => {
         );
     }
 
+    const campaignColumns = [
+        { header: 'Campaign', cell: (row) => <div className="max-w-[180px] truncate font-bold text-neutral-800 dark:text-white" title={row.name}>{row.name}</div> },
+        { 
+            header: 'Status', 
+            cell: (row) => (
+                <span className={`text-[11px] font-black px-2 py-0.5 rounded-full capitalize ${
+                    row.status?.toLowerCase() === 'enabled' || row.status?.toLowerCase() === 'active'
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800'
+                }`}>{row.status}</span>
+            )
+        },
+        { header: 'Spend', cell: (row) => <span className="font-black text-amber-600 dark:text-amber-400 tabular-nums">{formatCurrency(row.cost)}</span> },
+        { header: 'Clicks', cell: (row) => <span className="font-bold text-neutral-900 dark:text-white tabular-nums">{formatNumber(row.clicks)}</span> },
+        { header: 'Conv.', cell: (row) => <span className="font-black text-green-600 dark:text-green-400 tabular-nums">{formatNumber(row.conversions)}</span> },
+        { header: 'CTR', cell: (row) => <span className="font-semibold text-purple-600 dark:text-purple-400 tabular-nums">{row.impressions > 0 ? ((row.clicks/row.impressions)*100).toFixed(1) : '0'}%</span> },
+    ];
+
     const keywordColumns = [
         { header: 'Keyword (Resource)', cell: (row) => <div className="max-w-[200px] truncate" title={row.name}>{row.name}</div> },
         { header: 'Cost', cell: (row) => formatCurrency(row.cost) },
@@ -521,62 +539,25 @@ const GoogleAdsPage = () => {
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* ADD 6 — Campaigns Table Improvement */}
-                    <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-2xl shadow-sm overflow-hidden">
-                      <div className="p-5 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
-                        <div>
-                          <h3 className="text-sm font-black text-neutral-900 dark:text-white">Top Campaigns</h3>
-                          <p className="text-xs text-neutral-400 mt-0.5">Performance breakdown by campaign</p>
+                    <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-2xl shadow-sm overflow-hidden min-h-[400px]">
+                        <div className="p-5 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
+                            <div>
+                                <h3 className="text-sm font-black text-neutral-900 dark:text-white">Top Campaigns</h3>
+                                <p className="text-xs text-neutral-400 mt-0.5">Performance breakdown by campaign</p>
+                            </div>
+                            <span className="text-xs font-bold bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 px-3 py-1 rounded-full">{campaigns.length} campaigns</span>
                         </div>
-                        <span className="text-xs font-bold bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 px-3 py-1 rounded-full">{campaigns.length} campaigns</span>
-                      </div>
-                      {loading ? (
-                        <div className="p-5 space-y-3">{[...Array(4)].map((_,i)=><div key={i} className="h-12 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"/>)}</div>
-                      ) : filteredCampaigns.length === 0 ? <EmptyState/> : (
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-sm">
-                            <thead className="bg-neutral-50 dark:bg-neutral-800/50 border-b border-neutral-100 dark:border-neutral-800">
-                              <tr>
-                                {['#','Campaign','Status','Spend','Clicks','Impressions','Conv.','CTR'].map(h=>(
-                                  <th key={h} className="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wider text-neutral-400">{h}</th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {filteredCampaigns.map((c,i)=>{
-                                const campCtr = c.impressions > 0 ? ((c.clicks/c.impressions)*100).toFixed(1) : '0';
-                                return (
-                                  <tr key={i} className="border-b border-neutral-50 dark:border-neutral-800/50 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors">
-                                    <td className="px-4 py-3">
-                                      <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-black ${i < 3 ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500'}`}>{i+1}</span>
-                                    </td>
-                                    <td className="px-4 py-3 font-bold text-neutral-800 dark:text-white max-w-[180px] truncate">{c.name}</td>
-                                    <td className="px-4 py-3">
-                                      <span className={`text-[11px] font-black px-2 py-0.5 rounded-full capitalize ${
-                                        c.status?.toLowerCase() === 'enabled' || c.status?.toLowerCase() === 'active'
-                                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                          : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800'
-                                      }`}>{c.status}</span>
-                                    </td>
-                                    <td className="px-4 py-3 font-black text-amber-600 dark:text-amber-400 tabular-nums">{formatCurrency(c.cost)}</td>
-                                    <td className="px-4 py-3 font-bold text-neutral-900 dark:text-white tabular-nums">{formatNumber(c.clicks)}</td>
-                                    <td className="px-4 py-3 text-neutral-500 tabular-nums">{formatNumber(c.impressions)}</td>
-                                    <td className="px-4 py-3 font-black text-green-600 dark:text-green-400 tabular-nums">{formatNumber(c.conversions)}</td>
-                                    <td className="px-4 py-3 font-semibold text-purple-600 dark:text-purple-400 tabular-nums">{campCtr}%</td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
+                        <div className="p-0">
+                            <DataTable columns={campaignColumns} data={filteredCampaigns} loading={loading} initialLimit={5} />
                         </div>
-                      )}
                     </div>
                     
-                    <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+                    <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[400px]">
                         <div className="p-5 border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-dark-surface/50">
                             <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Top Target Keywords</h3>
                         </div>
                         <div className="p-0">
-                            <DataTable columns={keywordColumns} data={filteredKeywords} loading={loading} />
+                            <DataTable columns={keywordColumns} data={filteredKeywords} loading={loading} initialLimit={5} />
                         </div>
                     </div>
                 </div>

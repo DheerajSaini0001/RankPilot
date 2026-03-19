@@ -479,7 +479,7 @@ const GscPage = () => {
                             <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Top Queries</h3>
                         </div>
                         <div className="p-0">
-                            <DataTable columns={queryColumns} data={filteredQueries} loading={loading} />
+                            <DataTable columns={queryColumns} data={filteredQueries} loading={loading} initialLimit={5} />
                         </div>
                     </div>
                     
@@ -489,7 +489,7 @@ const GscPage = () => {
                             <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Top Landing Pages</h3>
                         </div>
                         <div className="p-0">
-                            <DataTable columns={pageColumns} data={filteredPages} loading={loading} />
+                            <DataTable columns={pageColumns} data={filteredPages} loading={loading} initialLimit={5} />
                         </div>
                     </div>
                 </div>
