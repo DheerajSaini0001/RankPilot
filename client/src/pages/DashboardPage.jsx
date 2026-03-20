@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import AiSectionChat from '../components/ai/AiSectionChat';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/ui/DashboardLayout';
 import KpiCard from '../components/dashboard/KpiCard';
@@ -43,7 +44,7 @@ const EmptyState = ({ message = 'No data', sub = 'Try a wider date range' }) => 
 
 const DashboardPage = () => {
   const navigate = useNavigate();
-  const { preset, startDate, endDate } = useDateRangeStore();
+  const { startDate, endDate } = useDateRangeStore();
   const { device, campaign, channel, searchQuery } = useFilterStore();
   const {
     connectedSources,
@@ -58,7 +59,6 @@ const DashboardPage = () => {
   const [overviewData, setOverviewData] = useState({ ga4: null, gsc: null, googleAds: null, facebookAds: null });
   const [timeseriesData, setTimeseriesData] = useState([]);
   const [topPages, setTopPages] = useState([]);
-  const [insights, setInsights] = useState([]);
   const [selectedMetric, setSelectedMetric] = useState('Sessions');
 
   const downloadCSV = () => {
@@ -73,7 +73,7 @@ const DashboardPage = () => {
     a.click();
   };
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     setLoading(true);
     try {
       const query = new URLSearchParams({
@@ -97,10 +97,22 @@ const DashboardPage = () => {
 
       setTimeseriesData(data.timeseries || []);
       setTopPages(data.topPages || []);
-      setInsights(data.insights || []);
-
     } catch (err) {
       console.error('Failed to load unified dashboard data:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [startDate, endDate, device, campaign, channel, activeSiteId]);
+
+  const handleManualRefresh = async () => {
+    if (!activeSiteId) return;
+    setLoading(true);
+    try {
+      await api.post('/analytics/sync', { siteId: activeSiteId });
+      await loadDashboardData();
+    } catch (err) {
+      console.error('Manual sync failed:', err);
+      await loadDashboardData();
     } finally {
       setLoading(false);
     }
@@ -108,14 +120,16 @@ const DashboardPage = () => {
 
   useEffect(() => {
     loadDashboardData();
-  }, [startDate, endDate, connectedSources, activeSiteId, device, campaign, channel]);
+  }, [loadDashboardData, connectedSources]);
 
   useEffect(() => {
     const interval = setInterval(() => {
+      console.log('Auto-refreshing dashboard data...');
       loadDashboardData();
-    }, 15 * 60 * 1000);
+    }, 30 * 60 * 1000);
+
     return () => clearInterval(interval);
-  }, [startDate, endDate, connectedSources, activeSiteId, device, campaign, channel]);
+  }, [loadDashboardData]);
 
   const { user } = useAuthStore();
   const totalTraffic = (overviewData.ga4?.sessions || 0);
@@ -191,17 +205,38 @@ const DashboardPage = () => {
       <div className="flex flex-col space-y-8 max-w-[1600px] mx-auto">
         <div className="flex flex-col space-y-8 min-w-0">
           {/* SECTION 1 — Greeting Card */}
-          <div className="bg-white/60 dark:bg-dark-card/60 backdrop-blur-xl border border-neutral-200/60 dark:border-neutral-800/60 rounded-[2rem] p-6 shadow-sm relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-brand-500/10 transition-colors"></div>
-            <h1 className="text-xl lg:text-3xl font-black tracking-tight text-neutral-900 dark:text-white leading-none relative z-10">
-              Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'},
-              <span className="ml-2 bg-gradient-to-r from-brand-600 to-accent-500 bg-clip-text text-transparent capitalize">
-                {user?.name || 'Pilot'}
-              </span>
-            </h1>
-            <p className="mt-2 text-xs font-bold text-neutral-500 dark:text-neutral-400 relative z-10">
-              Track your performance and optimize your digital growth points in real-time.
-            </p>
+          <div className="bg-white/60 dark:bg-dark-card/60 backdrop-blur-xl border border-neutral-200/60 dark:border-neutral-800/60 rounded-[2rem] p-6 shadow-sm relative overflow-hidden group flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-brand-500/10 transition-colors pointer-events-none"></div>
+            <div className="relative z-10">
+              <h1 className="text-xl lg:text-3xl font-black tracking-tight text-neutral-900 dark:text-white leading-none">
+                Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'},
+                <span className="ml-2 bg-gradient-to-r from-brand-600 to-accent-500 bg-clip-text text-transparent capitalize">
+                  {user?.name || 'Pilot'}
+                </span>
+              </h1>
+              <p className="mt-2 text-xs font-bold text-neutral-500 dark:text-neutral-400">
+                Track your performance and optimize your digital growth points in real-time.
+              </p>
+            </div>
+
+            <div className="relative z-10 shrink-0">
+               <AiSectionChat 
+                  label="Generate Total Brand Summary"
+                  sectionTitle="Total Dashboard Summary"
+                  activeSources={['ga4', 'gsc', 'google-ads', 'facebook-ads']}
+                  contextPrompt={`Analyze my complete brand dashboard for ${startDate} to ${endDate}. 
+- Total Web Traffic (GA4 Sessions): ${formatNumber(totalTraffic || 0)}
+- Total Organic Clicks (GSC): ${formatNumber(searchClicks || 0)}
+- Total Ad Spend (Meta + Google): ${formatCurrency(totalAdSpend || 0)}
+- Total Ad Conversions: ${formatNumber(totalConversions || 0)}
+- Overall Health Score: ${healthScore}/100
+
+Give me a 3-part strategic review:
+1. Brand Performance Analysis (Organic vs Paid)
+2. Most Efficient Channel this week
+3. One high-level strategy for the next 7 days for maximum ROI.`}
+               />
+            </div>
           </div>
 
           {/* SECTION 2 — Empty/Not-Connected State */}
@@ -219,7 +254,7 @@ const DashboardPage = () => {
           ) : (
             <>
               {/* SECTION 3 — FilterBar */}
-              <FilterBar onRefresh={loadDashboardData} loading={loading} />
+              <FilterBar loading={loading} onRefresh={handleManualRefresh} />
 
               {/* SECTION 4 — Platform Status Bar (4 cards) */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -340,7 +375,10 @@ const DashboardPage = () => {
                       <span className="text-lg">📊</span>
                       <h3 className="text-sm font-black text-neutral-900 dark:text-white">Google Analytics 4</h3>
                     </div>
-                    <button onClick={() => navigate('/dashboard/ga4')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">View Full <ArrowRightIcon className="w-3 h-3" /></button>
+                    <div className="flex items-center gap-2">
+                      {activeGa4PropertyId && <AiSectionChat sectionTitle="Overview - GA4 Summary" contextPrompt={`Quick GA4 summary: ${formatNumber(overviewData.ga4?.users)} users, ${formatNumber(overviewData.ga4?.sessions)} sessions, bounce rate ${formatPct((overviewData.ga4?.bounceRate||0)*100)}, avg session ${formatTime(overviewData.ga4?.avgSessionDuration)}. What are the key insights and opportunities?`} activeSources={['ga4']} />}
+                      <button onClick={() => navigate('/dashboard/ga4')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">View Full <ArrowRightIcon className="w-3 h-3" /></button>
+                    </div>
                   </div>
                   {loading ? (
                     <div className="grid grid-cols-3 gap-3">{[...Array(6)].map((_, i) => <div key={i} className="h-16 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse" />)}</div>
@@ -369,7 +407,10 @@ const DashboardPage = () => {
                       <span className="text-lg">🔍</span>
                       <h3 className="text-sm font-black text-neutral-900 dark:text-white">Search Console</h3>
                     </div>
-                    <button onClick={() => navigate('/dashboard/gsc')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">View Full <ArrowRightIcon className="w-3 h-3" /></button>
+                    <div className="flex items-center gap-2">
+                      {activeGscSite && <AiSectionChat sectionTitle="Overview - GSC Summary" contextPrompt={`Quick GSC summary: ${formatNumber(overviewData.gsc?.clicks)} clicks, ${formatNumber(overviewData.gsc?.impressions)} impressions, ${formatPct((overviewData.gsc?.ctr||0)*100)} CTR, avg position #${(overviewData.gsc?.avgPosition||0).toFixed(1)}. Any quick wins I should focus on?`} activeSources={['gsc']} />}
+                      <button onClick={() => navigate('/dashboard/gsc')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">View Full <ArrowRightIcon className="w-3 h-3" /></button>
+                    </div>
                   </div>
                   {loading ? (
                     <div className="grid grid-cols-3 gap-3">{[...Array(6)].map((_, i) => <div key={i} className="h-16 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse" />)}</div>
@@ -398,7 +439,10 @@ const DashboardPage = () => {
                       <span className="text-lg">📢</span>
                       <h3 className="text-sm font-black text-neutral-900 dark:text-white">Google Ads</h3>
                     </div>
-                    <button onClick={() => navigate('/dashboard/google-ads')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">View Full <ArrowRightIcon className="w-3 h-3" /></button>
+                    <div className="flex items-center gap-2">
+                      {activeGoogleAdsCustomerId && <AiSectionChat sectionTitle="Overview - Google Ads Summary" contextPrompt={`Quick Google Ads summary: Spend ${formatCurrency(overviewData.googleAds?.spend)}, ${formatNumber(overviewData.googleAds?.clicks)} clicks, ${formatNumber(overviewData.googleAds?.conversions)} conversions, CPC ${formatCurrency(overviewData.googleAds?.cpc)}. Is this performance good and what should I optimize?`} activeSources={['google-ads']} />}
+                      <button onClick={() => navigate('/dashboard/google-ads')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">View Full <ArrowRightIcon className="w-3 h-3" /></button>
+                    </div>
                   </div>
                   {loading ? (
                     <div className="grid grid-cols-3 gap-3">{[...Array(6)].map((_, i) => <div key={i} className="h-16 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse" />)}</div>
@@ -427,7 +471,10 @@ const DashboardPage = () => {
                       <span className="text-lg">📘</span>
                       <h3 className="text-sm font-black text-neutral-900 dark:text-white">Facebook Ads</h3>
                     </div>
-                    <button onClick={() => navigate('/dashboard/facebook-ads')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">View Full <ArrowRightIcon className="w-3 h-3" /></button>
+                    <div className="flex items-center gap-2">
+                      {activeFacebookAdAccountId && <AiSectionChat sectionTitle="Overview - Facebook Ads Summary" contextPrompt={`Quick Facebook Ads summary: Spend ${formatCurrency(overviewData.facebookAds?.spend)}, Reach ${formatNumber(overviewData.facebookAds?.reach||0)}, ${formatNumber(overviewData.facebookAds?.impressions)} impressions, ROAS ${(overviewData.facebookAds?.roas||0).toFixed(2)}x. What's my campaign efficiency and what should I improve?`} activeSources={['facebook-ads']} />}
+                      <button onClick={() => navigate('/dashboard/facebook-ads')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">View Full <ArrowRightIcon className="w-3 h-3" /></button>
+                    </div>
                   </div>
                   {loading ? (
                     <div className="grid grid-cols-3 gap-3">{[...Array(6)].map((_, i) => <div key={i} className="h-16 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse" />)}</div>
@@ -458,7 +505,16 @@ const DashboardPage = () => {
                     <h3 className="text-sm font-black text-neutral-900 dark:text-white">Ad Platform Comparison</h3>
                     <p className="text-xs text-neutral-400 mt-0.5">Google Ads vs Facebook Ads — side by side</p>
                   </div>
-                  <span className="text-xs font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-500 px-3 py-1 rounded-full">This Period</span>
+                  <div className="flex items-center gap-2">
+                    {(activeGoogleAdsCustomerId || activeFacebookAdAccountId) && (
+                      <AiSectionChat
+                          sectionTitle="Overview - Ad Platform Comparison"
+                          contextPrompt={`Comparing my ad platforms: Google Ads spent ${formatCurrency(overviewData.googleAds?.spend||0)} getting ${formatNumber(overviewData.googleAds?.conversions||0)} conversions. Facebook Ads spent ${formatCurrency(overviewData.facebookAds?.spend||0)} getting ${formatNumber(overviewData.facebookAds?.conversions||0)} conversions and ${formatNumber(overviewData.facebookAds?.reach||0)} reach. Which platform is more efficient for me and how should I reallocate budget?`}
+                          activeSources={['google-ads', 'facebook-ads']}
+                      />
+                    )}
+                    <span className="text-xs font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-500 px-3 py-1 rounded-full">This Period</span>
+                  </div>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -520,7 +576,16 @@ const DashboardPage = () => {
               <div className={`glass-card rounded-[2.5rem] overflow-hidden flex flex-col min-h-[500px] transition-all ${isDataEmpty ? 'opacity-50 grayscale blur-[0.5px] border-dashed' : ''}`}>
                 <div className="px-10 py-8 border-b border-neutral-100 dark:border-neutral-800 flex flex-col sm:flex-row justify-between items-center gap-6 bg-white/50 dark:bg-dark-surface/50">
                   <div className="flex-1 text-left">
-                    <h3 className="text-xl font-black text-neutral-900 dark:text-white">Growth Matrix</h3>
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-xl font-black text-neutral-900 dark:text-white">Growth Matrix</h3>
+                      {!isDataEmpty && (
+                        <AiSectionChat
+                            sectionTitle="Overview - Growth Matrix"
+                            contextPrompt={`My overall growth matrix for ${selectedMetric}: latest value ${timeseriesData.length > 0 ? timeseriesData[timeseriesData.length-1]?.[selectedMetric] : 0}. GA4 sessions: ${formatNumber(overviewData.ga4?.sessions)}, GSC clicks: ${formatNumber(overviewData.gsc?.clicks)}, Ad spend: ${formatCurrency((overviewData.googleAds?.spend||0)+(overviewData.facebookAds?.spend||0))}. What's the overall trend and what should I prioritize?`}
+                            activeSources={['ga4', 'gsc', 'google-ads', 'facebook-ads']}
+                        />
+                      )}
+                    </div>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="w-2 h-2 rounded-full bg-brand-500 animate-pulse"></span>
                       <p className="text-xs font-bold text-neutral-400 dark:text-neutral-500">Real-time performance distribution</p>
@@ -555,7 +620,16 @@ const DashboardPage = () => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Health Score */}
                 <div className={`bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 shadow-sm flex flex-col items-center justify-center text-center transition-all ${isDataEmpty ? 'opacity-50 grayscale blur-[0.5px] border-dashed' : ''}`}>
-                  <h3 className="text-sm font-black text-neutral-900 dark:text-white mb-1">Platform Health Score</h3>
+                  <div className="flex items-center justify-between w-full mb-1">
+                    <h3 className="text-sm font-black text-neutral-900 dark:text-white">Platform Health Score</h3>
+                    {!isDataEmpty && (
+                      <AiSectionChat
+                        sectionTitle="Platform Health Score"
+                        contextPrompt={`My platform health score is ${healthScore}/100 (${healthScore >= 80 ? 'Excellent' : healthScore >= 60 ? 'Good' : 'Needs Attention'}). Connected platforms: GA4=${!!activeGa4PropertyId}, GSC=${!!activeGscSite}, Google Ads=${!!activeGoogleAdsCustomerId}, Facebook Ads=${!!activeFacebookAdAccountId}. Why is my score ${healthScore}? What specific actions should I take to improve it to 100?`}
+                        activeSources={['ga4', 'gsc', 'google-ads', 'facebook-ads']}
+                      />
+                    )}
+                  </div>
                   <p className="text-xs text-neutral-400 mb-5">Based on all connected sources</p>
                   <div className="relative w-32 h-32 mb-4">
                     <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
@@ -599,7 +673,16 @@ const DashboardPage = () => {
                     <h3 className="text-lg font-black text-neutral-900 dark:text-white">Top Performing Pages</h3>
                     <p className="text-xs font-bold text-neutral-400 mt-1 italic">Pages driving the most engagement this period</p>
                   </div>
-                  <button onClick={downloadCSV} className="text-xs font-black px-4 py-2 bg-neutral-100 dark:bg-dark-bg rounded-xl hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors">Export CSV</button>
+                  <div className="flex items-center gap-2">
+                    {activeGa4PropertyId && (
+                      <AiSectionChat
+                        sectionTitle="Overview - Top Performing Pages"
+                        contextPrompt={`My top GA4 pages: ${topPages.slice(0,5).map(p => `${p.url} (${p.visitors} visitors, ${p.bounce} bounce)`).join(', ')}. Which pages should I optimize for better engagement? Any low-hanging SEO or UX improvements?`}
+                        activeSources={['ga4']}
+                      />
+                    )}
+                    <button onClick={downloadCSV} className="text-xs font-black px-4 py-2 bg-neutral-100 dark:bg-dark-bg rounded-xl hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors">Export CSV</button>
+                  </div>
                 </div>
                 <div className="p-4">
                   <DataTable columns={pageColumns} data={filteredPages} loading={loading} initialLimit={5} className="border-none" />
@@ -610,7 +693,16 @@ const DashboardPage = () => {
               <div className={`bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 shadow-sm transition-all ${isDataEmpty ? 'opacity-50 grayscale blur-[0.5px] border-dashed border-neutral-300' : ''}`}>
                 <div className="flex items-center justify-between mb-5">
                   <div><h3 className="text-sm font-black text-neutral-900 dark:text-white">Overall Period Comparison</h3><p className="text-xs text-neutral-400 mt-0.5">All sources — this period vs last period</p></div>
-                  <span className="text-xs font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full border border-purple-100 dark:border-purple-800">vs Last Period</span>
+                  <div className="flex items-center gap-2">
+                    {!isDataEmpty && (
+                      <AiSectionChat
+                        sectionTitle="Overview - Overall Period Comparison"
+                        contextPrompt={`Overall comparison across all platforms: GA4 users ${formatNumber(overviewData.ga4?.users)} (${overviewData.ga4?.growth?.toFixed(1)}% growth), GSC clicks ${formatNumber(overviewData.gsc?.clicks)} (${overviewData.gsc?.growth?.toFixed(1)}% growth), Google Ads spend ${formatCurrency(overviewData.googleAds?.spend)}, Facebook Ads spend ${formatCurrency(overviewData.facebookAds?.spend)}. What are the biggest wins and concerns across all platforms?`}
+                        activeSources={['ga4', 'gsc', 'google-ads', 'facebook-ads']}
+                      />
+                    )}
+                    <span className="text-xs font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full border border-purple-100 dark:border-purple-800">vs Last Period</span>
+                  </div>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">

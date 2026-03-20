@@ -133,8 +133,23 @@ class PromptBuilder {
     }
 
 
-    buildAskPrompt(question, data) {
-        return `${this.prompts.system}\n\n${this.buildContext(data)}\n\nUser Question: ${question}`;
+    buildAskPrompt(question, data, chatHistory = []) {
+        let historyBlock = '';
+
+        if (chatHistory.length > 0) {
+            historyBlock = `\n\n## 💬 Conversation History (for context)\n`;
+            chatHistory.forEach(msg => {
+                const label = msg.role === 'user' ? '**User**' : '**Assistant**';
+                // Truncate long assistant responses to save tokens
+                const content = msg.role === 'assistant' && msg.content.length > 800
+                    ? msg.content.slice(0, 800) + '...[truncated]'
+                    : msg.content;
+                historyBlock += `${label}: ${content}\n\n`;
+            });
+            historyBlock += `---\n`;
+        }
+
+        return `${this.prompts.system}\n\n${this.buildContext(data)}${historyBlock}\n\nUser Question: ${question}`;
     }
 
     buildWeeklyInsightPrompt(data) {

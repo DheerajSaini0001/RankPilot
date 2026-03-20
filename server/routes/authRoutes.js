@@ -35,7 +35,7 @@ router.get('/google', (req, res, next) => {
         state: req.query.token
     })(req, res, next);
 });
-router.get('/google/callback', attachUserFromState, passport.authenticate('google', { session: false, failureRedirect: '/login' }), catchAsync(authCallback));
+router.get('/google/callback', attachUserFromState, passport.authenticate('google', { session: false, failureRedirect: `${process.env.CLIENT_URL || 'http://localhost:5173'}/login` }), catchAsync(authCallback));
 
 // Facebook Auth
 router.get('/facebook', (req, res, next) => {
@@ -44,7 +44,7 @@ router.get('/facebook', (req, res, next) => {
         state: req.query.token
     })(req, res, next);
 });
-router.get('/facebook/callback', attachUserFromState, passport.authenticate('facebook', { session: false, failureRedirect: '/login' }), catchAsync(authCallback));
+router.get('/facebook/callback', attachUserFromState, passport.authenticate('facebook', { session: false, failureRedirect: `${process.env.CLIENT_URL || 'http://localhost:5173'}/login` }), catchAsync(authCallback));
 
 router.get('/me', protect, catchAsync(getMe));
 router.delete('/me', protect, catchAsync(deleteMe));

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import toast from 'react-hot-toast';
+import { registerUser } from '../api/authApi';
 
 const RegisterPage = () => {
     const [name, setName] = useState('');
@@ -16,7 +16,7 @@ const RegisterPage = () => {
         e.preventDefault();
         setLoading(true);
         try {
-            await axios.post(`${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/register`, { name, email, password });
+            await registerUser({ name, email, password });
             toast.success('Registration successful. Please check your email to verify your account.');
             navigate('/login');
         } catch (err) {

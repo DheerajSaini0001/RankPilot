@@ -72,7 +72,7 @@ export const syncHistoricalData = async (accountId, source) => {
     }
 };
 
-const syncGa4 = async (acc, startDate, endDate) => {
+export const syncGa4 = async (acc, startDate, endDate) => {
     if (!acc || !acc.ga4PropertyId) return;
     const userId = acc.userId;
 
@@ -140,7 +140,7 @@ const syncGa4 = async (acc, startDate, endDate) => {
 };
 
 
-const syncGsc = async (acc, startDate, endDate) => {
+export const syncGsc = async (acc, startDate, endDate) => {
     if (!acc || !acc.gscSiteUrl) return;
     const userId = acc.userId;
 
@@ -191,7 +191,7 @@ const syncGsc = async (acc, startDate, endDate) => {
 };
 
 
-const syncGoogleAds = async (acc, startDate, endDate) => {
+export const syncGoogleAds = async (acc, startDate, endDate) => {
     if (!acc || !acc.googleAdsCustomerId) return;
     const userId = acc.userId;
 
@@ -265,7 +265,7 @@ const syncGoogleAds = async (acc, startDate, endDate) => {
 };
 
 
-const syncFacebookAds = async (acc, startDate, endDate) => {
+export const syncFacebookAds = async (acc, startDate, endDate) => {
     if (!acc || !acc.facebookAdAccountId) return;
     const userId = acc.userId;
 

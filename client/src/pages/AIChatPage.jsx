@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import toast from 'react-hot-toast';
 import DashboardLayout from '../components/ui/DashboardLayout';
 import { useAccountsStore } from '../store/accountsStore';
 import { useAuthStore } from '../store/authStore';
@@ -21,7 +22,6 @@ import {
     GlobeAltIcon
 } from '@heroicons/react/24/outline';
 import {
-    askAi,
     getConversations,
     getConversation,
     deleteConversation,
@@ -29,12 +29,13 @@ import {
     refreshWeeklyInsight,
     getSuggestedQuestions
 } from '../api/aiApi';
+import { getApiUrl } from '../api/index';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import ChartRenderer from '../components/ai/ChartRenderer';
 
 const MarkdownComponents = {
-    code({ node, inline, className, children, ...props }) {
+    code({ inline, className, children, ...props }) {
         const match = /language-json-chart-(\w+)/.exec(className || '');
         if (!inline && match) {
             try {
@@ -44,7 +45,7 @@ const MarkdownComponents = {
                         <ChartRenderer type={match[1]} data={chartData} />
                     </div>
                 );
-            } catch (err) {
+            } catch {
                 // Return a subtle placeholder while JSON is streaming/invalid
                 return (
                     <div className="my-4 p-4 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl flex items-center justify-center bg-neutral-50/50 dark:bg-neutral-900/50">
@@ -283,9 +284,6 @@ const AIChatPage = () => {
         }
     };
 
-    const handleUseSuggestion = (q) => {
-        setQuery(q);
-    }
 
     const handleSendMessage = async (e) => {
         if (e) e.preventDefault();
@@ -307,8 +305,8 @@ const AIChatPage = () => {
 
         try {
             const token = useAuthStore.getState().token;
-            const apiBase = import.meta.env.VITE_API_BASE_URL || '/api';
-            const response = await fetch(`${apiBase}/ai/ask`, {
+            const url = getApiUrl('/ai/ask');
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -361,7 +359,7 @@ const AIChatPage = () => {
                                 }
                             }
                             if (data.error) throw new Error(data.error);
-                        } catch (parseError) {
+                        } catch {
                             // Partial JSON skip
                         }
                     }

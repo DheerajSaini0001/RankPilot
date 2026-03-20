@@ -4,11 +4,11 @@ import Button from '../components/ui/Button';
 import { useAuthStore } from '../store/authStore';
 import { useAccountsStore } from '../store/accountsStore';
 import { disconnectFacebook, disconnectGoogle } from '../api/accountApi';
-import api from '../api';
+import api, { getApiUrl } from '../api';
 import toast from 'react-hot-toast';
 
 const SettingsPage = () => {
-    const { user, clearAuth } = useAuthStore();
+    const { user, clearAuth, token } = useAuthStore();
     const { connectedSources, setAccounts } = useAccountsStore();
 
     const handleGoogleDisconnect = async () => {
@@ -34,7 +34,7 @@ const SettingsPage = () => {
     const handleFacebookDisconnect = async () => {
         if (!window.confirm("Disconnect Facebook Ads?")) return;
         try {
-            const res = await disconnectFacebook();
+            await disconnectFacebook();
             setAccounts({
                 connectedSources: connectedSources.filter(s => !['facebook', 'facebook-ads'].includes(s)),
                 facebook: {}
@@ -120,7 +120,7 @@ const SettingsPage = () => {
                                     {connectedSources?.includes('google') ? (
                                         <Button variant="secondary" onClick={handleGoogleDisconnect} className="w-full text-sm hover:border-red-300 hover:text-red-500 dark:hover:border-red-700 dark:hover:text-red-400 shadow-sm bg-white dark:bg-dark-card border-neutral-200 dark:border-neutral-700 transition-colors">Disconnect Data Link</Button>
                                     ) : (
-                                        <Button onClick={() => window.location.href = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/google?token=${encodeURIComponent(token)}`} className="w-full text-sm shadow-sm shadow-brand-500/25">Connect Google</Button>
+                                        <Button onClick={() => window.location.href = getApiUrl(`/auth/google?token=${encodeURIComponent(token)}`)} className="w-full text-sm shadow-sm shadow-brand-500/25">Connect Google</Button>
                                     )}
                                 </div>
                             </div>
@@ -138,7 +138,7 @@ const SettingsPage = () => {
                                     {connectedSources?.includes('facebook') ? (
                                         <Button variant="secondary" onClick={handleFacebookDisconnect} className="w-full text-sm hover:border-red-300 hover:text-red-500 dark:hover:border-red-700 dark:hover:text-red-400 shadow-sm bg-white dark:bg-dark-card border-neutral-200 dark:border-neutral-700 transition-colors">Disconnect Data Link</Button>
                                     ) : (
-                                        <Button onClick={() => window.location.href = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/facebook?token=${encodeURIComponent(token)}`} className="w-full text-sm shadow-sm shadow-brand-500/25">Connect Meta</Button>
+                                        <Button onClick={() => window.location.href = getApiUrl(`/auth/facebook?token=${encodeURIComponent(token)}`)} className="w-full text-sm shadow-sm shadow-brand-500/25">Connect Meta</Button>
                                     )}
                                 </div>
                             </div>

@@ -1,6 +1,5 @@
 import { google } from 'googleapis';
 import { getValidGoogleToken } from './googleAuthService.js';
-import UserAccounts from '../models/UserAccounts.js';
 
 export const listProperties = async (userId) => {
     const auth = await getValidGoogleToken(userId);

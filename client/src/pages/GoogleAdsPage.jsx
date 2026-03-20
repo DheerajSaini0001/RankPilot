@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import AiSectionChat from '../components/ai/AiSectionChat';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/ui/DashboardLayout';
 import KpiCard from '../components/dashboard/KpiCard';
@@ -17,18 +18,14 @@ import {
   ResponsiveContainer,
   AreaChart, Area,
   BarChart, Bar,
-  LineChart, Line,
-  ComposedChart,
   PieChart, Pie, Cell,
   XAxis, YAxis,
-  Tooltip, CartesianGrid,
-  Legend
+  Tooltip, CartesianGrid
 } from 'recharts';
 import FilterBar from '../components/dashboard/FilterBar';
 import { useFilterStore } from '../store/filterStore';
 
 // Helper Functions
-const formatPct = (val, decimals = 2) => `${Number(val || 0).toFixed(decimals)}%`;
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
 const formatCurrency = (num) => `$${Number(num || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -55,7 +52,7 @@ const GoogleAdsPage = () => {
     const [keywords, setKeywords] = useState([]);
     const [devices, setDevices] = useState([]);
 
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         setLoading(true);
         try {
             const query = new URLSearchParams({
@@ -79,12 +76,26 @@ const GoogleAdsPage = () => {
         } finally {
             setLoading(false);
         }
+    }, [startDate, endDate, device, campaign, activeSiteId]);
+
+    const handleManualRefresh = async () => {
+        if (!activeSiteId) return;
+        setLoading(true);
+        try {
+            await api.post('/analytics/sync', { siteId: activeSiteId });
+            await loadData();
+        } catch (err) {
+            console.error('Manual sync failed:', err);
+            await loadData();
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
         if (!isConnected || !hasAccount) return;
         loadData();
-    }, [isConnected, hasAccount, startDate, endDate, device, campaign, activeSiteId]);
+    }, [isConnected, hasAccount, loadData]);
 
     // Auto-refresh every 10 minutes
     useEffect(() => {
@@ -92,10 +103,10 @@ const GoogleAdsPage = () => {
         const interval = setInterval(() => {
             console.log('Auto-refreshing Google Ads data...');
             loadData();
-        }, 60 * 60 * 1000); // Sync with 1h Cron
+        }, 30 * 60 * 1000);
 
         return () => clearInterval(interval);
-    }, [isConnected, hasAccount, startDate, endDate, device, campaign, activeSiteId]);
+    }, [isConnected, hasAccount, loadData]);
 
     const { searchQuery } = useFilterStore();
 
@@ -222,15 +233,31 @@ const GoogleAdsPage = () => {
                         <h1 className="text-2xl lg:text-3xl font-black text-neutral-900 dark:text-white tracking-tight">Google Ads Performance</h1>
                         <p className="text-sm font-bold text-neutral-500 dark:text-neutral-400 mt-1">Campaign and Search Ad metrics</p>
                      </div>
-                     <div className="relative z-10 p-2 bg-amber-500/10 rounded-2xl border border-amber-500/20">
-                        <BanknotesIcon className="w-6 h-6 text-amber-500" />
+                     <div className="relative z-10">
+                        <AiSectionChat 
+                            label="Get AI Summary"
+                            sectionTitle="Google Ads Summary"
+                            activeSources={['google-ads']}
+                            contextPrompt={`Analyze this Google Ads dashboard for ${startDate} to ${endDate}. 
+- Ad Spend: ${formatCurrency(overview?.cost || 0)}
+- Conversions: ${formatNumber(overview?.conversions || 0)}
+- CTR: ${ctr}%
+- ROAS: ${roas}x
+
+Top Campaigns: ${campaigns.slice(0, 3).map(c => c.name).join(', ')}
+
+Please provide: 
+1. ROAS/Efficiency Score (1-100)
+2. Most profitable campaign hint
+3. One advice to lower the CPC.`}
+                        />
                      </div>
                 </div>
 
                 <FilterBar 
                     showCampaign 
-                    onRefresh={loadData}
                     loading={loading}
+                    onRefresh={handleManualRefresh}
                 />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -348,7 +375,12 @@ const GoogleAdsPage = () => {
                             <h3 className="text-lg font-black text-neutral-900 dark:text-white">Capital Performance Matrix</h3>
                             <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mt-1">Cross-axial cost and conversion mapping</p>
                         </div>
-                        <div className="flex gap-4">
+                        <div className="flex gap-4 items-center">
+                            <AiSectionChat
+                                sectionTitle="Google Ads - Capital Performance Matrix"
+                                contextPrompt={`My Google Ads performance: Spend $${overview?.cost?.toFixed(2) || 0}, Clicks: ${formatNumber(overview?.clicks)}, Conversions: ${formatNumber(overview?.conversions)}, CTR: ${ctr}%, ROAS: ${roas}x. What's my overall ad efficiency and where should I focus optimization?`}
+                                activeSources={['google-ads']}
+                            />
                             <div className="flex items-center gap-2">
                                 <div className="w-3 h-3 rounded-full bg-amber-500"></div>
                                 <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Spend</span>
@@ -428,7 +460,14 @@ const GoogleAdsPage = () => {
 
                   {/* Conversion Trend */}
                   <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 shadow-sm">
-                    <h3 className="text-sm font-black text-neutral-900 dark:text-white mb-1">Conversion Trend</h3>
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="text-sm font-black text-neutral-900 dark:text-white">Conversion Trend</h3>
+                      <AiSectionChat
+                          sectionTitle="Google Ads - Conversion Trend"
+                          contextPrompt={`My Google Ads conversion trend for this period: Total conversions ${formatNumber(overview?.conversions)}, Conv. Rate ${convRate}%, Cost per conversion $${costPerConv}. Are my conversions trending up or down? What can I do to improve conversion rate?`}
+                          activeSources={['google-ads']}
+                      />
+                    </div>
                     <p className="text-xs text-neutral-400 mb-4">Daily conversions over selected period</p>
                     {loading ? (
                       <div className="h-48 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"/>
@@ -453,7 +492,14 @@ const GoogleAdsPage = () => {
 
                   {/* Campaign Performance Bar Chart */}
                   <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 shadow-sm">
-                    <h3 className="text-sm font-black text-neutral-900 dark:text-white mb-1">Campaign Spend</h3>
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="text-sm font-black text-neutral-900 dark:text-white">Campaign Spend</h3>
+                      <AiSectionChat
+                          sectionTitle="Google Ads - Campaign Spend"
+                          contextPrompt={`My Google Ads campaigns by spend: ${campaigns.slice(0,5).map(c => `${c.name}: $${c.cost?.toFixed(2)} (${c.conversions} conv)`).join(', ')}. Which campaigns are worth increasing budget and which should be paused?`}
+                          activeSources={['google-ads']}
+                      />
+                    </div>
                     <p className="text-xs text-neutral-400 mb-4">Spend comparison across campaigns</p>
                     {loading ? (
                       <div className="h-48 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"/>
@@ -545,7 +591,14 @@ const GoogleAdsPage = () => {
                                 <h3 className="text-sm font-black text-neutral-900 dark:text-white">Top Campaigns</h3>
                                 <p className="text-xs text-neutral-400 mt-0.5">Performance breakdown by campaign</p>
                             </div>
-                            <span className="text-xs font-bold bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 px-3 py-1 rounded-full">{campaigns.length} campaigns</span>
+                            <div className="flex items-center gap-2">
+                                <AiSectionChat
+                                    sectionTitle="Google Ads - Top Campaigns"
+                                    contextPrompt={`My Google Ads top campaigns: ${campaigns.slice(0,5).map(c => `${c.name}: ${c.conversions} conv, $${c.cost?.toFixed(2)} spend, ${c.clicks} clicks`).join(' | ')}. Which campaigns need attention and which should I scale?`}
+                                    activeSources={['google-ads']}
+                                />
+                                <span className="text-xs font-bold bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 px-3 py-1 rounded-full">{campaigns.length} campaigns</span>
+                            </div>
                         </div>
                         <div className="p-0">
                             <DataTable columns={campaignColumns} data={filteredCampaigns} loading={loading} initialLimit={5} />
@@ -564,9 +617,16 @@ const GoogleAdsPage = () => {
 
                 {/* Google Ads Device Breakdown */}
                 <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-[2.5rem] p-8 shadow-sm group">
-                    <div className="mb-6">
-                        <h3 className="text-lg font-black text-neutral-900 dark:text-white">Capital Apparatus Mix</h3>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Ad spend distribution by hardware category</p>
+                    <div className="mb-6 flex justify-between items-center">
+                        <div>
+                            <h3 className="text-lg font-black text-neutral-900 dark:text-white">Capital Apparatus Mix</h3>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Ad spend distribution by hardware category</p>
+                        </div>
+                        <AiSectionChat
+                            sectionTitle="Google Ads - Device Spend Mix"
+                            contextPrompt={`My Google Ads spend by device: ${devices.map(d => `${d.name}: $${d.value?.toFixed(2)}`).join(', ')}. Should I adjust device bid modifiers? Which device is delivering the best ROI?`}
+                            activeSources={['google-ads']}
+                        />
                     </div>
                     <div className="flex flex-col md:flex-row items-center gap-12">
                         <div className="w-[250px] h-[250px]">
@@ -614,7 +674,14 @@ const GoogleAdsPage = () => {
                       <h3 className="text-sm font-black text-neutral-900 dark:text-white">Period Comparison</h3>
                       <p className="text-xs text-neutral-400 mt-0.5">This period vs last period — all key metrics</p>
                     </div>
-                    <span className="text-xs font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full border border-purple-100 dark:border-purple-800">vs Last Period</span>
+                    <div className="flex items-center gap-2">
+                      <AiSectionChat
+                          sectionTitle="Google Ads - Period Comparison"
+                          contextPrompt={`My Google Ads this period: Spend $${overview?.cost?.toFixed(2)}, Conversions ${formatNumber(overview?.conversions)}, CTR ${ctr}%, ROAS ${roas}x. How is my overall performance trending and what's the biggest area to improve?`}
+                          activeSources={['google-ads']}
+                      />
+                      <span className="text-xs font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full border border-purple-100 dark:border-purple-800">vs Last Period</span>
+                    </div>
                   </div>
                   {loading ? (
                     <div className="space-y-3">{[...Array(6)].map((_,i)=><div key={i} className="h-10 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"/>)}</div>

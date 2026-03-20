@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import AiSectionChat from '../components/ai/AiSectionChat';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/ui/DashboardLayout';
 import KpiCard from '../components/dashboard/KpiCard';
@@ -10,8 +11,8 @@ import {
     CursorArrowRaysIcon,
     MagnifyingGlassIcon,
     ChartBarIcon,
-    InformationCircleIcon,
     ExclamationTriangleIcon,
+    InformationCircleIcon,
     SparklesIcon,
     GlobeAltIcon
 } from '@heroicons/react/24/outline';
@@ -52,7 +53,7 @@ const GscPage = () => {
     const [devices, setDevices] = useState([]);
     const [countries, setCountries] = useState([]);
 
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         if (!activeGscSite) return;
         setLoading(true);
         try {
@@ -80,20 +81,34 @@ const GscPage = () => {
         } finally {
             setLoading(false);
         }
+    }, [activeGscSite, startDate, endDate, device, activeSiteId]);
+
+    const handleManualRefresh = async () => {
+        if (!activeSiteId) return;
+        setLoading(true);
+        try {
+            await api.post('/analytics/sync', { siteId: activeSiteId });
+            await loadData();
+        } catch (err) {
+            console.error('Manual sync failed:', err);
+            await loadData();
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
         loadData();
-    }, [activeGscSite, startDate, endDate, device, activeSiteId]);
+    }, [loadData]);
 
     useEffect(() => {
         const interval = setInterval(() => {
             console.log('Auto-refreshing GSC data...');
             loadData();
-        }, 12 * 60 * 60 * 1000);
+        }, 30 * 60 * 1000);
 
         return () => clearInterval(interval);
-    }, [activeGscSite, startDate, endDate, device, activeSiteId]);
+    }, [loadData]);
 
 
     if (!connectedSources.includes('ga4') && !connectedSources.includes('gsc')) {
@@ -203,12 +218,26 @@ const GscPage = () => {
                         <h1 className="text-2xl lg:text-3xl font-black text-neutral-900 dark:text-white tracking-tight">Search Console Performance</h1>
                         <p className="text-sm font-bold text-neutral-500 dark:text-neutral-400 mt-1">Analytics for <span className="text-brand-600 dark:text-brand-400 font-black">{activeGscSite.replace('https://', '')}</span></p>
                      </div>
-                     <div className="relative z-10 p-2 bg-brand-500/10 rounded-2xl border border-brand-500/20">
-                        <MagnifyingGlassIcon className="w-6 h-6 text-brand-500" />
+                     <div className="relative z-10">
+                        <AiSectionChat 
+                            label="Get AI Summary"
+                            sectionTitle="GSC Performance Summary"
+                            activeSources={['gsc']}
+                            contextPrompt={`Analyze this Search Console dashboard for ${startDate} to ${endDate}. 
+- Clicks: ${formatNumber(overview?.clicks || 0)} (Change: ${calculateChange(overview?.clicks, priorOverview?.clicks)}%)
+- Impressions: ${formatNumber(overview?.impressions || 0)} (Change: ${calculateChange(overview?.impressions, priorOverview?.impressions)}%)
+- Avg Position: ${(overview?.position || 0).toFixed(1)}
+
+Top Queries: ${queries.slice(0, 5).map(q => q.query).join(', ')}
+
+Please provide: 
+1. Performance Score (1-100)
+2. One specific thing I should do right now to increase clicks.`}
+                        />
                      </div>
                 </div>
 
-                <FilterBar onRefresh={loadData} loading={loading} />
+                <FilterBar onRefresh={handleManualRefresh} loading={loading} />
 
                 {/* KPI Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -278,8 +307,15 @@ const GscPage = () => {
                             <h3 className="text-lg font-black text-neutral-900 dark:text-white">Neural Traffic Resonance</h3>
                             <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mt-1">Cross-axial click and impression mapping</p>
                         </div>
-                        <div className="w-10 h-10 flex items-center justify-center bg-brand-500/10 rounded-xl border border-brand-500/20">
-                            <ChartBarIcon className="w-5 h-5 text-brand-500" />
+                        <div className="flex items-center gap-2">
+                            <AiSectionChat
+                                sectionTitle="GSC - Traffic Resonance (Clicks & Impressions)"
+                                contextPrompt={`Analyze my Google Search Console clicks and impressions trend. Clicks: ${overview?.clicks || 0}, Impressions: ${overview?.impressions || 0}, CTR: ${((overview?.ctr || 0) * 100).toFixed(2)}%. What patterns do you see and what should I optimize?`}
+                                activeSources={['gsc']}
+                            />
+                            <div className="w-10 h-10 flex items-center justify-center bg-brand-500/10 rounded-xl border border-brand-500/20">
+                                <ChartBarIcon className="w-5 h-5 text-brand-500" />
+                            </div>
                         </div>
                     </div>
                     
@@ -356,7 +392,14 @@ const GscPage = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                     {/* CTR Trend */}
                     <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 shadow-sm">
-                        <h3 className="text-sm font-black text-neutral-900 dark:text-white mb-1">CTR Trend</h3>
+                        <div className="flex items-center justify-between mb-1">
+                            <h3 className="text-sm font-black text-neutral-900 dark:text-white">CTR Trend</h3>
+                            <AiSectionChat
+                                sectionTitle="GSC - CTR Trend"
+                                contextPrompt={`My Google Search Console CTR is ${((overview?.ctr || 0) * 100).toFixed(2)}% with ${overview?.clicks || 0} clicks from ${overview?.impressions || 0} impressions. Is this CTR good? How can I improve it?`}
+                                activeSources={['gsc']}
+                            />
+                        </div>
                         <p className="text-xs text-neutral-400 mb-4">Click-through rate over time</p>
                         {loading ? (
                             <div className="h-48 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"/>
@@ -385,7 +428,14 @@ const GscPage = () => {
                     <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 shadow-sm">
                         <div className="flex items-center justify-between mb-1">
                             <h3 className="text-sm font-black text-neutral-900 dark:text-white">Position Trend</h3>
-                            <span className="text-xs font-bold bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 px-2 py-1 rounded-full border border-amber-100 dark:border-amber-800">Lower = Better</span>
+                            <div className="flex items-center gap-2">
+                                <AiSectionChat
+                                    sectionTitle="GSC - Ranking Position Trend"
+                                    contextPrompt={`My average Google Search Console ranking position is #${(overview?.position || 0).toFixed(1)}. What's a good average position benchmark? What actions can I take to improve my rankings?`}
+                                    activeSources={['gsc']}
+                                />
+                                <span className="text-xs font-bold bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 px-2 py-1 rounded-full border border-amber-100 dark:border-amber-800">Lower = Better</span>
+                            </div>
                         </div>
                         <p className="text-xs text-neutral-400 mb-4">Average ranking position over time</p>
                         {loading ? (
@@ -410,10 +460,15 @@ const GscPage = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                     {/* Low CTR Opportunities */}
                     <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 shadow-sm">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center justify-between mb-1">
                             <h3 className="text-sm font-black text-neutral-900 dark:text-white">💡 CTR Opportunities</h3>
+                            <AiSectionChat
+                                sectionTitle="GSC - CTR Opportunities"
+                                contextPrompt={`I have ${opportunities.length} keywords with high impressions but low CTR (under 5%). Top ones: ${opportunities.slice(0,3).map(q => `"${q.query}" (${formatNumber(q.impressions)} impr, ${(q.ctr*100).toFixed(1)}% CTR)`).join(', ')}. How should I improve the CTR for these keywords?`}
+                                activeSources={['gsc']}
+                            />
                         </div>
-                        <p className="text-xs text-neutral-400 mb-4">High impressions but low CTR — improve your title & meta description</p>
+                        <p className="text-xs text-neutral-400 mb-4">High impressions but low CTR — improve your title &amp; meta description</p>
                         {loading ? (
                             <div className="space-y-3">{[...Array(4)].map((_,i)=><div key={i} className="h-10 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"/>)}</div>
                         ) : opportunities.length === 0 ? (
@@ -441,8 +496,13 @@ const GscPage = () => {
 
                     {/* Near Page 1 */}
                     <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 shadow-sm">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center justify-between mb-1">
                             <h3 className="text-sm font-black text-neutral-900 dark:text-white">🚀 Close to Page 1</h3>
+                            <AiSectionChat
+                                sectionTitle="GSC - Near Page 1 Keywords"
+                                contextPrompt={`I have ${nearPageOne.length} keywords ranking between positions 8-20 that are close to reaching page 1. Keywords: ${nearPageOne.slice(0,3).map(q => `"${q.query}" at pos #${q.position?.toFixed(1)}`).join(', ')}. What specific SEO strategies should I use to push these to page 1?`}
+                                activeSources={['gsc']}
+                            />
                         </div>
                         <p className="text-xs text-neutral-400 mb-4">Keywords ranking 8–20 — small push could reach page 1</p>
                         {loading ? (
@@ -474,9 +534,16 @@ const GscPage = () => {
                 {/* Sub-Reports (Queries & Pages) */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-2xl shadow-sm overflow-hidden flex flex-col">
-                        <div className="p-5 border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-dark-surface/50 flex items-center gap-2">
-                            <SparklesIcon className="w-4 h-4 text-brand-500" />
-                            <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Top Queries</h3>
+                        <div className="p-5 border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-dark-surface/50 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <SparklesIcon className="w-4 h-4 text-brand-500" />
+                                <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Top Queries</h3>
+                            </div>
+                            <AiSectionChat
+                                sectionTitle="GSC - Top Search Queries"
+                                contextPrompt={`My top GSC search queries are: ${queries.slice(0,5).map(q => `"${q.query}" (${q.clicks} clicks, pos #${q.position?.toFixed(1)})`).join(', ')}. Which queries should I focus on for content optimization?`}
+                                activeSources={['gsc']}
+                            />
                         </div>
                         <div className="p-0">
                             <DataTable columns={queryColumns} data={filteredQueries} loading={loading} initialLimit={5} />
@@ -484,9 +551,16 @@ const GscPage = () => {
                     </div>
                     
                     <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-2xl shadow-sm overflow-hidden flex flex-col">
-                        <div className="p-5 border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-dark-surface/50 flex items-center gap-2">
-                             <GlobeAltIcon className="w-4 h-4 text-brand-500" />
-                            <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Top Landing Pages</h3>
+                        <div className="p-5 border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-dark-surface/50 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <GlobeAltIcon className="w-4 h-4 text-brand-500" />
+                                <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Top Landing Pages</h3>
+                            </div>
+                            <AiSectionChat
+                                sectionTitle="GSC - Top Landing Pages"
+                                contextPrompt={`My top GSC landing pages are: ${pages.slice(0,5).map(p => `${p.page} (${p.clicks} clicks, ${p.impressions} impressions)`).join(', ')}. Which pages have the biggest SEO improvement potential?`}
+                                activeSources={['gsc']}
+                            />
                         </div>
                         <div className="p-0">
                             <DataTable columns={pageColumns} data={filteredPages} loading={loading} initialLimit={5} />
@@ -496,9 +570,16 @@ const GscPage = () => {
 
                 {/* ADD 7 — Impressions Breakdown Bar Chart */}
                 <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-[2.5rem] p-8 shadow-sm group">
-                    <div className="mb-6">
-                        <h3 className="text-lg font-black text-neutral-900 dark:text-white">Daily Impression Volume</h3>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Search visibility density per interval</p>
+                    <div className="flex items-center justify-between mb-6">
+                        <div>
+                            <h3 className="text-lg font-black text-neutral-900 dark:text-white">Daily Impression Volume</h3>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Search visibility density per interval</p>
+                        </div>
+                        <AiSectionChat
+                            sectionTitle="GSC - Daily Impression Volume"
+                            contextPrompt={`My total GSC impressions are ${formatNumber(overview?.impressions || 0)} for this period. Are there any significant dips or spikes I should be concerned about? What does impression volume indicate about my SEO health?`}
+                            activeSources={['gsc']}
+                        />
                     </div>
                     <div className="h-[250px]">
                         {loading ? (
@@ -520,9 +601,16 @@ const GscPage = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Device Breakdown */}
                     <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-[2.5rem] p-8 shadow-sm group">
-                        <div className="mb-6">
-                            <h3 className="text-lg font-black text-neutral-900 dark:text-white">Apparatus Analysis</h3>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Search volume by device category</p>
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 className="text-lg font-black text-neutral-900 dark:text-white">Apparatus Analysis</h3>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Search volume by device category</p>
+                            </div>
+                            <AiSectionChat
+                                sectionTitle="GSC - Device Breakdown"
+                                contextPrompt={`My GSC device breakdown: ${devices.map(d => `${d.name}: ${formatNumber(d.value)} clicks`).join(', ')}. Is my mobile vs desktop ratio healthy? What device-specific optimizations should I focus on?`}
+                                activeSources={['gsc']}
+                            />
                         </div>
                         <div className="flex flex-col md:flex-row items-center gap-12">
                             <div className="w-[200px] h-[200px]">
@@ -566,9 +654,16 @@ const GscPage = () => {
 
                     {/* Geography Breakdown */}
                     <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-[2.5rem] p-8 shadow-sm group">
-                        <div className="mb-6">
-                            <h3 className="text-lg font-black text-neutral-900 dark:text-white">Geographical Reach</h3>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Top conversion landscapes</p>
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 className="text-lg font-black text-neutral-900 dark:text-white">Geographical Reach</h3>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Top conversion landscapes</p>
+                            </div>
+                            <AiSectionChat
+                                sectionTitle="GSC - Geographic Distribution"
+                                contextPrompt={`My top GSC countries by clicks: ${countries.slice(0,5).map(c => `${c.name}: ${formatNumber(c.value)}`).join(', ')}. Should I focus more on specific geographies? Any localization opportunities?`}
+                                activeSources={['gsc']}
+                            />
                         </div>
                         <div className="space-y-4">
                             {loading ? (
@@ -607,9 +702,16 @@ const GscPage = () => {
                       <h3 className="text-sm font-black text-neutral-900 dark:text-white">Period Comparison</h3>
                       <p className="text-xs text-neutral-400 mt-0.5">This period vs last period — all key metrics</p>
                     </div>
-                    <span className="text-xs font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full border border-purple-100 dark:border-purple-800">
-                      vs Last Period
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <AiSectionChat
+                          sectionTitle="GSC - Period Comparison"
+                          contextPrompt={`Compare my GSC performance: Clicks ${overview?.clicks || 0} vs prior ${priorOverview?.clicks || 0}, Impressions ${overview?.impressions || 0} vs ${priorOverview?.impressions || 0}, CTR ${((overview?.ctr||0)*100).toFixed(2)}% vs ${((priorOverview?.ctr||0)*100).toFixed(2)}%. What's the biggest improvement or decline, and what caused it?`}
+                          activeSources={['gsc']}
+                      />
+                      <span className="text-xs font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full border border-purple-100 dark:border-purple-800">
+                        vs Last Period
+                      </span>
+                    </div>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">

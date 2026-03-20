@@ -75,175 +75,201 @@ const FilterBar = ({ showDevice = true, showCampaign = false, showChannel = fals
     };
 
     return (
-        <div className="relative mb-8">
-            <div className="bg-white/80 dark:bg-dark-card/80 backdrop-blur-md border border-neutral-200/60 dark:border-neutral-700/60 rounded-[2rem] p-3 shadow-sm flex items-center gap-4 transition-all relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/5 rounded-full blur-2xl -mr-16 -mt-16 group-hover:bg-brand-500/10 transition-colors"></div>
+        <div className="relative mb-6">
+            <div className="bg-white dark:bg-dark-card border border-neutral-200/70 dark:border-neutral-700/50 rounded-2xl px-4 py-2.5 shadow-sm flex items-center gap-3 overflow-x-auto no-scrollbar transition-all hover:shadow-md">
                 
-                <div className="flex items-center gap-4 w-full overflow-x-auto no-scrollbar py-1">
-
-                {/* Date Range Section */}
-                <div className="flex items-center gap-2 pr-4 border-r border-neutral-100 dark:border-neutral-800">
-                    <button 
+                {/* Date Presets */}
+                <div className="flex items-center gap-2 shrink-0">
+                    <button
                         onClick={() => setShowPicker(!showPicker)}
-                        className={`p-2 rounded-lg shrink-0 transition-all ${showPicker ? 'bg-brand-600 text-white shadow-lg rotate-12' : 'bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 hover:scale-110'}`}
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shrink-0 ${
+                            showPicker
+                                ? 'bg-brand-600 text-white shadow-md'
+                                : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600'
+                        }`}
                     >
-                        <CalendarIcon className="w-5 h-5" />
+                        <CalendarIcon className="w-4 h-4" />
                     </button>
-                    <div className="flex bg-neutral-100 dark:bg-neutral-800 p-1 rounded-xl">
+
+                    <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 rounded-xl p-0.5 gap-0.5">
                         {datePresets.map((p) => (
                             <button
                                 key={p.value}
                                 onClick={() => handleDatePreset(p)}
-                                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                                    preset === p.value 
-                                    ? 'bg-white dark:bg-neutral-700 text-brand-600 dark:text-white shadow-sm' 
-                                    : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200'
+                                className={`px-2.5 py-1.5 text-[11px] font-black rounded-lg transition-all ${
+                                    preset === p.value
+                                        ? 'bg-white dark:bg-neutral-700 text-brand-600 dark:text-brand-400 shadow-sm'
+                                        : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'
                                 }`}
                             >
                                 {p.label}
                             </button>
                         ))}
                     </div>
-                    
-                    <div className="text-[11px] font-bold text-neutral-400 dark:text-neutral-500 ml-2 whitespace-nowrap cursor-pointer hover:text-brand-500 transition-colors" onClick={() => setShowPicker(!showPicker)}>
+
+                    <button
+                        onClick={() => setShowPicker(!showPicker)}
+                        className="text-[11px] font-bold text-neutral-400 dark:text-neutral-500 hover:text-brand-500 transition-colors whitespace-nowrap hidden md:block"
+                    >
                         {startDate} — {endDate}
-                    </div>
+                    </button>
                 </div>
+
+                <div className="h-6 w-px bg-neutral-200 dark:bg-neutral-700 shrink-0 hidden sm:block"/>
 
                 {/* Device Filter */}
                 {showDevice && (
-                    <div className="flex items-center gap-2 pr-4 border-r border-neutral-100 dark:border-neutral-800">
-                        <div className="p-2 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-lg">
-                            <FunnelIcon className="w-5 h-5" />
+                    <>
+                        <div className="h-6 w-px bg-neutral-200 dark:bg-neutral-700 shrink-0 hidden sm:block"/>
+                        <div className="flex items-center gap-2 shrink-0">
+                            <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+                                <FunnelIcon className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400"/>
+                            </div>
+                            <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 rounded-xl p-0.5 gap-0.5">
+                                {[
+                                    { label: 'All',     value: '',        icon: FunnelIcon },
+                                    { label: 'Mobile',  value: 'mobile',  icon: DevicePhoneMobileIcon },
+                                    { label: 'Desktop', value: 'desktop', icon: ComputerDesktopIcon },
+                                    { label: 'Tablet',  value: 'tablet',  icon: DeviceTabletIcon },
+                                ].map((d) => (
+                                    <button
+                                        key={d.value}
+                                        onClick={() => setFilters({ device: d.value })}
+                                        title={d.label}
+                                        className={`px-2.5 py-1.5 text-[11px] font-black rounded-lg transition-all flex items-center gap-1 ${
+                                            device === d.value
+                                                ? 'bg-white dark:bg-neutral-700 text-amber-600 dark:text-amber-400 shadow-sm'
+                                                : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'
+                                        }`}
+                                    >
+                                        <d.icon className="w-3 h-3"/>
+                                        <span className="hidden lg:inline">{d.label}</span>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                        <div className="flex bg-neutral-100 dark:bg-neutral-800 p-1 rounded-xl">
-                            {[
-                                { label: 'All', value: '', icon: FunnelIcon },
-                                { label: 'Mobile', value: 'mobile', icon: DevicePhoneMobileIcon },
-                                { label: 'Desktop', value: 'desktop', icon: ComputerDesktopIcon },
-                                { label: 'Tablet', value: 'tablet', icon: DeviceTabletIcon },
-                            ].map((d) => (
-                                <button
-                                    key={d.label}
-                                    onClick={() => setFilters({ device: d.value })}
-                                    title={d.label}
-                                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
-                                        device === d.value 
-                                        ? 'bg-white dark:bg-neutral-700 text-amber-600 dark:text-white shadow-sm' 
-                                        : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200'
-                                    }`}
-                                >
-                                    <d.icon className="w-3.5 h-3.5" />
-                                    <span className="hidden sm:inline">{d.label}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                    </>
                 )}
 
                 {/* Campaign/Channel Filter */}
                 {(showCampaign || showChannel) && (
-                    <div className="flex-1 min-w-[200px] flex items-center gap-2">
-                        <div className="relative flex-1">
+                    <>
+                        <div className="h-6 w-px bg-neutral-200 dark:bg-neutral-700 shrink-0 hidden sm:block"/>
+                        <div className="flex-1 min-w-[160px] max-w-[260px] relative">
                             <input
                                 type="text"
-                                placeholder={showCampaign ? "Filter by campaign..." : "Filter by channel..."}
+                                placeholder={showCampaign ? 'Filter campaign...' : 'Filter channel...'}
                                 value={showCampaign ? campaign : channel}
                                 onChange={(e) => setFilters(showCampaign ? { campaign: e.target.value } : { channel: e.target.value })}
-                                className="w-full pl-4 pr-10 py-2.5 bg-neutral-100 dark:bg-neutral-800 border-none rounded-xl text-xs font-bold text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:ring-2 focus:ring-brand-500 transition-all"
+                                className="w-full pl-3 pr-8 py-2 bg-neutral-100 dark:bg-neutral-800 border border-transparent rounded-xl text-[11px] font-bold text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
                             />
                             {(campaign || channel) && (
-                                <button 
-                                    onClick={() => resetFilters()}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
+                                <button
+                                    onClick={resetFilters}
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-red-500 transition-colors"
                                 >
-                                    <XMarkIcon className="w-4 h-4" />
+                                    <XMarkIcon className="w-3.5 h-3.5"/>
                                 </button>
                             )}
                         </div>
-                    </div>
+                    </>
                 )}
 
-                {/* Reset All */}
+                {/* Clear Filters */}
                 {(device || campaign || channel) && (
                     <button
                         onClick={resetFilters}
-                        className="px-4 py-2 text-xs font-black text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
+                        className="text-[11px] font-black text-red-500 hover:text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 px-3 py-1.5 rounded-lg transition-all shrink-0"
                     >
-                        Clear Filters
+                        Clear
                     </button>
                 )}
 
-                {/* Status & Actions */}
-                <div className="ml-auto flex items-center gap-4 pl-4 border-l border-neutral-100 dark:border-neutral-800">
+                {/* Right Side - Refresh + Sync */}
+                <div className="ml-auto flex items-center gap-2 shrink-0 pl-3 border-l border-neutral-200 dark:border-neutral-700">
+                    {onRefresh && (
+                        <button
+                            onClick={onRefresh}
+                            disabled={loading}
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                                loading
+                                    ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed'
+                                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 dark:hover:text-brand-400 active:scale-90'
+                            }`}
+                            title="Refresh data"
+                        >
+                            <ArrowPathIcon className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}/>
+                        </button>
+                    )}
+
                     {(activeGa4PropertyId || activeGscSite || activeGoogleAdsCustomerId || activeFacebookAdAccountId) ? (
-                        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${
-                            syncMetadata.syncStatus === 'syncing' 
-                            ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-800 animate-pulse' 
-                            : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800'
+                        <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[10px] font-black transition-all ${
+                            syncMetadata.syncStatus === 'syncing'
+                                ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-800 animate-pulse'
+                                : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800'
                         }`}>
-                            {syncMetadata.syncStatus === 'syncing' ? (
-                                <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" />
-                            ) : (
-                                <CheckCircleIcon className="w-3.5 h-3.5" />
-                            )}
-                            <div className="flex flex-col">
-                                <span className="text-[9px] font-black uppercase tracking-wider leading-none">
-                                    {syncMetadata.syncStatus === 'syncing' ? 'Syncing...' : 'Data Synced'}
-                                </span>
-                            </div>
+                            {syncMetadata.syncStatus === 'syncing'
+                                ? <ArrowPathIcon className="w-3 h-3 animate-spin"/>
+                                : <CheckCircleIcon className="w-3 h-3"/>
+                            }
+                            <span className="hidden sm:inline uppercase tracking-wide">
+                                {syncMetadata.syncStatus === 'syncing' ? 'Syncing' : 'Synced'}
+                            </span>
                         </div>
                     ) : (
-                        <a 
+                        <a
                             href="/connect-accounts"
-                            className="flex items-center gap-2 px-4 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-[10px] font-black transition-all shadow-lg shadow-brand-500/10 hover:scale-105 active:scale-95"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-[10px] font-black transition-all hover:scale-105 active:scale-95 shadow-sm shadow-brand-500/20"
                         >
-                            <CloudArrowUpIcon className="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline">Connect Node</span>
+                            <CloudArrowUpIcon className="w-3.5 h-3.5"/>
+                            <span className="hidden sm:inline">Connect</span>
                         </a>
                     )}
 
-                    {(syncMetadata.syncStatus !== 'syncing' && !loading) && (
-                        <div className="hidden xl:flex flex-col items-end border-l border-neutral-100 dark:border-neutral-800 pl-4">
-                            <span className="text-[8px] font-black uppercase tracking-widest text-neutral-400">Last Sync</span>
-                            <span className="text-[10px] font-bold text-neutral-600 dark:text-neutral-300">
-                                {syncMetadata.lastDailySyncAt 
-                                    ? new Date(syncMetadata.lastDailySyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                    : 'Never'}
+                    {syncMetadata.lastDailySyncAt && syncMetadata.syncStatus !== 'syncing' && !loading && (
+                        <div className="hidden xl:flex flex-col items-end pl-3 border-l border-neutral-200 dark:border-neutral-700">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-neutral-400 leading-none">Last Sync</span>
+                            <span className="text-[10px] font-bold text-neutral-600 dark:text-neutral-300 mt-0.5">
+                                {new Date(syncMetadata.lastDailySyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                         </div>
                     )}
-                </div>
                 </div>
             </div>
 
             {/* Custom Date Picker Dropdown */}
             {showPicker && (
-                <div className="absolute top-full left-0 mt-3 p-5 bg-white/95 dark:bg-dark-card/95 backdrop-blur-xl border border-neutral-200/60 dark:border-neutral-700/60 rounded-[2.5rem] shadow-2xl z-50 animate-in fade-in slide-in-from-top-4 duration-300 flex flex-col sm:flex-row items-center gap-6">
-                    <div className="flex flex-col">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-2 ml-1">Start Date</label>
-                        <input 
-                            type="date" 
+                <div className="absolute top-full left-0 mt-2 z-50 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-xl p-5 flex flex-col sm:flex-row items-end gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Start Date</label>
+                        <input
+                            type="date"
                             value={tempDates.start}
                             onChange={(e) => setTempDates(prev => ({ ...prev, start: e.target.value }))}
-                            className="bg-neutral-100 dark:bg-neutral-800 border-none rounded-2xl px-5 py-3 text-sm font-black text-neutral-900 dark:text-white focus:ring-2 focus:ring-brand-500 transition-all outline-none"
+                            className="bg-neutral-100 dark:bg-neutral-800 border-none rounded-xl px-4 py-2.5 text-sm font-bold text-neutral-900 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none transition-all"
                         />
                     </div>
-                    <div className="w-8 h-px bg-neutral-200 dark:bg-neutral-800 hidden sm:block mt-6"></div>
-                    <div className="flex flex-col">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-2 ml-1">End Date</label>
-                        <input 
-                            type="date" 
+                    <div className="w-6 h-px bg-neutral-300 dark:bg-neutral-700 hidden sm:block mb-4"/>
+                    <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">End Date</label>
+                        <input
+                            type="date"
                             value={tempDates.end}
                             onChange={(e) => setTempDates(prev => ({ ...prev, end: e.target.value }))}
-                            className="bg-neutral-100 dark:bg-neutral-800 border-none rounded-2xl px-5 py-3 text-sm font-black text-neutral-900 dark:text-white focus:ring-2 focus:ring-brand-500 transition-all outline-none"
+                            className="bg-neutral-100 dark:bg-neutral-800 border-none rounded-xl px-4 py-2.5 text-sm font-bold text-neutral-900 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none transition-all"
                         />
                     </div>
-                    <button 
+                    <button
                         onClick={handleApplyCustomRange}
-                        className="mt-6 sm:mt-6 px-8 py-3 bg-brand-600 hover:bg-brand-500 text-white text-xs font-black rounded-2xl shadow-xl shadow-brand-500/20 transition-all hover:-translate-y-1 active:scale-95 uppercase tracking-widest"
+                        className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-black rounded-xl shadow-lg shadow-brand-500/20 transition-all hover:-translate-y-0.5 active:scale-95 uppercase tracking-wider whitespace-nowrap"
                     >
                         Apply Range
+                    </button>
+                    <button
+                        onClick={() => setShowPicker(false)}
+                        className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all"
+                    >
+                        <XMarkIcon className="w-4 h-4"/>
                     </button>
                 </div>
             )}

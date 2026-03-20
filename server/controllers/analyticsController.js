@@ -1,5 +1,6 @@
 import DailyMetric from '../models/DailyMetric.js';
 import UserAccounts from '../models/UserAccounts.js';
+import { syncGsc, syncGa4, syncGoogleAds, syncFacebookAds } from '../services/syncService.js';
 
 const buildMatchFilter = async (userId, source, query) => {
     const { startDate, endDate, device, campaign, channel, siteId } = query;
@@ -602,5 +603,68 @@ export const getFacebookAdsSummary = async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
+    }
+};
+export const syncAccountData = async (req, res) => {
+    const { siteId } = req.body;
+    const userId = req.user._id;
+
+    if (!siteId) {
+        return res.status(400).json({ success: false, message: 'Site ID is required' });
+    }
+
+    try {
+        const acc = await UserAccounts.findOne({ _id: siteId, userId });
+        if (!acc) {
+            return res.status(404).json({ success: false, message: 'Account not found' });
+        }
+
+        // Check if sync was done very recently (e.g. within 30 minutes) to prevent abuse
+        const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000);
+        if (acc.lastDailySyncAt && acc.lastDailySyncAt > thirtyMinsAgo && acc.syncStatus !== 'error') {
+            return res.status(200).json({ 
+                success: true, 
+                message: 'Data is already up to date (synced within last 30 minutes)',
+                alreadySynced: true
+            });
+        }
+
+        // Update status to syncing
+        await UserAccounts.findByIdAndUpdate(siteId, { syncStatus: 'syncing' });
+
+        // Calculate a small window for daily refresh (last 3 days)
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+        const threeDaysAgo = new Date();
+        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+        const startDate = threeDaysAgo.toISOString().split('T')[0];
+        const endDate = todayStr;
+
+        // Perform sync for all connected platforms on this account
+        const syncTasks = [];
+        if (acc.gscSiteUrl) syncTasks.push(syncGsc(acc, startDate, endDate));
+        if (acc.ga4PropertyId) syncTasks.push(syncGa4(acc, startDate, endDate));
+        if (acc.googleAdsCustomerId) syncTasks.push(syncGoogleAds(acc, startDate, endDate));
+        if (acc.facebookAdAccountId) syncTasks.push(syncFacebookAds(acc, startDate, endDate));
+
+        await Promise.all(syncTasks);
+
+        // Update status back to idle
+        await UserAccounts.findByIdAndUpdate(siteId, { 
+            syncStatus: 'idle', 
+            lastDailySyncAt: new Date() 
+        });
+
+        res.status(200).json({ 
+            success: true, 
+            message: 'Synchronization completed successfully' 
+        });
+    } catch (error) {
+        console.error('Manual Sync Error:', error);
+        await UserAccounts.findByIdAndUpdate(siteId, { syncStatus: 'error' });
+        res.status(500).json({ 
+            success: false, 
+            message: 'Synchronization failed: ' + error.message 
+        });
     }
 };

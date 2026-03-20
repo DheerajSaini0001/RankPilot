@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import DashboardLayout from '../components/ui/DashboardLayout';
 import Button from '../components/ui/Button';
 import toast from 'react-hot-toast';
@@ -11,19 +11,19 @@ const AdminPage = () => {
 
     useEffect(() => {
         loadConfigs();
-    }, []);
+    }, [loadConfigs]);
 
-    const loadConfigs = async () => {
+    const loadConfigs = useCallback(async () => {
         setLoading(true);
         try {
             const res = await api.get('/admin/config');
             setConfigs(res.data);
-        } catch (err) {
+        } catch {
             toast.error('Failed to load configurations');
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     const handleConfigChange = (idx, value) => {
         const newConfigs = [...configs];

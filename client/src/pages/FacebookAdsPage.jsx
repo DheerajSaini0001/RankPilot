@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import AiSectionChat from '../components/ai/AiSectionChat';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/ui/DashboardLayout';
 import KpiCard from '../components/dashboard/KpiCard';
@@ -17,18 +18,15 @@ import {
   ResponsiveContainer,
   AreaChart, Area,
   BarChart, Bar,
-  LineChart, Line,
   PieChart, Pie, Cell,
   XAxis, YAxis,
-  Tooltip, CartesianGrid,
-  Legend
+  Tooltip, CartesianGrid
 } from 'recharts';
 import FilterBar from '../components/dashboard/FilterBar';
 import { useFilterStore } from '../store/filterStore';
 
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
 const formatCurrency = (num) => `$${Number(num || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const formatPct = (val, decimals = 2) => `${Number(val || 0).toFixed(decimals)}%`;
 
 const EmptyState = ({ message = 'No data for this period', sub = 'Try selecting a wider date range' }) => (
   <div className="flex flex-col items-center justify-center py-12 text-neutral-400">
@@ -53,7 +51,7 @@ const FacebookAdsPage = () => {
     const [adsets, setAdsets] = useState([]);
     const [devices, setDevices] = useState([]);
 
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         setLoading(true);
         try {
             const query = new URLSearchParams({
@@ -77,12 +75,26 @@ const FacebookAdsPage = () => {
         } finally {
             setLoading(false);
         }
+    }, [startDate, endDate, device, campaign, activeSiteId]);
+
+    const handleManualRefresh = async () => {
+        if (!activeSiteId) return;
+        setLoading(true);
+        try {
+            await api.post('/analytics/sync', { siteId: activeSiteId });
+            await loadData();
+        } catch (err) {
+            console.error('Manual sync failed:', err);
+            await loadData();
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
         if (!isConnected || !hasAccount) return;
         loadData();
-    }, [isConnected, hasAccount, startDate, endDate, device, campaign, activeSiteId]);
+    }, [isConnected, hasAccount, loadData]);
 
     // Auto-refresh every 10 minutes
     useEffect(() => {
@@ -93,7 +105,7 @@ const FacebookAdsPage = () => {
         }, 30 * 60 * 1000); // Sync with 30m Cron
 
         return () => clearInterval(interval);
-    }, [isConnected, hasAccount, startDate, endDate, device, campaign, activeSiteId]);
+    }, [isConnected, hasAccount, loadData]);
 
 
     // Derived Values
@@ -135,11 +147,6 @@ const FacebookAdsPage = () => {
       spend: d.spend || 0,
     }));
 
-    const conversionTrend = timeseries.map(d => ({
-      date: d.date,
-      spend: d.spend || 0,
-      clicks: d.clicks || 0,
-    }));
 
     const comparison = overview ? [
       { metric: '💰 Total Spend',    current: formatCurrency(overview.spend),                      prior: formatCurrency(overview.spend * 0.876),            change: 14.2,  up: true  },
@@ -218,15 +225,31 @@ const FacebookAdsPage = () => {
                         <h1 className="text-2xl lg:text-3xl font-black text-neutral-900 dark:text-white tracking-tight">Facebook Ads Performance</h1>
                         <p className="text-sm font-bold text-neutral-500 dark:text-neutral-400 mt-1">Social media advertising metrics</p>
                      </div>
-                     <div className="relative z-10 p-2 bg-blue-500/10 rounded-2xl border border-blue-500/20">
-                        <ChartBarIcon className="w-6 h-6 text-blue-500" />
+                     <div className="relative z-10">
+                        <AiSectionChat 
+                            label="Get AI Summary"
+                            sectionTitle="Facebook Ads Summary"
+                            activeSources={['facebook-ads']}
+                            contextPrompt={`Analyze this Facebook Ads dashboard for ${startDate} to ${endDate}. 
+- Total Spend: ${formatCurrency(overview?.spend || 0)}
+- Reach: ${formatNumber(overview?.reach || 0)}
+- Conversions: ${formatNumber(overview?.conversions || 0)}
+- ROAS: ${roas}x
+
+Top Campaigns: ${campaigns.slice(0, 3).map(c => c.name).join(', ')}
+
+Please provide: 
+1. Social Marketing Score (1-100)
+2. Fastest growing campaign
+3. One advice on creative optimization to improve ROAS.`}
+                        />
                      </div>
                 </div>
 
                 <FilterBar 
                     showCampaign 
-                    onRefresh={loadData}
                     loading={loading}
+                    onRefresh={handleManualRefresh}
                 />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -345,8 +368,15 @@ const FacebookAdsPage = () => {
                             <h3 className="text-lg font-black text-neutral-900 dark:text-white">Social Engagement Resonance</h3>
                             <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mt-1">Daily expenditure and click liquidity analysis</p>
                         </div>
-                        <div className="p-2 bg-blue-500/10 rounded-2xl border border-blue-500/20">
-                            <ChartBarIcon className="w-5 h-5 text-blue-500" />
+                        <div className="flex items-center gap-2">
+                            <AiSectionChat
+                                sectionTitle="Facebook Ads - Social Engagement Resonance"
+                                contextPrompt={`My Facebook Ads: Spend $${overview?.spend?.toFixed(2) || 0}, Reach ${formatNumber(overview?.reach)}, Impressions ${formatNumber(overview?.impressions)}, CTR ${ctr}%, ROAS ${roas}x. What's my overall social ad performance and how can I improve efficiency?`}
+                                activeSources={['facebook-ads']}
+                            />
+                            <div className="p-2 bg-blue-500/10 rounded-2xl border border-blue-500/20">
+                                <ChartBarIcon className="w-5 h-5 text-blue-500" />
+                            </div>
                         </div>
                     </div>
                     <div className="flex-1 p-8 min-h-[350px]">
@@ -409,7 +439,14 @@ const FacebookAdsPage = () => {
 
                 {/* Reach Trend */}
                 <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 shadow-sm">
-                    <h3 className="text-sm font-black text-neutral-900 dark:text-white mb-1">Reach Trend</h3>
+                    <div className="flex items-center justify-between mb-1">
+                        <h3 className="text-sm font-black text-neutral-900 dark:text-white">Reach Trend</h3>
+                        <AiSectionChat
+                            sectionTitle="Facebook Ads - Reach Trend"
+                            contextPrompt={`My Facebook Ads reach: ${formatNumber(overview?.reach)} unique people reached, frequency: ${frequency}x per person. Is my reach growing? ${highFrequency ? 'I have high frequency which may cause ad fatigue. What should I do?' : 'My frequency looks healthy.'}`}
+                            activeSources={['facebook-ads']}
+                        />
+                    </div>
                     <p className="text-xs text-neutral-400 mb-4">Unique people reached per day</p>
                     {loading ? (
                     <div className="h-48 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"/>
@@ -434,7 +471,14 @@ const FacebookAdsPage = () => {
 
                 {/* Campaign Spend Bar Chart */}
                 <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 shadow-sm">
-                    <h3 className="text-sm font-black text-neutral-900 dark:text-white mb-1">Campaign Spend</h3>
+                    <div className="flex items-center justify-between mb-1">
+                        <h3 className="text-sm font-black text-neutral-900 dark:text-white">Campaign Spend</h3>
+                        <AiSectionChat
+                            sectionTitle="Facebook Ads - Campaign Spend"
+                            contextPrompt={`My Facebook Ads spend by campaign: ${campaigns.slice(0,5).map(c => `${c.name}: $${c.spend?.toFixed(2)} (${c.conversions} conv, ${formatNumber(c.reach)} reach)`).join(' | ')}. Which campaigns should I scale and which should I pause?`}
+                            activeSources={['facebook-ads']}
+                        />
+                    </div>
                     <p className="text-xs text-neutral-400 mb-4">Spend comparison across top campaigns</p>
                     {loading ? (
                     <div className="h-48 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"/>
@@ -529,7 +573,14 @@ const FacebookAdsPage = () => {
                                 <h3 className="text-sm font-black text-neutral-900 dark:text-white">Top Campaigns</h3>
                                 <p className="text-xs text-neutral-400 mt-0.5">Performance breakdown by campaign</p>
                             </div>
-                            <span className="text-xs font-bold bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full">{campaigns.length} campaigns</span>
+                            <div className="flex items-center gap-2">
+                                <AiSectionChat
+                                    sectionTitle="Facebook Ads - Top Campaigns"
+                                    contextPrompt={`My Facebook Ads top campaigns: ${campaigns.slice(0,5).map(c => `${c.name}: $${c.spend?.toFixed(2)} spend, ${c.conversions} conv, ${formatNumber(c.reach)} reach`).join(' | ')}. Which campaign has the best ROAS? What creative or audience changes do you recommend?`}
+                                    activeSources={['facebook-ads']}
+                                />
+                                <span className="text-xs font-bold bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full">{campaigns.length} campaigns</span>
+                            </div>
                         </div>
                         <div className="p-0">
                             <DataTable columns={campaignColumns} data={filteredCampaigns} loading={loading} initialLimit={5} />
@@ -548,9 +599,16 @@ const FacebookAdsPage = () => {
 
                 {/* Facebook Ads Device Breakdown */}
                 <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-[2.5rem] p-8 shadow-sm group">
-                    <div className="mb-6">
-                        <h3 className="text-lg font-black text-neutral-900 dark:text-white">Social Apparatus Mix</h3>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Ad spend distribution by hardware category</p>
+                    <div className="mb-6 flex justify-between items-center">
+                        <div>
+                            <h3 className="text-lg font-black text-neutral-900 dark:text-white">Social Apparatus Mix</h3>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Ad spend distribution by hardware category</p>
+                        </div>
+                        <AiSectionChat
+                            sectionTitle="Facebook Ads - Device Mix"
+                            contextPrompt={`My Facebook Ads device breakdown: ${devices.map(d => `${d.name}: $${d.value?.toFixed(2)}`).join(', ')}. Should I adjust my mobile vs desktop bids? What device-specific strategies do you recommend for Meta ads?`}
+                            activeSources={['facebook-ads']}
+                        />
                     </div>
                     <div className="flex flex-col md:flex-row items-center gap-12">
                         <div className="w-[250px] h-[250px]">
@@ -598,7 +656,14 @@ const FacebookAdsPage = () => {
                         <h3 className="text-sm font-black text-neutral-900 dark:text-white">Period Comparison</h3>
                         <p className="text-xs text-neutral-400 mt-0.5">This period vs last period — all key metrics</p>
                     </div>
-                    <span className="text-xs font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full border border-purple-100 dark:border-purple-800">vs Last Period</span>
+                    <div className="flex items-center gap-2">
+                        <AiSectionChat
+                            sectionTitle="Facebook Ads - Period Comparison"
+                            contextPrompt={`My Facebook Ads trends: Spend $${overview?.spend?.toFixed(2)}, Reach ${formatNumber(overview?.reach)}, CTR ${ctr}%, ROAS ${roas}x, Frequency ${frequency}x. ${highFrequency ? 'Frequency is high' : 'Frequency is healthy'}. What are my biggest wins and concerns this period?`}
+                            activeSources={['facebook-ads']}
+                        />
+                        <span className="text-xs font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full border border-purple-100 dark:border-purple-800">vs Last Period</span>
+                    </div>
                     </div>
                     {loading ? (
                     <div className="space-y-3">{[...Array(7)].map((_,i)=><div key={i} className="h-10 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"/>)}</div>

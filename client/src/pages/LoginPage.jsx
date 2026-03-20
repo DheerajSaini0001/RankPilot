@@ -5,7 +5,8 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
-import { getMe, resendVerification } from '../api/authApi';
+import { getMe, resendVerification, loginUser } from '../api/authApi';
+import { getApiUrl } from '../api/index';
 
 const LoginPage = () => {
     const [email, setEmail] = useState('');
@@ -22,7 +23,7 @@ const LoginPage = () => {
         setLoading(true);
         setShowResend(false);
         try {
-            const res = await axios.post(`${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/login`, { email, password });
+            const res = await loginUser({ email, password });
             setAuth(res.data.token, res.data.user);
             toast.success('Login successful');
 
@@ -58,12 +59,9 @@ const LoginPage = () => {
     };
 
     const loginGoogle = () => {
-        window.location.href = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/google`;
+        window.location.href = getApiUrl('/auth/google');
     };
 
-    const loginFacebook = () => {
-        window.location.href = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/facebook`;
-    };
 
 
     return (

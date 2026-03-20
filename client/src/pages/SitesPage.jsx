@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/ui/DashboardLayout';
 import { 
@@ -7,7 +7,6 @@ import {
     PencilSquareIcon,
     GlobeAltIcon,
     CheckCircleIcon,
-    ExclamationCircleIcon,
     ChartBarIcon
 } from '@heroicons/react/24/outline';
 import { useAccountsStore } from '../store/accountsStore';
@@ -47,7 +46,7 @@ const SitesPage = () => {
             }
             
             fetchSites();
-        } catch (err) {
+        } catch {
             toast.error('Failed to delete site');
         }
     };

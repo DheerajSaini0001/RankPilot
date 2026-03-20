@@ -19,6 +19,9 @@ import GoogleAdsPage from './pages/GoogleAdsPage';
 import FacebookAdsPage from './pages/FacebookAdsPage';
 import SitesPage from './pages/SitesPage';
 import { ProtectedRoute, AuthRoute, AdminRoute } from './components/ui/RouteWrappers';
+import { getMe } from './api/authApi';
+import { useAuthStore } from './store/authStore';
+import { useAccountsStore } from './store/accountsStore';
 
 
 const App = () => {
@@ -120,9 +123,7 @@ const App = () => {
   );
 };
 
-import { getMe } from './api/authApi';
-import { useAuthStore } from './store/authStore';
-import { useAccountsStore } from './store/accountsStore'; // Added this import
+
 
 // Handle OAuth callback token in URL
 const AuthCallback = () => {

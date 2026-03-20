@@ -6,13 +6,10 @@ import {
     ArrowRightOnRectangleIcon,
     MoonIcon,
     SunIcon,
-    ShieldCheckIcon,
     ChartPieIcon,
     ChatBubbleLeftRightIcon,
     MagnifyingGlassIcon,
     ChevronDownIcon,
-    PlusIcon,
-    QuestionMarkCircleIcon,
     BellIcon,
     ChartBarIcon,
     GlobeAltIcon,
@@ -24,12 +21,11 @@ import { useAuthStore } from '../../store/authStore';
 import { useAccountsStore } from '../../store/accountsStore';
 import { useFilterStore } from '../../store/filterStore';
 import { useNotificationStore } from '../../store/notificationStore';
-import { listSites, getActiveAccounts, selectAccounts } from '../../api/accountApi';
+import { listSites, getActiveAccounts } from '../../api/accountApi';
 
 const DashboardLayout = ({ children }) => {
     const { user, clearAuth } = useAuthStore();
     const { 
-        connectedSources = [], 
         userSites = [], 
         activeSiteId, 
         setAccounts 

@@ -91,15 +91,6 @@ export const testConfig = async (req, res) => {
                 throw err;
             }
             return res.status(200).json({ success: true, message: 'Tested successfully' });
-        } else if (key === 'ANTHROPIC_API_KEY') {
-            await axios.post('https://api.anthropic.com/v1/messages', {
-                model: 'claude-3-5-sonnet-20241022',
-                max_tokens: 5,
-                messages: [{ role: 'user', content: 'Say OK' }]
-            }, {
-                headers: { 'x-api-key': val, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }
-            });
-            return res.status(200).json({ success: true, message: 'Connection successful' });
         } else if (key === 'GEMINI_API_KEY') {
             await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${val}`, {
                 contents: [{ parts: [{ text: "Say OK" }] }]

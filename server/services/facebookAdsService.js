@@ -1,6 +1,5 @@
 import bizSdk from 'facebook-nodejs-business-sdk';
 import { getValidFacebookToken } from './facebookAuthService.js';
-import UserAccounts from '../models/UserAccounts.js';
 
 export const listAdAccounts = async (userId) => {
     const accessToken = await getValidFacebookToken(userId);

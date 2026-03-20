@@ -7,6 +7,7 @@ import { listGa4, listGsc, listGoogleAds, listFacebookAds, selectAccounts, getAc
 import { useAccountsStore } from '../store/accountsStore';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
+import { getApiUrl } from '../api/index';
 
 const ConnectAccountsPage = () => {
     const [loading, setLoading] = useState(true);
@@ -35,62 +36,61 @@ const ConnectAccountsPage = () => {
 
 
     useEffect(() => {
-        loadData();
-    }, [activeSiteId, isNew]);
+        const loadData = async () => {
+            setLoading(true);
+            try {
+                const me = await getMe();
+                setAccounts({ connectedSources: me.data.connectedSources });
 
-
-    const loadData = async () => {
-        setLoading(true);
-        try {
-            const me = await getMe();
-            setAccounts({ connectedSources: me.data.connectedSources });
-
-            // Only load active accounts if we are NOT in "new site" mode
-            if (!isNew) {
-                const active = await getActiveAccounts(activeSiteId);
-                if (active.data) {
-                    const vals = {
-                        siteName: active.data.siteName || '',
-                        ga4: active.data.ga4PropertyId || '',
-                        gsc: active.data.gscSiteUrl || '',
-                        gAds: active.data.googleAdsCustomerId || '',
-                        fbAds: active.data.facebookAdAccountId || ''
-                    };
-                    setInitialValues(vals);
-                    if (vals.siteName) setSiteName(vals.siteName);
-                    if (vals.ga4) setSelectedGa4(vals.ga4);
-                    if (vals.gsc) setSelectedGsc(vals.gsc);
-                    if (vals.gAds) setSelectedGAds(vals.gAds);
-                    if (vals.fbAds) setSelectedFbAds(vals.fbAds);
+                // Only load active accounts if we are NOT in "new site" mode
+                if (!isNew) {
+                    const active = await getActiveAccounts(activeSiteId);
+                    if (active.data) {
+                        const vals = {
+                            siteName: active.data.siteName || '',
+                            ga4: active.data.ga4PropertyId || '',
+                            gsc: active.data.gscSiteUrl || '',
+                            gAds: active.data.googleAdsCustomerId || '',
+                            fbAds: active.data.facebookAdAccountId || ''
+                        };
+                        setInitialValues(vals);
+                        if (vals.siteName) setSiteName(vals.siteName);
+                        if (vals.ga4) setSelectedGa4(vals.ga4);
+                        if (vals.gsc) setSelectedGsc(vals.gsc);
+                        if (vals.gAds) setSelectedGAds(vals.gAds);
+                        if (vals.fbAds) setSelectedFbAds(vals.fbAds);
+                    }
+                } else {
+                    setInitialValues({});
+                    // Reset selections for new site
+                    setSiteName('New Website');
+                    setSelectedGa4('');
+                    setSelectedGsc('');
+                    setSelectedGAds('');
+                    setSelectedFbAds('');
                 }
-            } else {
-                setInitialValues({});
-                // Reset selections for new site
-                setSiteName('New Website');
-                setSelectedGa4('');
-                setSelectedGsc('');
-                setSelectedGAds('');
-                setSelectedFbAds('');
-            }
 
-            if (me.data.connectedSources.includes('google')) {
-                const p = await listGa4().catch(() => ({ data: [] }));
-                setGa4Props(p.data || []);
-                const s = await listGsc().catch(() => ({ data: [] }));
-                setGscSites(s.data || []);
-                const g = await listGoogleAds().catch(() => ({ data: [] }));
-                setGAdsAccounts(g.data || []);
+                if (me.data.connectedSources.includes('google')) {
+                    const p = await listGa4().catch(() => ({ data: [] }));
+                    setGa4Props(p.data || []);
+                    const s = await listGsc().catch(() => ({ data: [] }));
+                    setGscSites(s.data || []);
+                    const g = await listGoogleAds().catch(() => ({ data: [] }));
+                    setGAdsAccounts(g.data || []);
+                }
+                if (me.data.connectedSources.includes('facebook')) {
+                    const f = await listFacebookAds().catch(() => ({ data: [] }));
+                    setFbAdAccounts(f.data || []);
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
             }
-            if (me.data.connectedSources.includes('facebook')) {
-                const f = await listFacebookAds().catch(() => ({ data: [] }));
-                setFbAdAccounts(f.data || []);
-            }
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
+        };
+
+        loadData();
+    }, [activeSiteId, isNew, setAccounts]);
 
     const handleSave = async () => {
         if (!siteName.trim()) {
@@ -128,7 +128,7 @@ const ConnectAccountsPage = () => {
             });
             toast.success(isNew ? 'New website added!' : 'Integrations updated!');
             navigate('/dashboard');
-        } catch (err) {
+        } catch {
             toast.error('Failed to link accounts');
         } finally {
             setSaving(false);
@@ -191,7 +191,7 @@ const ConnectAccountsPage = () => {
                                     </div>
                                     <div>
                                         {!connectedSources.includes('google') && (
-                                            <Button onClick={() => window.location.href = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/google?token=${encodeURIComponent(token)}`} className="shadow-lg shadow-brand-500/25">Connect Google</Button>
+                                            <Button onClick={() => window.location.href = getApiUrl(`/auth/google?token=${encodeURIComponent(token)}`)} className="shadow-lg shadow-brand-500/25">Connect Google</Button>
                                         )}
                                     </div>
                                 </div>
@@ -266,7 +266,7 @@ const ConnectAccountsPage = () => {
                                     </div>
                                     <div>
                                         {!connectedSources.includes('facebook') && (
-                                            <Button onClick={() => window.location.href = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/facebook?token=${encodeURIComponent(token)}`} className="shadow-lg shadow-brand-500/25">Connect Meta</Button>
+                                            <Button onClick={() => window.location.href = getApiUrl(`/auth/facebook?token=${encodeURIComponent(token)}`)} className="shadow-lg shadow-brand-500/25">Connect Meta</Button>
                                         )}
                                     </div>
                                 </div>

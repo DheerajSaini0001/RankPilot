@@ -2,7 +2,7 @@ import React from 'react';
 import { ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
 
-const KpiCard = ({ title, value, change, changeText, valueSuffix, isPositive, Icon, loading = false, sentiment, chartData = [] }) => {
+const KpiCard = ({ title, value, change, changeText, valueSuffix, isPositive, Icon, loading = false, chartData = [] }) => {
 
   // Loading state matching the updated dimensions
   if (loading) return (

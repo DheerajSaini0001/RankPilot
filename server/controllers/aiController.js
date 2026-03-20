@@ -192,7 +192,12 @@ const fetchPlatformData = async (userId, startDate, endDate, siteId, activeSourc
 
 
 export const askAi = async (req, res) => {
-    let { question, conversationId, activeSources, siteId } = req.body;
+    let { question, conversationId, activeSources, siteId, history } = req.body;
+
+    // Sanitize history — keep last 10 turns max to avoid token overflow
+    const chatHistory = Array.isArray(history)
+        ? history.slice(-10)
+        : [];
 
     const tzOffset = (new Date()).getTimezoneOffset() * 60000;
     const now = new Date(Date.now() - tzOffset);
@@ -226,7 +231,7 @@ export const askAi = async (req, res) => {
     const userId = req.user._id;
     const data = await fetchPlatformData(userId, startDate, endDate, siteId, activeSources);
 
-    const prompt = promptBuilder.buildAskPrompt(question, data);
+    const prompt = promptBuilder.buildAskPrompt(question, data, chatHistory);
 
     let convId = conversationId;
     if (!convId) {

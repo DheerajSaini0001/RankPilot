@@ -1,23 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { verifyEmail, forgotPassword } from '../api/authApi';
+import { verifyEmail } from '../api/authApi';
 
 const VerifyEmailPage = () => {
     const [searchParams] = useSearchParams();
     const token = searchParams.get('token');
-    const [status, setStatus] = useState('loading'); // loading | success | error
-    const [errorReason, setErrorReason] = useState('invalid'); // invalid | no-token
+    const [status, setStatus] = useState(!token ? 'error' : 'loading');
+    const [errorReason, setErrorReason] = useState(!token ? 'no-token' : 'invalid');
 
     useEffect(() => {
-        if (!token) {
-            setErrorReason('no-token');
-            setStatus('error');
-            return;
-        }
+        if (!token || status !== 'loading') return;
+
         verifyEmail(token)
             .then(() => setStatus('success'))
-            .catch(() => { setErrorReason('invalid'); setStatus('error'); });
+            .catch(() => { 
+                setErrorReason('invalid'); 
+                setStatus('error'); 
+            });
     }, [token]);
+
 
 
     return (
