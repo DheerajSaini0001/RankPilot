@@ -3,11 +3,22 @@ import DashboardLayout from '../components/ui/DashboardLayout';
 import Button from '../components/ui/Button';
 import toast from 'react-hot-toast';
 import api from '../api';
+import { 
+    ServerStackIcon, 
+    ShieldCheckIcon, 
+    CircleStackIcon, 
+    CommandLineIcon, 
+    GlobeAltIcon, 
+    SparklesIcon,
+    AdjustmentsHorizontalIcon,
+    CheckCircleIcon
+} from '@heroicons/react/24/outline';
 
 const AdminPage = () => {
     const [configs, setConfigs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [savingMsg, setSavingMsg] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         loadConfigs();
@@ -65,6 +76,41 @@ const AdminPage = () => {
         }
     };
 
+    const saveGroup = async (groupName) => {
+        const groupConfigs = configs.filter(c => c.group === groupName);
+        const toSave = groupConfigs.filter(c => !c.maskedValue.includes('****'));
+        
+        if (toSave.length === 0) {
+            toast.info('No changes to save. Masked values are skipped.');
+            return;
+        }
+
+        setSavingMsg(`Saving ${groupName} configuration...`);
+        try {
+            await api.post('/admin/config/bulk', { 
+                configs: toSave.map(c => ({ key: c.key, value: c.maskedValue })) 
+            });
+            toast.success(`${groupName} updated successfully`);
+            await loadConfigs();
+        } catch (err) {
+            toast.error(err.response?.data?.message || `Failed to update ${groupName}`);
+        } finally {
+            setSavingMsg('');
+        }
+    };
+
+    const getGroupIcon = (group) => {
+        switch (group) {
+            case 'server': return <ServerStackIcon className="w-5 h-5" />;
+            case 'security': return <ShieldCheckIcon className="w-5 h-5" />;
+            case 'database': return <CircleStackIcon className="w-5 h-5" />;
+            case 'google': return <GlobeAltIcon className="w-5 h-5" />;
+            case 'facebook': return <GlobeAltIcon className="w-5 h-5" />;
+            case 'gemini': return <SparklesIcon className="w-5 h-5" />;
+            default: return <AdjustmentsHorizontalIcon className="w-5 h-5" />;
+        }
+    };
+
     const groups = ['server', 'security', 'database', 'google', 'facebook', 'gemini', 'other'];
 
     return (
@@ -78,6 +124,19 @@ const AdminPage = () => {
                         Super Admin Panel
                     </h1>
                     <p className="text-neutral-500 dark:text-neutral-400 mt-2 font-medium">Manage global system configurations, API credentials, and security constants.</p>
+                </div>
+
+                <div className="relative group max-w-md">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <CommandLineIcon className="h-5 w-5 text-neutral-400 group-focus-within:text-brand-500 transition-colors" />
+                    </div>
+                    <input
+                        type="text"
+                        placeholder="Filter by key or label..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="block w-full pl-11 pr-4 py-3 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700/60 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all shadow-sm shadow-brand-500/5 group-hover:border-neutral-300 dark:group-hover:border-neutral-600"
+                    />
                 </div>
 
                 {loading ? (
@@ -97,19 +156,33 @@ const AdminPage = () => {
                             </div>
                         )}
                         {groups.map(group => {
-                            const groupConfigs = configs.filter(c => c.group === group);
+                            const groupConfigs = configs.filter(c => 
+                                c.group === group && 
+                                (c.label.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                 c.key.toLowerCase().includes(searchTerm.toLowerCase()))
+                            );
                             if (groupConfigs.length === 0) return null;
 
                             return (
                                 <div key={group} className="group bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-3xl p-6 md:p-8 shadow-sm hover:shadow-2xl hover:shadow-brand-500/5 hover:border-brand-400/50 dark:hover:border-brand-500/50 transition-all duration-500 relative overflow-hidden mb-8">
                                     <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none transition-opacity duration-500 opacity-0 group-hover:opacity-100"></div>
                                     <div className="relative z-10">
-                                        <h3 className="text-xl font-extrabold text-neutral-900 dark:text-white capitalize mb-6 flex items-center gap-3">
-                                            <span className="w-10 h-10 rounded-xl bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 flex items-center justify-center shadow-sm">
-                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /></svg>
-                                            </span>
-                                            {group} Configuration
-                                        </h3>
+                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                                            <h3 className="text-xl font-extrabold text-neutral-900 dark:text-white capitalize flex items-center gap-3">
+                                                <span className="w-10 h-10 rounded-xl bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 flex items-center justify-center shadow-sm">
+                                                    {getGroupIcon(group)}
+                                                </span>
+                                                {group} Configuration
+                                            </h3>
+                                            <Button 
+                                                variant="secondary" 
+                                                onClick={() => saveGroup(group)}
+                                                className="text-xs h-[38px] px-4 font-black flex items-center gap-2 border-neutral-200 dark:border-neutral-700 bg-white/50 dark:bg-dark-card/50"
+                                            >
+                                                <CheckCircleIcon className="w-4 h-4 text-brand-500" />
+                                                Save All {group}
+                                            </Button>
+                                        </div>
                                         <div className="space-y-4 pt-2">
                                             {groupConfigs.map(config => {
                                                 const originalIdx = configs.findIndex(c => c.key === config.key);

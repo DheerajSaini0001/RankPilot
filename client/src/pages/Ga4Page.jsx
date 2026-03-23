@@ -39,7 +39,7 @@ const formatTime = (secs) => {
 const Ga4Page = () => {
     const { startDate, endDate } = useDateRangeStore();
     const { device, campaign, channel } = useFilterStore();
-    const { connectedSources, activeGa4PropertyId, activeSiteId } = useAccountsStore();
+    const { connectedSources, activeGa4PropertyId, activeSiteId, syncMetadata } = useAccountsStore();
     const isConnected = connectedSources.includes('ga4');
     const hasProperty = !!activeGa4PropertyId;
     const navigate = useNavigate();
@@ -117,6 +117,14 @@ const Ga4Page = () => {
 
         return () => clearInterval(interval);
     }, [loadData]);
+    
+    // Refresh data when sync completes
+    useEffect(() => {
+        if (syncMetadata?.syncStatus !== 'syncing' && activeSiteId) {
+            console.log('GA4 Sync completed or idle, refreshing data...');
+            loadData();
+        }
+    }, [syncMetadata?.syncStatus, activeSiteId, loadData]);
 
 
     if (!isConnected) {

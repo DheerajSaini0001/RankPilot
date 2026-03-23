@@ -371,10 +371,10 @@ export const getSuggestedQuestions = async (req, res) => {
 
     let questions = [];
     const fallbacks = [
-        "Audit my GSC performance to find high-impression keywords with low CTR.",
-        "Analyze my GA4 conversion funnel to identify where I'm losing potential customers.",
-        "Evaluate my Google Ads budget efficiency and identify the highest ROI campaigns.",
-        "Review my Meta Ads performance to compare ROAS across different audiences."
+        "Find keywords with high impressions but low CTR.",
+        "Identify GA4 conversion leaks in my funnel.",
+        "Which Google Ads campaigns have highest ROI?",
+        "Compare ROAS across Meta Ads audiences."
     ];
 
     try {

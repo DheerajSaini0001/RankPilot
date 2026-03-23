@@ -19,7 +19,7 @@ import {
     MagnifyingGlassIcon,
     ArrowTrendingUpIcon,
     LinkIcon,
-    GlobeAltIcon
+    GlobeAltIcon,
 } from '@heroicons/react/24/outline';
 import {
     getConversations,
@@ -27,7 +27,7 @@ import {
     deleteConversation,
     getWeeklyInsight,
     refreshWeeklyInsight,
-    getSuggestedQuestions
+    getSuggestedQuestions,
 } from '../api/aiApi';
 import { getApiUrl } from '../api/index';
 import ReactMarkdown from 'react-markdown';
@@ -46,7 +46,6 @@ const MarkdownComponents = {
                     </div>
                 );
             } catch {
-                // Return a subtle placeholder while JSON is streaming/invalid
                 return (
                     <div className="my-4 p-4 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl flex items-center justify-center bg-neutral-50/50 dark:bg-neutral-900/50">
                         <div className="flex items-center gap-3">
@@ -86,54 +85,67 @@ const MarkdownComponents = {
 const ChatMessage = React.memo(({ msg, userName }) => {
     const isUser = msg.role === 'user';
     
-    return (
-        <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} group animate-fade-in-up`}>
-            <div className={`flex max-w-[90%] md:max-w-[80%] ${isUser ? 'flex-row-reverse' : 'flex-row'} items-start gap-4`}>
-                <div className="shrink-0 mt-1">
-                    {isUser ? (
-                        <div className="w-9 h-9 rounded-full bg-neutral-800 text-white flex items-center justify-center text-xs font-bold border-2 border-white shadow-sm">
-                            {userName?.charAt(0) || 'U'}
-                        </div>
-                    ) : (
-                        <div className="w-9 h-9 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center shadow-sm border border-neutral-200 dark:border-neutral-700">
-                            <SparklesIcon className="w-5 h-5 text-brand-600" />
-                        </div>
-                    )}
+    if (isUser) {
+        return (
+            <div className="flex justify-end">
+                <div className="flex items-end gap-2.5 flex-row-reverse max-w-[75%]">
+                    <div className="w-7 h-7 rounded-full bg-neutral-800 dark:bg-neutral-600 text-white flex items-center justify-center text-[10px] font-black flex-shrink-0">
+                        {userName?.charAt(0)?.toUpperCase() || 'U'}
+                    </div>
+                    <div className="px-4 py-3 bg-neutral-100 dark:bg-neutral-800 rounded-2xl rounded-br-sm text-sm font-medium text-neutral-900 dark:text-white leading-relaxed max-w-full">
+                        {msg.content}
+                    </div>
                 </div>
-                <div className={`px-2 py-1 leading-relaxed markdown-content ${isUser
-                    ? 'text-neutral-900 dark:text-white font-medium prose-sm'
-                    : 'text-neutral-800 dark:text-neutral-200 prose prose-neutral dark:prose-invert max-w-none'
-                    }`}>
-                    {!isUser ? (
-                        msg.content ? (
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex justify-start">
+            <div className="flex items-start gap-3 max-w-[85%]">
+                <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
+                    <SparklesIcon className="w-3.5 h-3.5 text-white"/>
+                </div>
+                <div className="flex-1 min-w-0">
+                    {msg.isError ? (
+                        <div className="px-4 py-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-800/30 rounded-xl text-sm text-red-600 dark:text-red-400">
                             <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}
                                 components={MarkdownComponents}
                             >
-                                {msg.content
-                                    .replace(/^[•*]\s*$/gm, '')
-                                    .replace(/•\s*/g, '- ')
-                                    .replace(/^\s*[•*]\s*/gm, '- ')
-                                    .replace(/- \s*\n/g, '- ')
-                                    .replace(/(\n\d+\.)\s*[•*]\s*/g, '$1 ')
-                                    .replace(/([.!?])\s+(- \s*)/g, '$1\n$2')
-                                    .replace(/\n{3,}/g, '\n\n')
-                                }
+                                {msg.content}
                             </ReactMarkdown>
-                        ) : msg.isLoading ? (
-                            <div className="flex items-center space-x-2 py-2">
-                                <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                                <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                                <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                            </div>
-                        ) : (
-                            <div className="py-2 text-neutral-400 font-medium italic text-[14px] flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 animate-pulse" />
-                                No response generated by the server. Please check your data connectivity or try again in a moment.
-                            </div>
-                        )
+                        </div>
                     ) : (
-                        msg.content
+                        <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed text-neutral-800 dark:text-neutral-200">
+                            {msg.content ? (
+                                <ReactMarkdown
+                                    remarkPlugins={[remarkGfm]}
+                                    components={MarkdownComponents}
+                                >
+                                    {msg.content
+                                        .replace(/^[•*]\s*$/gm, '')
+                                        .replace(/•\s*/g, '- ')
+                                        .replace(/^\s*[•*]\s*/gm, '- ')
+                                        .replace(/- \s*\n/g, '- ')
+                                        .replace(/(\n\d+\.)\s*[•*]\s*/g, '$1 ')
+                                        .replace(/([.!?])\s+(- \s*)/g, '$1\n$2')
+                                        .replace(/\n{3,}/g, '\n\n')
+                                    }
+                                </ReactMarkdown>
+                            ) : msg.isLoading ? (
+                                <div className="flex items-center space-x-2 py-2">
+                                    <div className="w-1.5 h-1.5 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                    <div className="w-1.5 h-1.5 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                    <div className="w-1.5 h-1.5 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                                </div>
+                            ) : (
+                                <div className="py-2 text-neutral-400 font-medium italic text-[14px] flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 animate-pulse" />
+                                    No response generated by the server.
+                                </div>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>
@@ -169,14 +181,12 @@ const AIChatPage = () => {
 
     useEffect(() => {
         if (connectedSources.length > 0 && selectedSources.length === 0) {
-            // Only select the normalized AI sources
             const initial = connectedSources.flatMap(s => {
                 if (s === 'google-ads' || s === 'google_ads') return ['google-ads'];
                 if (s === 'facebook-ads' || s === 'facebook' || s === 'meta') return ['facebook-ads'];
                 if (['ga4', 'gsc'].includes(s)) return [s];
                 return [];
             });
-            // Ensure unique values
             setSelectedSources([...new Set(initial)]);
         }
     }, [connectedSources]);
@@ -260,7 +270,7 @@ const AIChatPage = () => {
             setWeeklyInsight(res.data.content);
         } catch (err) {
             console.error(err);
-            toast.error(err.response?.data?.message || "Failed to refresh insights. Please try again later.");
+            toast.error(err.response?.data?.message || "Failed to refresh insights.");
         } finally {
             setInsightLoading(false);
         }
@@ -274,16 +284,15 @@ const AIChatPage = () => {
         } catch (err) {
             console.error(err);
             setSuggestions([
-                "Audit my GSC performance to find high-impression keywords with low CTR.",
-                "Analyze my GA4 conversion funnel to identify where I'm losing potential customers.",
-                "Evaluate my Google Ads budget efficiency and identify the highest ROI campaigns.",
-                "Review my Meta Ads performance to compare ROAS across different audiences."
+                "Find keywords with high impressions but low CTR.",
+                "Identify GA4 conversion leaks in my funnel.",
+                "Which Google Ads campaigns have highest ROI?",
+                "Compare ROAS across Meta Ads audiences."
             ]);
         } finally {
             setSuggestionsLoading(false);
         }
     };
-
 
     const handleSendMessage = async (e) => {
         if (e) e.preventDefault();
@@ -360,21 +369,18 @@ const AIChatPage = () => {
                             }
                             if (data.error) throw new Error(data.error);
                         } catch {
-                            // Partial JSON skip
                         }
                     }
                 }
             }
         } catch (err) {
             console.error("AI Error:", err);
-            
-            // Map technical error codes to user-friendly messages
             const getFriendlyError = (msg) => {
-                if (msg.includes('API_KEY_INVALID')) return "There's a configuration issue with the AI connection. Please contact support or check your settings.";
-                if (msg.includes('QuotaFailure') || msg.includes('limit') || msg.includes('429')) return "RankPilot is currently handling a high volume of requests. Please wait a minute before sending your next query.";
-                if (msg.includes('Network') || msg.includes('fetch')) return "I'm having trouble connecting to the analytics server. Please check your internet connection.";
-                if (msg.includes('safety')) return "I can't provide information on that specific topic as it falls outside my safety guidelines.";
-                return "I encountered an unexpected error while analyzing your data. Let's try that again in a few seconds.";
+                if (msg.includes('API_KEY_INVALID')) return "There's a configuration issue with the AI connection.";
+                if (msg.includes('QuotaFailure') || msg.includes('limit') || msg.includes('429')) return "High volume of requests. Please wait a minute.";
+                if (msg.includes('Network') || msg.includes('fetch')) return "Trouble connecting to the analytics server.";
+                if (msg.includes('safety')) return "Falls outside safety guidelines.";
+                return "Unexpected error while analyzing your data.";
             };
 
             const friendlyMsg = getFriendlyError(err.message || "");
@@ -430,15 +436,10 @@ const AIChatPage = () => {
 
     return (
         <DashboardLayout>
-            <div className="flex h-[calc(100vh-145px)] w-full max-w-7xl mx-auto overflow-hidden bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-2xl shadow-sm relative z-10">
-
-                {/* Main Chat Area */}
-                <div className="flex-1 flex flex-col h-full bg-white dark:bg-dark-card relative shadow-sm overflow-hidden">
-                    {/* Content Wrapper - Blurred when Modal is active */}
-                    <div className={`flex-1 flex flex-col min-h-0 transition-all duration-500 ${chatToDelete ? 'blur-[8px] opacity-90' : ''}`}>
-
-                    {/* Mobile Header (Hidden on LG) */}
-                    <div className="lg:hidden p-4 border-b border-neutral-200/60 dark:border-neutral-800 flex items-center justify-between shrink-0 bg-white dark:bg-dark-card relative z-20 shadow-sm">
+            <div className="pt-10 pb-2 flex-1 flex flex-col min-h-0 h-full w-full overflow-hidden bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700/60 rounded-2xl shadow-sm relative">
+                    
+                    {/* Mobile Header */}
+                    <div className="lg:hidden shrink-0 p-4 border-b border-neutral-200/60 dark:border-neutral-800 flex items-center justify-between bg-white dark:bg-dark-card relative z-20 shadow-sm">
                         <div className="flex items-center space-x-3">
                             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-indigo-600 flex items-center justify-center">
                                 <SparklesIcon className="w-4 h-4 text-white" />
@@ -455,470 +456,307 @@ const AIChatPage = () => {
                         </div>
                     </div>
 
-                    {/* Desktop Rail Header Removed (Integrated in Sidebar) */}
-
-                    {/* History Drawer Slider - Full Container */}
+                    {/* HISTORY DRAWER */}
                     {isHistoryOpen && (
-                        <div className="absolute inset-0 z-50 flex animate-fade-in">
-                            <div className="relative w-full h-full bg-white dark:bg-[#111111] shadow-2xl flex flex-col">
-                                <div className="max-w-4xl mx-auto w-full h-full flex flex-col">
-                                    <div className="px-8 py-6 border-b border-neutral-100 dark:border-neutral-800/80 flex items-center justify-between shrink-0">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-brand-50 dark:bg-brand-900/30 rounded-lg text-brand-600">
-                                                <ChatBubbleLeftRightIcon className="w-5 h-5" />
-                                            </div>
-                                            <h2 className="text-xl font-extrabold text-neutral-800 dark:text-neutral-100 tracking-tight">Chat History</h2>
-                                        </div>
-                                        <button onClick={() => setIsHistoryOpen(false)} className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition-colors group">
-                                            <PlusIcon className="w-6 h-6 rotate-45 text-neutral-400 group-hover:text-neutral-600 dark:group-hover:text-neutral-200" />
-                                        </button>
+                        <div className="absolute inset-0 z-50 flex flex-col overflow-hidden bg-white dark:bg-dark-card">
+                            <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-neutral-800">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center">
+                                        <ChatBubbleLeftRightIcon className="w-4 h-4 text-brand-600 dark:text-brand-400"/>
                                     </div>
-
-                                    <div className="flex-1 overflow-y-auto p-8 space-y-2 custom-scrollbar">
-                                        {conversations.length === 0 ? (
-                                            <div className="text-center py-24">
-                                                <p className="text-lg text-neutral-400 font-medium italic">No recent chats found</p>
-                                            </div>
-                                        ) : (
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-12">
-                                                {conversations.map(conv => (
-                                                    <div
-                                                        key={conv._id}
-                                                        onClick={() => {
-                                                            loadConversationDetails(conv._id);
-                                                            setIsHistoryOpen(false);
-                                                        }}
-                                                        className={`group flex items-center justify-between p-5 rounded-2xl cursor-pointer transition-all border ${activeConversationId === conv._id
-                                                            ? 'bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white font-bold'
-                                                            : 'bg-white dark:bg-neutral-900/40 border-neutral-100 dark:border-neutral-800/50 hover:border-brand-500/30 hover:bg-neutral-50 dark:hover:bg-neutral-800/60 text-neutral-600 dark:text-neutral-400'
-                                                            }`}
-                                                    >
-                                                        <div className="flex items-center gap-4 truncate pr-2">
-                                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${activeConversationId === conv._id ? 'bg-brand-500 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'}`}>
-                                                                <ChatBubbleLeftRightIcon className="w-5 h-5" />
-                                                            </div>
-                                                            <span className="text-[17px] truncate font-semibold">{conv.title || "SEO Analysis"}</span>
-                                                        </div>
-                                                        <button
-                                                            onClick={(e) => handleDeleteConversation(conv._id, e)}
-                                                            className="opacity-0 group-hover:opacity-100 p-2.5 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all rounded-xl"
-                                                        >
-                                                            <TrashIcon className="w-5 h-5" />
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                    
-                                    <div className="p-8 border-t border-neutral-100 dark:border-neutral-800/80 shrink-0">
-                                        <button
-                                            onClick={() => { handleNewChat(); setIsHistoryOpen(false); }}
-                                            className="w-full max-w-sm mx-auto flex items-center justify-center gap-2 py-4 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-2xl font-black text-[16px] shadow-xl active:scale-[0.98] transition-all hover:opacity-90"
-                                        >
-                                            <PlusIcon className="w-5 h-5" />
-                                            <span>Start New Conversation</span>
-                                        </button>
-                                    </div>
+                                    <h2 className="text-sm font-black text-neutral-900 dark:text-white">Chat History</h2>
                                 </div>
+                                <button onClick={() => setIsHistoryOpen(false)}
+                                    className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-all">
+                                    <PlusIcon className="w-4 h-4 rotate-45"/>
+                                </button>
                             </div>
-                        </div>
-                    )}
 
-                    {/* Weekly Insight Drawer - Full Container */}
-                    {isInsightOpen && (
-                        <div className="absolute inset-0 z-50 flex animate-fade-in">
-                            <div className="relative w-full h-full bg-white dark:bg-[#111111] shadow-2xl flex flex-col">
-                                <div className="max-w-4xl mx-auto w-full h-full flex flex-col">
-                                    <div className="px-8 py-6 border-b border-neutral-100 dark:border-neutral-800/80 flex items-center justify-between shrink-0">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-brand-50 dark:bg-brand-900/30 rounded-lg text-brand-600">
-                                                <InboxStackIcon className="w-6 h-6" />
-                                            </div>
-                                            <h2 className="text-xl font-extrabold text-neutral-800 dark:text-neutral-100 tracking-tight">Weekly Performance Insight</h2>
-                                        </div>
-                                        <button onClick={() => setIsInsightOpen(false)} className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition-colors group">
-                                            <PlusIcon className="w-6 h-6 rotate-45 text-neutral-400 group-hover:text-neutral-600 dark:group-hover:text-neutral-200" />
-                                        </button>
+                            <div className="flex-1 min-h-0 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] p-4">
+                                {conversations.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center h-full text-neutral-400 py-12">
+                                        <ChatBubbleLeftRightIcon className="w-10 h-10 mb-3 opacity-30"/>
+                                        <p className="text-sm font-semibold">No chats yet</p>
+                                        <p className="text-xs mt-1 opacity-70">Start a new conversation below</p>
                                     </div>
-                                    <div className="flex-1 overflow-y-auto p-10 custom-scrollbar bg-neutral-50/30 dark:bg-neutral-900/10">
-                                        {insightLoading ? (
-                                            <div className="flex flex-col items-center justify-center h-full gap-5">
-                                                <div className="w-12 h-12 border-4 border-brand-500/10 border-t-brand-500 rounded-full animate-spin"></div>
-                                                <p className="text-[17px] font-bold text-neutral-500 animate-pulse">Running advanced analytics...</p>
-                                            </div>
-                                        ) : weeklyInsight ? (
-                                            <div className="bg-white dark:bg-[#1c1c1c] border border-neutral-200 dark:border-neutral-800/60 rounded-3xl p-10 shadow-sm max-w-3xl mx-auto transition-all duration-500">
-                                                <div className="prose prose-md dark:prose-invert prose-neutral max-w-none prose-headings:font-black prose-headings:tracking-tight prose-p:leading-[1.8] prose-strong:text-brand-600 dark:prose-strong:text-brand-400">
-                                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                                        {weeklyInsight}
-                                                    </ReactMarkdown>
+                                ) : (
+                                    <div className="space-y-1.5">
+                                        {conversations.map(conv => (
+                                            <div key={conv._id}
+                                                onClick={() => { loadConversationDetails(conv._id); setIsHistoryOpen(false); }}
+                                                className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all border ${activeConversationId === conv._id ? 'bg-brand-50 dark:bg-brand-900/20 border-brand-200 dark:border-brand-800' : 'border-transparent hover:bg-neutral-50 dark:hover:bg-neutral-800/50 hover:border-neutral-200 dark:hover:border-neutral-700'}`}>
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${activeConversationId === conv._id ? 'bg-brand-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'}`}>
+                                                        <ChatBubbleLeftRightIcon className="w-3.5 h-3.5"/>
+                                                    </div>
+                                                    <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 truncate">{conv.title || 'New Chat'}</span>
                                                 </div>
-                                            </div>
-                                        ) : (
-                                            <div className="text-center py-24 bg-white dark:bg-[#1c1c1c] border border-neutral-200 dark:border-neutral-800 rounded-3xl p-10 shadow-sm max-w-2xl mx-auto">
-                                                <p className="text-lg text-neutral-400 font-medium italic mb-8">No specific insights detected for your current data.</p>
-                                                <button 
-                                                    onClick={handleRefreshInsight}
-                                                    className="px-8 py-4 bg-brand-600 text-white rounded-2xl font-black text-[15px] hover:bg-brand-700 transition-all shadow-xl active:scale-95"
-                                                >
-                                                    Generate New Report
+                                                <button onClick={e => handleDeleteConversation(conv._id, e)}
+                                                    className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 text-neutral-400 transition-all flex-shrink-0">
+                                                    <TrashIcon className="w-3.5 h-3.5"/>
                                                 </button>
                                             </div>
-                                        )}
-                                    </div>
-                                    <div className="p-8 border-t border-neutral-100 dark:border-neutral-800/80 shrink-0">
-                                        <button 
-                                            onClick={handleRefreshInsight}
-                                            disabled={insightLoading}
-                                            className="w-full max-w-sm mx-auto flex items-center justify-center gap-3 py-4 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-2xl font-black text-[16px] shadow-xl active:scale-[0.98] transition-all hover:opacity-90 disabled:opacity-50"
-                                        >
-                                            <ArrowPathIcon className={`w-5 h-5 ${insightLoading ? 'animate-spin' : ''}`} />
-                                            <span>Update Weekly Summary</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-
-                    {/* Messages Scroll Area */}
-                    <div className="flex-1 overflow-y-auto px-4 md:px-12 py-6 relative z-10 custom-scrollbar scroll-smooth">
-                        {messages.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center min-h-full w-full mx-auto py-8">
-
-                                {/* Personalized Greeting */}
-                                <div className="flex items-center gap-4 mb-6 animate-fade-in-up">
-                                    <div className="w-12 h-12 flex items-center justify-center text-orange-500">
-                                        <SparklesIcon className="w-10 h-10 animate-pulse-slow" />
-                                    </div>
-                                    <h1 className="text-4xl md:text-5xl font-serif font-medium text-neutral-800 dark:text-neutral-100 tracking-tight">
-                                        {getTimeGreeting()}, {user?.name?.split(' ')[0] || 'Explorer'}
-                                    </h1>
-                                </div>
-
-                                {/* Suggested Questions - Immediate Entry */}
-                                {!suggestionsLoading && suggestions.length > 0 && (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 animate-fade-in-up px-4 w-full max-w-2xl mx-auto" style={{ animationDelay: '100ms' }}>
-                                        {suggestions.slice(0, 4).map((q, idx) => (
-                                            <button
-                                                key={idx}
-                                                onClick={() => setQuery(q)}
-                                                className="px-4 py-3 bg-white dark:bg-[#1c1c1c] hover:bg-brand-50 dark:hover:bg-brand-900/20 border border-neutral-200 dark:border-neutral-800 hover:border-brand-500/40 text-[12px] font-bold text-neutral-600 dark:text-neutral-400 hover:text-brand-600 rounded-xl transition-all shadow-sm active:scale-[0.98] text-center flex items-center justify-center min-h-[50px]"
-                                            >
-                                                {q}
-                                            </button>
                                         ))}
                                     </div>
                                 )}
+                            </div>
 
-                                {/* Main Centered Input Box */}
-                                <div className="w-full max-w-5xl bg-white dark:bg-[#1e1e1e] border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none focus-within:ring-2 focus-within:ring-brand-500/20 focus-within:border-brand-500/50 transition-all duration-300 mb-4 animate-fade-in-up">
-                                    <textarea
-                                        rows={2}
-                                        value={query}
-                                        onChange={(e) => setQuery(e.target.value)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter' && !e.shiftKey) {
-                                                e.preventDefault();
-                                                handleSendMessage();
-                                            }
-                                        }}
-                                        placeholder="What would you like to analyze today?"
-                                        className="w-full bg-transparent border-none outline-none text-lg text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 resize-none px-2 py-1 h-12"
-                                    />
+                            <div className="shrink-0 p-4 border-t border-neutral-100 dark:border-neutral-800">
+                                <button onClick={() => { handleNewChat(); setIsHistoryOpen(false); }}
+                                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-xl text-xs font-black transition-all hover:opacity-90 active:scale-95 shadow-lg">
+                                    <PlusIcon className="w-4 h-4"/>
+                                    New Conversation
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
-                                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-neutral-50 dark:border-neutral-800/50">
-                                        <div className="flex items-center gap-2">
-                                            <button 
-                                                onClick={handleNewChat}
-                                                className="p-2 text-neutral-400 hover:text-brand-600 transition-colors rounded-lg group" 
-                                                title="New Chat"
-                                            >
-                                                <PlusIcon className="w-5 h-5 transition-transform group-active:rotate-90" />
-                                            </button>
-                                            <button 
-                                                onClick={() => {
-                                                    const newState = !isInsightOpen;
-                                                    setIsInsightOpen(newState);
-                                                    if (newState) setIsHistoryOpen(false);
-                                                    if (newState && !weeklyInsight) loadWeeklyInsight();
-                                                }}
-                                                className={`p-2 transition-all rounded-lg ${isInsightOpen ? 'text-brand-500' : 'text-neutral-400 hover:text-brand-600'}`}
-                                                title="Weekly Insight"
-                                            >
-                                                <InboxStackIcon className={`w-5 h-5 ${insightLoading ? 'animate-pulse' : ''}`} />
-                                            </button>
-                                            <button 
-                                                onClick={() => {
-                                                    const newState = !isHistoryOpen;
-                                                    setIsHistoryOpen(newState);
-                                                    if (newState) setIsInsightOpen(false);
-                                                }}
-                                                className={`p-2 transition-all rounded-lg ${isHistoryOpen ? 'text-brand-500' : 'text-neutral-400 hover:text-brand-600'}`}
-                                                title="Chat History"
-                                            >
-                                                <ChatBubbleLeftRightIcon className="w-5 h-5" />
-                                            </button>
-                                        </div>
+                    {/* INSIGHT DRAWER */}
+                    {isInsightOpen && (
+                        <div className="absolute inset-0 z-50 flex flex-col overflow-hidden bg-white dark:bg-dark-card">
+                            <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-neutral-800">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center">
+                                        <InboxStackIcon className="w-4 h-4 text-brand-600 dark:text-brand-400"/>
+                                    </div>
+                                    <h2 className="text-sm font-black text-neutral-900 dark:text-white">Weekly Performance Insight</h2>
+                                </div>
+                                <button onClick={() => setIsInsightOpen(false)}
+                                    className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 transition-all">
+                                    <PlusIcon className="w-4 h-4 rotate-45"/>
+                                </button>
+                            </div>
 
-                                        <div className="flex items-center gap-3">
-                                            <div className="relative">
-                                                <button 
-                                                    onClick={() => setIsSourceMenuOpen(!isSourceMenuOpen)}
-                                                    className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-bold rounded-lg transition-all border ${isSourceMenuOpen || selectedSources.length > 0 
-                                                        ? 'bg-brand-50 dark:bg-brand-900/20 border-brand-500/30 text-brand-600 dark:text-brand-400' 
-                                                        : 'text-neutral-500 border-transparent hover:bg-neutral-50 dark:hover:bg-neutral-800'}`}
-                                                >
-                                                    <ChartBarIcon className="w-3.5 h-3.5" />
-                                                    <span>{selectedSources.length > 0 ? `${selectedSources.length}` : 'Sources'}</span>
-                                                    <ChevronDownIcon className={`w-3 h-3 transition-transform ${isSourceMenuOpen ? 'rotate-180' : ''}`} />
-                                                </button>
-
-                                                {isSourceMenuOpen && (
-                                                    <div className="absolute right-0 bottom-full mb-2 w-56 bg-white dark:bg-[#1c1c1c] border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-2xl z-[60] p-2 animate-fade-in-up">
-                                                        <div className="px-3 py-2 border-b border-neutral-100 dark:border-neutral-800 mb-1">
-                                                            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Context Sources</p>
-                                                        </div>
-                                                        {connectedSources.length === 0 ? (
-                                                            <p className="px-3 py-4 text-xs text-neutral-500 italic text-center">No platforms connected.</p>
-                                                        ) : (
-                                                            <div className="space-y-0.5">
-                                                                {['gsc', 'ga4', 'google-ads', 'facebook-ads']
-                                                                    .filter(id => connectedSources.includes(id) || (id === 'google-ads' && connectedSources.includes('google_ads')) || (id === 'facebook-ads' && (connectedSources.includes('meta') || connectedSources.includes('facebook'))))
-                                                                    .map(source => (
-                                                                        <button
-                                                                            key={source}
-                                                                            onClick={() => toggleSource(source)}
-                                                                            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${selectedSources.includes(source)
-                                                                                ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-600'
-                                                                                : 'hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
-                                                                            }`}
-                                                                        >
-                                                                            {sourceLabels[source] || source}
-                                                                            {selectedSources.includes(source) && <div className="w-1.5 h-1.5 rounded-full bg-brand-500"></div>}
-                                                                        </button>
-                                                                    ))}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className="w-px h-4 bg-neutral-200 dark:bg-neutral-800"></div>
-                                            <button
-                                                onClick={handleSendMessage}
-                                                disabled={!query.trim() || loading}
-                                                className="p-2 bg-brand-600 hover:bg-brand-700 disabled:bg-neutral-200 dark:disabled:bg-neutral-800 disabled:text-neutral-400 text-white rounded-lg transition-all shadow-sm"
-                                            >
-                                                <PaperAirplaneIcon className="w-4 h-4 -rotate-45" />
-                                            </button>
+                            <div className="flex-1 min-h-0 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] p-5">
+                                {insightLoading ? (
+                                    <div className="flex flex-col items-center justify-center h-full gap-4">
+                                        <div className="w-10 h-10 border-4 border-brand-200 dark:border-brand-800 border-t-brand-600 rounded-full animate-spin"/>
+                                        <p className="text-sm font-bold text-neutral-400 animate-pulse">Running analytics...</p>
+                                    </div>
+                                ) : weeklyInsight ? (
+                                    <div className="bg-neutral-50 dark:bg-neutral-800/30 border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 max-w-2xl mx-auto">
+                                        <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:font-black prose-p:leading-relaxed prose-strong:text-brand-600 dark:prose-strong:text-brand-400">
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{weeklyInsight}</ReactMarkdown>
                                         </div>
                                     </div>
-                                </div>
-
-                                {/* Source-Matched Quick Actions - Compact Premium Design */}
-                                <div className="flex flex-wrap justify-center gap-3 animate-fade-in-up px-6 max-w-4xl mx-auto mb-1" style={{ animationDelay: '150ms' }}>
-                                    {[
-                                        { label: 'Search Console', icon: GlobeAltIcon, prompt: 'Analyze my Google Search Console performance and identify top-ranking keywords and impressions.' },
-                                        { label: 'GA4 Analytics', icon: ChartBarIcon, prompt: 'Provide a deep dive into my Google Analytics 4 data to understand user behavior and conversion paths.' },
-                                        { label: 'Google Paid Ads', icon: CursorArrowRaysIcon, prompt: 'Evaluate my Google Ads campaign efficiency, including CTR, CPC, and overall ROAS.' },
-                                        { label: 'Meta Social Ads', icon: ArrowTrendingUpIcon, prompt: 'Review my Facebook/Meta Ads reach and engagement metrics to optimize social strategy.' }
-                                    ].map((item, i) => (
-                                        <button
-                                            key={i}
-                                            onClick={() => setQuery(item.prompt)}
-                                            className="px-4 py-2.5 bg-white dark:bg-[#1c1c1c] border border-neutral-200/80 dark:border-neutral-800 rounded-xl text-[13px] font-bold text-neutral-800 dark:text-neutral-200 hover:border-brand-500 hover:shadow-sm flex items-center gap-2.5 transition-all duration-300 active:scale-[0.97] group"
-                                        >
-                                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-neutral-50 dark:bg-neutral-800 group-hover:bg-brand-50 dark:group-hover:bg-brand-900/40 transition-colors">
-                                                <item.icon className="w-4 h-4 text-neutral-400 group-hover:text-brand-500 transition-colors" strokeWidth={2.5} />
-                                            </div>
-                                            <span className="group-hover:text-brand-600 transition-colors">{item.label}</span>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-full text-center">
+                                        <InboxStackIcon className="w-10 h-10 text-neutral-300 dark:text-neutral-600 mb-3"/>
+                                        <p className="text-sm font-bold text-neutral-500 mb-4">No insights available yet</p>
+                                        <button onClick={handleRefreshInsight}
+                                            className="px-5 py-2.5 bg-brand-600 text-white text-xs font-black rounded-xl hover:bg-brand-700 transition-all shadow-md shadow-brand-500/25 active:scale-95">
+                                            Generate Report
                                         </button>
-                                    ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="shrink-0 p-4 border-t border-neutral-100 dark:border-neutral-800">
+                                <button onClick={handleRefreshInsight} disabled={insightLoading}
+                                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-xl text-xs font-black transition-all hover:opacity-90 active:scale-95 disabled:opacity-50 shadow-lg">
+                                    <ArrowPathIcon className={`w-4 h-4 ${insightLoading ? 'animate-spin' : ''}`}/>
+                                    Refresh Weekly Summary
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* MESSAGES OR EMPTY STATE */}
+                    <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                        {messages.length === 0 ? (
+                            /* REBUILD EMPTY STATE — Centered greeting section */
+                            <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-6 overflow-hidden">
+                                
+                                {/* AI Icon */}
+                                <div className="w-16 h-16 rounded-2xl bg-brand-600 flex items-center justify-center mb-6 shadow-xl shadow-brand-500/30">
+                                    <SparklesIcon className="w-8 h-8 text-white"/>
                                 </div>
 
-                                <p className="text-center text-[11px] text-neutral-400 dark:text-neutral-500 font-medium hidden sm:block">
-                                    RankPilot AI can make mistakes. Always verify critical metrics before making business decisions.
+                                {/* Greeting */}
+                                <h1 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight mb-2 text-center">
+                                    {getTimeGreeting()}, {user?.name?.split(' ')[0] || 'Explorer'}
+                                </h1>
+                                <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium mb-6 text-center max-w-sm">
+                                    Ask anything about your marketing data. I have access to all your connected platforms.
                                 </p>
 
+                                {/* Connected source pills */}
+                                <div className="pt-5 pb-5 flex flex-wrap items-center justify-center gap-2">
+                                    {selectedSources.map(s => (
+                                        <span key={s} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-50 dark:bg-brand-900/20 border border-brand-100 dark:border-brand-800 text-xs font-black text-brand-700 dark:text-brand-400">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"/>
+                                            {sourceLabels[s] || s}
+                                        </span>
+                                    ))}
+                                </div>
                             </div>
                         ) : (
-                                <div className="space-y-6 md:space-y-8 w-full max-w-5xl mx-auto pb-4">
+                            /* REBUILD MESSAGES AREA */
+                            <div className="flex-1 min-h-0 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] px-4 md:px-10 py-6">
+                                <div className="max-w-3xl mx-auto w-full space-y-6 pb-4">
                                     {messages.map((msg, idx) => (
-                                        <ChatMessage 
-                                            key={idx} 
-                                            msg={msg} 
-                                            userName={user?.name}
-                                        />
+                                        <ChatMessage key={idx} msg={msg} userName={user?.name}/>
                                     ))}
-
-                                    <div ref={messagesEndRef} className="h-10" />
+                                    <div ref={messagesEndRef} className="h-4"/>
                                 </div>
+                            </div>
                         )}
                     </div>
 
-                    {/* Fixed Input Area at Bottom - ONLY show when chat is active */}
-                    {messages.length > 0 && (
-                        <div className="p-4 md:p-6 bg-white dark:bg-dark-card border-t border-neutral-100 dark:border-neutral-800 shrink-0 relative z-20 animate-fade-in-up">                            <div className="max-w-5xl mx-auto mb-2.5 flex items-center justify-between px-1">
-                                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                                    <span className="text-[9px] font-black uppercase tracking-wider text-neutral-400 dark:text-neutral-500 whitespace-nowrap">Active Context:</span>
-                                    <div className="flex items-center gap-1">
-                                        {selectedSources.length === 0 ? (
-                                            <span className="text-[9px] text-neutral-400 italic">No sources selected</span>
-                                        ) : (
-                                            selectedSources.map(s => (
-                                                <div key={s} className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-neutral-50 dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700/50">
-                                                    <div className={`w-1 h-1 rounded-full ${s === 'gsc' ? 'bg-blue-500' : s === 'ga4' ? 'bg-orange-500' : s === 'google-ads' ? 'bg-yellow-500' : 'bg-indigo-500'}`} />
-                                                    <span className="text-[9px] font-bold text-neutral-500 dark:text-neutral-400 uppercase">{s === 'google-ads' ? 'Ads' : s}</span>
-                                                </div>
-                                            ))
-                                        )}
+                    {/* REBUILD BOTTOM INPUT BAR */}
+                    <div className="shrink-0 border-t border-neutral-100 dark:border-neutral-800 px-4 pt-4 pb-2 bg-white dark:bg-dark-card">
+                            
+                            {/* Suggested questions & Quick actions — Grounded here only in empty state */}
+                            {messages.length === 0 && (
+                                <div className="max-w-3xl mx-auto mb-6 animate-fade-in-up">
+                                    {/* Suggested questions — 2x2 grid */}
+                                    {!suggestionsLoading && suggestions.length > 0 && (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-2.5">
+                                            {suggestions.slice(0, 4).map((q, i) => (
+                                                <button key={i} onClick={() => setQuery(q)}
+                                                    className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800/50 hover:bg-brand-50 dark:hover:bg-brand-900/20 border border-neutral-200 dark:border-neutral-700 hover:border-brand-300 dark:hover:border-brand-700 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-brand-600 dark:hover:text-brand-400 transition-all text-left leading-relaxed active:scale-[0.98]">
+                                                    {q}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Quick action pills */}
+                                    <div className="pt-3 flex flex-wrap justify-center gap-2">
+                                        {[
+                                            { label:'Search Console', icon: GlobeAltIcon,        prompt:'Analyze my Google Search Console performance and identify top-ranking keywords.' },
+                                            { label:'GA4 Analytics',  icon: ChartBarIcon,        prompt:'Deep dive into my GA4 data to understand user behavior and conversions.' },
+                                            { label:'Google Ads',     icon: CursorArrowRaysIcon, prompt:'Evaluate my Google Ads campaign efficiency including CTR, CPC, and ROAS.' },
+                                            { label:'Facebook Ads',   icon: ArrowTrendingUpIcon, prompt:'Review my Meta Ads reach and engagement metrics.' },
+                                        ].map((item, i) => (
+                                            <button key={i} onClick={() => setQuery(item.prompt)}
+                                                className="flex items-center gap-2 px-3.5 py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:border-brand-400 dark:hover:border-brand-600 hover:text-brand-600 dark:hover:text-brand-400 transition-all active:scale-95 group shadow-sm">
+                                                <item.icon className="w-3.5 h-3.5 group-hover:text-brand-500 transition-colors" strokeWidth={2.5}/>
+                                                {item.label}
+                                            </button>
+                                        ))}
                                     </div>
                                 </div>
-                            </div>
+                            )}
 
-                            <form onSubmit={handleSendMessage} className="relative flex items-center w-full max-w-5xl mx-auto group">
-                                <div className="absolute left-3 flex items-center gap-1.5 z-10 transition-opacity">
-                                    <button 
-                                        type="button" 
-                                        onClick={handleNewChat}
-                                        className="p-2 text-neutral-400 hover:text-brand-600 transition-colors rounded-lg group" 
-                                        title="New Chat"
-                                    >
-                                        <PlusIcon className="w-5 h-5 transition-transform group-active:rotate-90" />
-                                    </button>
-                                    <button 
-                                        type="button"
-                                        onClick={() => {
-                                            const newState = !isInsightOpen;
-                                            setIsInsightOpen(newState);
-                                            if (newState) setIsHistoryOpen(false);
-                                            if (newState && !weeklyInsight) loadWeeklyInsight();
-                                        }}
-                                        className={`p-2 transition-all rounded-lg ${isInsightOpen ? 'text-brand-500' : 'text-neutral-400 hover:text-brand-600'}`}
-                                        title="Weekly Insight"
-                                    >
-                                        <InboxStackIcon className={`w-5 h-5 ${insightLoading ? 'animate-pulse' : ''}`} />
-                                    </button>
-                                    <button 
-                                        type="button"
-                                        onClick={() => {
-                                            const newState = !isHistoryOpen;
-                                            setIsHistoryOpen(newState);
-                                            if (newState) setIsInsightOpen(false);
-                                        }}
-                                        className={`p-2 transition-all rounded-lg ${isHistoryOpen ? 'text-brand-500' : 'text-neutral-400 hover:text-brand-600'}`}
-                                        title="Chat History"
-                                    >
-                                        <ChatBubbleLeftRightIcon className="w-5 h-5" />
-                                    </button>
+                            {/* Active context strip */}
+                            {selectedSources.length > 0 && (
+                                <div className="pt-5 flex items-center gap-2 mb-2 px-1 max-w-3xl mx-auto">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Context:</span>
+                                    <div className="flex items-center gap-1 flex-wrap">
+                                        {selectedSources.map(s => (
+                                            <span key={s} className="text-[9px] font-black px-2 py-0.5 rounded-full bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 border border-brand-100 dark:border-brand-800">
+                                                {s === 'google-ads' ? 'G.Ads' : s === 'facebook-ads' ? 'Meta' : s.toUpperCase()}
+                                            </span>
+                                        ))}
+                                    </div>
                                 </div>
-                                <input
-                                    type="text"
-                                    value={query}
-                                    onChange={(e) => setQuery(e.target.value)}
-                                    placeholder="Message RankPilot AI..."
-                                    className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 py-4 pl-36 pr-36 text-[15px] font-medium text-neutral-900 dark:text-white outline-none placeholder:text-neutral-500 rounded-2xl focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all shadow-inner"
-                                    disabled={loading}
-                                />
-                                
-                                <div className="absolute right-3 flex items-center gap-2">
-                                    <div className="relative">
-                                        <button 
-                                            type="button"
-                                            onClick={() => setIsSourceMenuOpen(!isSourceMenuOpen)}
-                                            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold rounded-lg transition-all border ${isSourceMenuOpen || selectedSources.length > 0 
-                                                ? 'bg-brand-50 dark:bg-brand-900/20 border-brand-500/30 text-brand-600' 
-                                                : 'text-neutral-500 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
-                                        >
-                                            <ChartBarIcon className="w-3.5 h-3.5" />
-                                            <span>{selectedSources.length > 0 ? `${selectedSources.length}` : 'Sources'}</span>
-                                            <ChevronDownIcon className={`w-3 h-3 transition-transform ${isSourceMenuOpen ? 'rotate-180' : ''}`} />
+                            )}
+
+                            {/* Input pill */}
+                            <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto">
+                                <div className="flex items-center gap-2 bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-2xl px-3 py-2 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/10 transition-all">
+
+                                    {/* Left buttons */}
+                                    <div className="flex items-center gap-0.5 flex-shrink-0">
+                                        <button type="button" onClick={handleNewChat} title="New Chat"
+                                            className="w-8 h-8 flex items-center justify-center rounded-xl text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all">
+                                            <PlusIcon className="w-4 h-4"/>
                                         </button>
-
-                                        {isSourceMenuOpen && (
-                                            <div className="absolute right-0 bottom-full mb-2 w-56 bg-white dark:bg-[#1c1c1c] border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-2xl z-50 p-2 animate-fade-in-up">
-                                                <div className="px-3 py-2 border-b border-neutral-100 dark:border-neutral-800 mb-1">
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Context Sources</p>
-                                                </div>
-                                                {connectedSources.length === 0 ? (
-                                                    <p className="px-3 py-4 text-xs text-neutral-500 italic text-center">No platforms connected.</p>
-                                                ) : (
-                                                    <div className="space-y-0.5">
-                                                        {['gsc', 'ga4', 'google-ads', 'facebook-ads']
-                                                            .filter(id => connectedSources.includes(id) || (id === 'google-ads' && connectedSources.includes('google_ads')) || (id === 'facebook-ads' && (connectedSources.includes('meta') || connectedSources.includes('facebook'))))
-                                                            .map(source => (
-                                                                <button
-                                                                    key={source}
-                                                                    onClick={() => toggleSource(source)}
-                                                                    type="button"
-                                                                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${selectedSources.includes(source)
-                                                                        ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-600'
-                                                                        : 'hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
-                                                                    }`}
-                                                                >
-                                                                    {sourceLabels[source] || source}
-                                                                    {selectedSources.includes(source) && <div className="w-1.5 h-1.5 rounded-full bg-brand-500"></div>}
-                                                                </button>
-                                                            ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
+                                        <button type="button" title="Weekly Insight"
+                                            onClick={() => { setIsInsightOpen(!isInsightOpen); if (!isInsightOpen) { setIsHistoryOpen(false); if (!weeklyInsight) loadWeeklyInsight(); }}}
+                                            className={`w-8 h-8 flex items-center justify-center rounded-xl transition-all ${isInsightOpen ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20'}`}>
+                                            <InboxStackIcon className={`w-4 h-4 ${insightLoading ? 'animate-pulse' : ''}`}/>
+                                        </button>
+                                        <button type="button" title="Chat History"
+                                            onClick={() => { setIsHistoryOpen(!isHistoryOpen); if (!isHistoryOpen) setIsInsightOpen(false); }}
+                                            className={`w-8 h-8 flex items-center justify-center rounded-xl transition-all ${isHistoryOpen ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20'}`}>
+                                            <ChatBubbleLeftRightIcon className="w-4 h-4"/>
+                                        </button>
                                     </div>
-                                    <div className="w-px h-4 bg-neutral-200 dark:bg-neutral-800"></div>
-                                    <button
-                                        type="submit"
-                                        disabled={!query.trim() || loading}
-                                        className="p-2 bg-brand-600 hover:bg-brand-700 rounded-xl text-white disabled:opacity-50 disabled:bg-neutral-300 dark:disabled:bg-neutral-700 transition-colors shadow-sm flex items-center justify-center group"
-                                    >
-                                        <PaperAirplaneIcon className="w-5 h-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" strokeWidth={2} />
-                                    </button>
-                                </div>
-                            </form>
-                            <p className="text-center text-[11px] text-neutral-400 dark:text-neutral-500 mt-1.5 font-medium hidden sm:block">
-                                RankPilot AI can make mistakes. Always verify critical metrics before making business decisions.
-                            </p>
-                        </div>
-                    )}
-                    </div> {/* End of Content Wrapper */}
 
-                    {/* Delete Confirmation Modal - Moved Outside the Blur Wrapper */}
-                    {chatToDelete && (
-                        <div className="absolute inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in">
-                            {/* Backdrop - Fully Transparent */}
-                            <div
-                                className="absolute inset-0 bg-transparent"
-                                onClick={() => setChatToDelete(null)}
-                            ></div>
-                            <div className="relative w-full max-w-[340px] bg-white dark:bg-[#1c1c1c] border border-neutral-200/50 dark:border-neutral-800/50 rounded-[2rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] p-7 overflow-hidden animate-scale-in">
-                                <h2 className="text-[20px] font-black text-neutral-900 dark:text-white mb-2.5 tracking-tight px-1">Delete chat</h2>
-                                <p className="text-neutral-500 dark:text-neutral-400 text-[15px] font-medium mb-8 leading-relaxed px-1">
-                                    Are you sure you want to delete this chat?
+                                    {/* Divider */}
+                                    <div className="w-px h-5 bg-neutral-200 dark:bg-neutral-700 flex-shrink-0"/>
+
+                                    {/* Text input */}
+                                    <input type="text" value={query} onChange={e => setQuery(e.target.value)}
+                                        placeholder="Message RankPilot AI..."
+                                        disabled={loading}
+                                        className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500 py-1.5 min-w-0"/>
+
+                                    {/* Right: Sources + Send */}
+                                    <div className="flex items-center gap-2 flex-shrink-0">
+
+                                        {/* Sources selector */}
+                                        <div className="relative" ref={sourceMenuRef}>
+                                            <button type="button" onClick={() => setIsSourceMenuOpen(!isSourceMenuOpen)}
+                                                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px] font-black border transition-all ${isSourceMenuOpen || selectedSources.length > 0 ? 'bg-brand-50 dark:bg-brand-900/20 border-brand-200 dark:border-brand-800 text-brand-600 dark:text-brand-400' : 'border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:border-neutral-300 dark:hover:border-neutral-600'}`}>
+                                                <ChartBarIcon className="w-3 h-3"/>
+                                                <span>{selectedSources.length > 0 ? selectedSources.length : 'Sources'}</span>
+                                                <ChevronDownIcon className={`w-2.5 h-2.5 transition-transform ${isSourceMenuOpen ? 'rotate-180' : ''}`}/>
+                                            </button>
+
+                                            {isSourceMenuOpen && (
+                                                <div className="absolute right-0 bottom-full mb-2 w-52 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-2xl z-50 p-2">
+                                                    <p className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-neutral-400 border-b border-neutral-100 dark:border-neutral-800 mb-1">Context Sources</p>
+                                                    {connectedSources.length === 0 ? (
+                                                        <p className="px-3 py-4 text-xs text-neutral-400 italic text-center">No platforms connected</p>
+                                                    ) : (
+                                                        ['gsc','ga4','google-ads','facebook-ads']
+                                                            .filter(id => connectedSources.includes(id) || (id==='google-ads' && connectedSources.includes('google_ads')) || (id==='facebook-ads' && (connectedSources.includes('meta') || connectedSources.includes('facebook'))))
+                                                            .map(source => (
+                                                                <button key={source} type="button" onClick={() => toggleSource(source)}
+                                                                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all ${selectedSources.includes(source) ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400' : 'hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'}`}>
+                                                                    {sourceLabels[source] || source}
+                                                                    {selectedSources.includes(source) && <div className="w-1.5 h-1.5 rounded-full bg-brand-500"/>}
+                                                                </button>
+                                                            ))
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Divider */}
+                                        <div className="w-px h-5 bg-neutral-200 dark:bg-neutral-700"/>
+
+                                        {/* Send */}
+                                        <button type="submit" disabled={!query.trim() || loading}
+                                            className="w-9 h-9 flex items-center justify-center rounded-xl bg-brand-600 hover:bg-brand-700 text-white disabled:bg-neutral-200 dark:disabled:bg-neutral-700 disabled:text-neutral-400 transition-all shadow-md shadow-brand-500/20 active:scale-95">
+                                            <PaperAirplaneIcon className="w-4 h-4"/>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <p className="text-center text-[10px] text-neutral-400 mt-2">
+                                    RankPilot AI can make mistakes. Always verify critical metrics.
                                 </p>
-                                <div className="flex items-center justify-end gap-3">
-                                    <button
-                                        onClick={() => setChatToDelete(null)}
-                                        className="px-6 py-2.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-200 font-bold text-sm hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all font-bold"
-                                    >
+                            </form>
+                    </div>
+
+                    {/* REBUILD DELETE MODAL */}
+                    {chatToDelete && (
+                        <div className="absolute inset-0 z-[100] flex items-center justify-center p-4">
+                            <div className="absolute inset-0 bg-black/20 dark:bg-black/40 backdrop-blur-sm" onClick={() => setChatToDelete(null)}/>
+                            <div className="relative w-full max-w-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-2xl p-6">
+                                <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center mb-4">
+                                    <TrashIcon className="w-5 h-5 text-red-500"/>
+                                </div>
+                                <h3 className="text-base font-black text-neutral-900 dark:text-white mb-1.5">Delete chat?</h3>
+                                <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-5 leading-relaxed">This conversation will be permanently deleted and cannot be recovered.</p>
+                                <div className="flex gap-3">
+                                    <button onClick={() => setChatToDelete(null)}
+                                        className="flex-1 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-black text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all">
                                         Cancel
                                     </button>
-                                    <button
-                                        onClick={confirmDelete}
-                                        className="px-6 py-2.5 rounded-2xl bg-[#ec5e5e] hover:bg-red-600 text-white font-bold text-sm transition-all shadow-lg active:scale-95 shadow-red-500/10 font-bold"
-                                    >
+                                    <button onClick={confirmDelete}
+                                        className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-black transition-all shadow-md shadow-red-500/20 active:scale-95">
                                         Delete
                                     </button>
                                 </div>
                             </div>
                         </div>
                     )}
-
-
                 </div>
-            </div>
-
         </DashboardLayout>
     );
 };

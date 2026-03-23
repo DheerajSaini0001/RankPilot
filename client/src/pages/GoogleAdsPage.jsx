@@ -40,7 +40,7 @@ const EmptyState = ({ message = 'No data for this period', sub = 'Try selecting 
 const GoogleAdsPage = () => {
     const { startDate, endDate } = useDateRangeStore();
     const { device, campaign } = useFilterStore();
-    const { connectedSources, activeGoogleAdsCustomerId, activeSiteId } = useAccountsStore();
+    const { connectedSources, activeGoogleAdsCustomerId, activeSiteId, syncMetadata } = useAccountsStore();
     const isConnected = connectedSources.includes('google-ads');
     const hasAccount = !!activeGoogleAdsCustomerId;
     const navigate = useNavigate();
@@ -107,6 +107,14 @@ const GoogleAdsPage = () => {
 
         return () => clearInterval(interval);
     }, [isConnected, hasAccount, loadData]);
+
+    // Refresh data when sync completes
+    useEffect(() => {
+        if (syncMetadata?.syncStatus !== 'syncing' && activeSiteId) {
+            console.log('Google Ads Sync completed or idle, refreshing data...');
+            loadData();
+        }
+    }, [syncMetadata?.syncStatus, activeSiteId, loadData]);
 
     const { searchQuery } = useFilterStore();
 

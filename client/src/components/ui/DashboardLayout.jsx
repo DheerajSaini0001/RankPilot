@@ -28,7 +28,8 @@ const DashboardLayout = ({ children }) => {
     const { 
         userSites = [], 
         activeSiteId, 
-        setAccounts 
+        setAccounts,
+        syncMetadata 
     } = useAccountsStore();
     const { 
         notifications, 
@@ -39,13 +40,36 @@ const DashboardLayout = ({ children }) => {
     const navigate = useNavigate();
     const isAdmin = user?.email === import.meta.env.VITE_SUPER_ADMIN_EMAIL;
 
+    // Polling for syncStatus
+    useEffect(() => {
+        let interval;
+        if (user && activeSiteId && syncMetadata?.syncStatus === 'syncing') {
+            interval = setInterval(() => {
+                getActiveAccounts(activeSiteId)
+                    .then(res => {
+                        const data = res.data || {};
+                        if (data.syncStatus !== 'syncing') {
+                            setAccounts({
+                                syncMetadata: {
+                                    isHistoricalSyncComplete: data.isHistoricalSyncComplete || false,
+                                    lastDailySyncAt: data.lastDailySyncAt || null,
+                                    syncStatus: data.syncStatus || 'idle'
+                                }
+                            });
+                        }
+                    })
+                    .catch(() => { });
+            }, 5000);
+        }
+        return () => clearInterval(interval);
+    }, [user, activeSiteId, syncMetadata?.syncStatus, setAccounts]);
+
     useEffect(() => {
         if (user) {
             listSites()
                 .then(res => {
                     const sites = res.data || [];
                     setAccounts({ userSites: sites });
-                    // If no activeSiteId is set but we have sites, pick the first one
                     if (!activeSiteId && sites.length > 0) {
                         setAccounts({ activeSiteId: sites[0]._id });
                     }
@@ -80,9 +104,9 @@ const DashboardLayout = ({ children }) => {
         }
     };
 
-
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [isNotifOpen, setIsNotifOpen] = useState(false);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
 
     const toggleDark = () => {
@@ -115,6 +139,10 @@ const DashboardLayout = ({ children }) => {
         { label: 'Facebook Ads', path: '/dashboard/facebook-ads', icon: ChartBarIcon, isSubItem: true },
     ];
 
+    const adminNavItems = [
+        { label: 'System Config', path: '/dashboard/admin', icon: WrenchIcon },
+    ];
+
     const { searchQuery, setSearchQuery } = useFilterStore();
     const searchInputRef = React.useRef(null);
 
@@ -133,36 +161,47 @@ const DashboardLayout = ({ children }) => {
 
     return (
         <div className="flex h-screen bg-neutral-50 dark:bg-dark-bg font-sans overflow-hidden transition-colors selection:bg-brand-500 selection:text-white">
-            {/* Sidebar */}
-            <aside className="w-64 bg-white dark:bg-dark-surface border-r border-neutral-200 dark:border-neutral-800 hidden md:flex flex-col flex-shrink-0 z-20 shadow-sm relative">
-                {/* Decorative background for sidebar */}
-                <div className="absolute inset-0 bg-gradient-to-b from-brand-50/30 to-transparent dark:from-brand-900/5 pointer-events-none"></div>
+            {/* Mobile Sidebar Overlay */}
+            {isSidebarOpen && (
+                <div 
+                    className="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm z-40 md:hidden animate-fade-in"
+                    onClick={() => setIsSidebarOpen(false)}
+                ></div>
+            )}
 
-                <div className="p-7 relative z-10">
-                    <NavLink to="/dashboard" className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-600 to-brand-400 flex items-center justify-center shadow-lg shadow-brand-500/20">
-                            <ChartBarIcon className="w-5 h-5 text-white" strokeWidth={2.5} />
+            {/* Sidebar Container */}
+            <aside className={`
+                w-60 bg-white dark:bg-dark-surface border-r border-neutral-200 dark:border-neutral-800
+                fixed md:relative inset-y-0 left-0 z-50 transform
+                ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+                md:translate-x-0 md:flex flex-col flex-shrink-0
+                transition-transform duration-300 ease-in-out shadow-xl md:shadow-none
+            `}>
+                
+                {/* Sidebar Logo */}
+                <div className="px-5 py-5 border-b border-neutral-100 dark:border-neutral-800">
+                    <NavLink to="/dashboard" className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center shadow-md shadow-brand-500/30">
+                            <ChartBarIcon className="w-4 h-4 text-white" strokeWidth={2.5}/>
                         </div>
-                        <span className="text-xl font-black tracking-tight text-neutral-900 dark:text-white">
-                            RankPilot
-                        </span>
+                        <span className="text-lg font-black tracking-tight text-neutral-900 dark:text-white">RankPilot</span>
                     </NavLink>
                 </div>
 
-                <div className="px-4 pb-6 relative z-10">
-                    <div className="relative group">
-                        <div className="w-full flex items-center justify-between px-4 py-3 bg-neutral-50 dark:bg-dark-card border border-neutral-200 dark:border-neutral-700/60 rounded-2xl text-sm font-black text-neutral-800 dark:text-neutral-100 shadow-sm cursor-pointer hover:border-brand-500/50 transition-all active:scale-[0.98]">
-                            <div className="flex items-center gap-2.5 truncate">
-                                <div className="w-6 h-6 rounded-lg bg-brand-500/10 dark:bg-brand-500/20 flex items-center justify-center shrink-0">
-                                    <GlobeAltIcon className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
+                {/* Site Switcher */}
+                <div className="px-3 py-3 border-b border-neutral-100 dark:border-neutral-800">
+                    <div className="relative">
+                        <div className="flex items-center justify-between px-3 py-2.5 bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl cursor-pointer hover:border-brand-400 dark:hover:border-brand-600 transition-all">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <div className="w-5 h-5 rounded-lg bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center flex-shrink-0">
+                                    <GlobeAltIcon className="w-3 h-3 text-brand-600 dark:text-brand-400"/>
                                 </div>
-                                <span className="truncate">
-                                    {userSites.find(s => s._id === activeSiteId)?.siteName || 'Switch Website...'}
+                                <span className="text-xs font-black text-neutral-800 dark:text-neutral-100 truncate">
+                                    {userSites.find(s => s._id === activeSiteId)?.siteName || 'Select Website'}
                                 </span>
                             </div>
-                            <ChevronDownIcon className="h-4 w-4 text-neutral-400 group-hover:text-brand-500 transition-colors" strokeWidth={3} />
+                            <ChevronDownIcon className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" strokeWidth={3}/>
                         </div>
-                        {/* Custom Dropdown Simulation for CSS purposes - would normally be a state-controlled div */}
                         <select
                             value={activeSiteId || ''}
                             onChange={handleSiteChange}
@@ -172,9 +211,7 @@ const DashboardLayout = ({ children }) => {
                                 <option value="">No websites added</option>
                             ) : (
                                 userSites.map(site => (
-                                    <option key={site._id} value={site._id}>
-                                        {site.siteName}
-                                    </option>
+                                    <option key={site._id} value={site._id}>{site.siteName}</option>
                                 ))
                             )}
                             <option value="new">+ Add Website</option>
@@ -182,70 +219,92 @@ const DashboardLayout = ({ children }) => {
                     </div>
                 </div>
 
-
-                <nav className="flex-1 px-3 space-y-1 overflow-y-auto relative z-10 scrollbar-hide">
-                    <div className="px-4 py-2">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-500">Main Menu</p>
-                    </div>
+                <nav className="flex-1 px-3 space-y-1 overflow-y-auto relative z-10 scrollbar-hide py-3">
+                    <p className="text-[9px] font-black uppercase tracking-[0.18em] text-neutral-400 dark:text-neutral-500 px-3 py-2 mt-2">
+                        Main Menu
+                    </p>
                     {navItems.filter(i => !i.isSubItem).map((item, i) => (
                         <NavLink
                             key={`nav-${i}`}
                             to={item.path}
+                            onClick={() => setIsSidebarOpen(false)}
                             end={item.path === '/dashboard'}
-                            className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all duration-300 group ${isActive
-                                ? 'bg-brand-600 text-white shadow-lg shadow-brand-600/20'
-                                : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800/50'
-                                }`}
+                            className={({ isActive }) => `
+                                flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all group
+                                ${isActive
+                                    ? 'bg-brand-600 text-white shadow-md shadow-brand-500/20'
+                                    : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800/50'
+                                }
+                            `}
                         >
-                            {({ isActive }) => (
-                                <>
-                                    <item.icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-neutral-400 group-hover:text-brand-500'} transition-colors`} strokeWidth={2.5} />
-                                    <span className="flex-1">{item.label}</span>
-                                    {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>}
-                                </>
-                            )}
+                            <item.icon className="w-4 h-4" strokeWidth={2.5} />
+                            <span className="flex-1">{item.label}</span>
                         </NavLink>
                     ))}
 
-                    <div className="px-4 py-4 mt-2">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-500">Connections</p>
-                    </div>
+                    <p className="text-[9px] font-black uppercase tracking-[0.18em] text-neutral-400 dark:text-neutral-500 px-3 py-2 mt-4">
+                        Connections
+                    </p>
                     {navItems.filter(i => i.isSubItem).map((item, i) => (
                         <NavLink
                             key={`sub-${i}`}
                             to={item.path}
-                            className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 group ${isActive
-                                ? 'bg-accent-600/10 text-accent-600 dark:bg-accent-500/10 dark:text-accent-400'
-                                : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800/50'
-                                }`}
+                            onClick={() => setIsSidebarOpen(false)}
+                            className={({ isActive }) => `
+                                flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all group
+                                ${isActive
+                                    ? 'bg-neutral-100 dark:bg-neutral-800 text-brand-600 dark:text-brand-400'
+                                    : 'text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/30'
+                                }
+                            `}
                         >
-                            {({ isActive }) => (
-                                <>
-                                    <item.icon className={`w-4 h-4 ${isActive ? 'text-accent-500' : 'text-neutral-400 group-hover:text-accent-500'} transition-colors`} strokeWidth={2.5} />
-                                    <span>{item.label}</span>
-                                </>
-                            )}
+                            <item.icon className="w-3.5 h-3.5" strokeWidth={2.5} />
+                            <span>{item.label}</span>
                         </NavLink>
                     ))}
-                </nav>
 
-                <div className="p-4 border-t border-neutral-100 dark:border-neutral-800 mt-auto">
-                    <div className="bg-gradient-to-br from-brand-600 to-accent-600 rounded-2xl p-4 text-white shadow-xl shadow-brand-500/20 relative overflow-hidden group cursor-pointer">
-                         <div className="absolute -right-6 -top-6 w-20 h-20 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
-                         <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Scale your growth</p>
-                         <h4 className="text-xs font-black">Upgrade to Pilot Pro</h4>
-                         <button className="mt-3 w-full py-2 bg-white text-brand-600 rounded-lg text-xs font-black hover:bg-neutral-50 transition-colors shadow-sm">
-                             View Plans
-                         </button>
-                    </div>
-                </div>
+                    {isAdmin && (
+                        <>
+                            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-neutral-400 dark:text-neutral-500 px-3 py-2 mt-4">
+                                Super Admin
+                            </p>
+                            {adminNavItems.map((item, i) => (
+                                <NavLink
+                                    key={`admin-${i}`}
+                                    to={item.path}
+                                    onClick={() => setIsSidebarOpen(false)}
+                                    className={({ isActive }) => `
+                                        flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all
+                                        ${isActive
+                                            ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-800/50'
+                                            : 'text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/30'
+                                        }
+                                    `}
+                                >
+                                    <item.icon className="w-3.5 h-3.5" strokeWidth={2.5} />
+                                    <span>{item.label}</span>
+                                </NavLink>
+                            ))}
+                        </>
+                    )}
+                </nav>
             </aside>
 
-            {/* Main Content */}
-            <main className="flex-1 flex flex-col h-full bg-neutral-50 dark:bg-dark-bg relative overflow-hidden">
+            {/* Main Content Area */}
+            <main className="flex-1 flex flex-col h-full bg-neutral-50 dark:bg-dark-bg overflow-hidden">
                 {/* Header */}
-                <header className="flex-shrink-0 flex items-center justify-between px-6 py-3 bg-white/50 dark:bg-dark-bg/50 backdrop-blur-xl border-b border-neutral-200 dark:border-neutral-800 z-20">
-                    <div className="flex items-center gap-8 flex-1">
+                <header className="flex-shrink-0 flex items-center justify-between px-5 py-3 bg-white dark:bg-dark-surface border-b border-neutral-200 dark:border-neutral-800 z-20">
+                    <div className="flex items-center gap-4 md:gap-8 flex-1">
+                        {/* Mobile Menu Toggle */}
+                        <button 
+                            onClick={() => setIsSidebarOpen(true)}
+                            className="p-2 -ml-2 text-neutral-500 hover:text-brand-500 md:hidden"
+                        >
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16m-7 6h7" />
+                            </svg>
+                        </button>
+
                         <div className="hidden xl:flex flex-col">
                             <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400">
                                 <span>Platform</span>
@@ -480,10 +539,8 @@ const DashboardLayout = ({ children }) => {
                     </div>
                 </header>
 
-                {/* Scrollable Content Area */}
-                <div className="flex-1 overflow-x-hidden overflow-y-auto p-6 md:p-8 relative">
-                    {/* Top Subtle Gradient */}
-                    <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-brand-500/5 to-transparent pointer-events-none z-0"></div>
+                {/* Content Area */}
+                <div className="flex-1 overflow-x-hidden overflow-y-auto p-5 md:p-7">
                     <div className="relative z-10">
                         {children}
                     </div>

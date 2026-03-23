@@ -39,7 +39,7 @@ const EmptyState = ({ message = 'No data for this period', sub = 'Try selecting 
 const FacebookAdsPage = () => {
     const { startDate, endDate } = useDateRangeStore();
     const { device, campaign, searchQuery } = useFilterStore();
-    const { connectedSources, activeFacebookAdAccountId, activeSiteId } = useAccountsStore();
+    const { connectedSources, activeFacebookAdAccountId, activeSiteId, syncMetadata } = useAccountsStore();
     const isConnected = connectedSources.includes('facebook-ads');
     const hasAccount = !!activeFacebookAdAccountId;
     const navigate = useNavigate();
@@ -106,6 +106,14 @@ const FacebookAdsPage = () => {
 
         return () => clearInterval(interval);
     }, [isConnected, hasAccount, loadData]);
+
+    // Refresh data when sync completes
+    useEffect(() => {
+        if (syncMetadata?.syncStatus !== 'syncing' && activeSiteId) {
+            console.log('Facebook Ads Sync completed or idle, refreshing data...');
+            loadData();
+        }
+    }, [syncMetadata?.syncStatus, activeSiteId, loadData]);
 
 
     // Derived Values

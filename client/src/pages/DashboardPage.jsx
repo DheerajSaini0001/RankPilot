@@ -52,7 +52,8 @@ const DashboardPage = () => {
     activeGa4PropertyId,
     activeGoogleAdsCustomerId,
     activeFacebookAdAccountId,
-    activeSiteId
+    activeSiteId,
+    syncMetadata
   } = useAccountsStore();
 
   const [loading, setLoading] = useState(true);
@@ -130,6 +131,14 @@ const DashboardPage = () => {
 
     return () => clearInterval(interval);
   }, [loadDashboardData]);
+
+  // Refresh data when sync completes
+  useEffect(() => {
+    if (syncMetadata?.syncStatus !== 'syncing' && activeSiteId) {
+      console.log('Sync completed or idle, refreshing data...');
+      loadDashboardData();
+    }
+  }, [syncMetadata?.syncStatus, activeSiteId, loadDashboardData]);
 
   const { user } = useAuthStore();
   const totalTraffic = (overviewData.ga4?.sessions || 0);

@@ -41,7 +41,7 @@ const EmptyState = ({ message='No data for this period', sub='Try selecting a wi
 const GscPage = () => {
     const { startDate, endDate } = useDateRangeStore();
     const { device } = useFilterStore();
-    const { activeGscSite, connectedSources, activeSiteId } = useAccountsStore();
+    const { activeGscSite, connectedSources, activeSiteId, syncMetadata } = useAccountsStore();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     
@@ -109,6 +109,14 @@ const GscPage = () => {
 
         return () => clearInterval(interval);
     }, [loadData]);
+    
+    // Refresh data when sync completes
+    useEffect(() => {
+        if (syncMetadata?.syncStatus !== 'syncing' && activeSiteId) {
+            console.log('GSC Sync completed or idle, refreshing data...');
+            loadData();
+        }
+    }, [syncMetadata?.syncStatus, activeSiteId, loadData]);
 
 
     if (!connectedSources.includes('ga4') && !connectedSources.includes('gsc')) {
