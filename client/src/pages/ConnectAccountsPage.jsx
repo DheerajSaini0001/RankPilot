@@ -6,6 +6,7 @@ import { getMe } from '../api/authApi';
 import { listGa4, listGsc, listGoogleAds, listFacebookAds, selectAccounts, getActiveAccounts } from '../api/accountApi';
 import { useAccountsStore } from '../store/accountsStore';
 import { useAuthStore } from '../store/authStore';
+import { useNotificationStore } from '../store/notificationStore';
 import toast from 'react-hot-toast';
 import { getApiUrl } from '../api/index';
 
@@ -127,6 +128,17 @@ const ConnectAccountsPage = () => {
                 activeFacebookAdAccountId: updatedAccount.facebookAdAccountId || null,
             });
             toast.success(isNew ? 'New website added!' : 'Integrations updated!');
+            
+            // Add to persistent notifications
+            const { addNotification } = useNotificationStore.getState();
+            addNotification({
+                type: 'success',
+                title: isNew ? 'Website Connected' : 'Integrations Updated',
+                message: isNew 
+                    ? `Successfully connected "${siteName}" to your analytics dashboard.`
+                    : `Updated marketing data connections for "${siteName}".`,
+            });
+            
             navigate('/dashboard');
         } catch {
             toast.error('Failed to link accounts');

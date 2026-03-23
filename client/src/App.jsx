@@ -38,7 +38,36 @@ const App = () => {
 
   return (
     <BrowserRouter>
-      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+      <Toaster 
+        position="top-right" 
+        toastOptions={{ 
+          duration: 4000,
+          style: {
+            background: theme === 'dark' ? '#171717' : '#FFFFFF',
+            color: theme === 'dark' ? '#F5F5F5' : '#171717',
+            borderRadius: '16px',
+            border: theme === 'dark' ? '1px solid #262626' : '1px solid #E5E5E5',
+            fontSize: '14px',
+            fontWeight: '600',
+            padding: '12px 16px',
+            boxShadow: theme === 'dark' 
+              ? '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)'
+              : '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          },
+          success: {
+            iconTheme: {
+              primary: '#10B981',
+              secondary: '#FFFFFF',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#EF4444',
+              secondary: '#FFFFFF',
+            },
+          },
+        }} 
+      />
       <Routes>
         <Route path="/" element={
           <AuthRoute>

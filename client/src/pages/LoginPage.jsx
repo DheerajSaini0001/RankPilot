@@ -26,7 +26,7 @@ const LoginPage = () => {
         try {
             const res = await loginUser({ email, password });
             setAuth(res.data.token, res.data.user);
-            toast.success('Login successful');
+            toast.success(`Welcome back, ${res.data.user.name.split(' ')[0]}!`);
 
             const meRes = await getMe();
             if (meRes.data.connectedSources.length === 0) {

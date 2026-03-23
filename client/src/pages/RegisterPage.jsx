@@ -4,6 +4,7 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { registerUser } from '../api/authApi';
 import { useThemeStore } from '../store/themeStore';
+import toast from 'react-hot-toast';
 
 const RegisterPage = () => {
     const [name, setName] = useState('');
@@ -17,7 +18,7 @@ const RegisterPage = () => {
         setLoading(true);
         try {
             await registerUser({ name, email, password });
-            toast.success('Registration successful. Please check your email to verify your account.');
+            toast.success('Account created! Please check your email to verify your account and start using RankPilot.');
             navigate('/login');
         } catch (err) {
             toast.error(err.response?.data?.message || 'Registration failed');

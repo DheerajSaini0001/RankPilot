@@ -11,12 +11,16 @@ import {
     MagnifyingGlassIcon,
     ChevronDownIcon,
     BellIcon,
+    ExclamationTriangleIcon,
+    InformationCircleIcon,
+    CheckCircleIcon,
     ChartBarIcon,
     GlobeAltIcon,
     SparklesIcon,
     ArrowRightIcon,
     ChevronRightIcon
 } from '@heroicons/react/24/outline';
+import { formatDistanceToNow } from 'date-fns';
 import { useAuthStore } from '../../store/authStore';
 import { useAccountsStore } from '../../store/accountsStore';
 import { useFilterStore } from '../../store/filterStore';
@@ -116,9 +120,21 @@ const DashboardLayout = ({ children }) => {
     };
 
     const handleLogout = () => {
+        // Specifically clear only necessary authenticated state
         clearAuth();
-        setAccounts({ ga4: {}, gsc: {}, googleAds: {}, facebook: {}, connectedSources: [], gscSites: [], activeGscSite: null });
-        localStorage.clear();
+        
+        // Reset accounts state using the store's built-in clear method
+        const { clearAccounts } = useAccountsStore.getState();
+        clearAccounts();
+        
+        // DO NOT use localStorage.clear() as it wipes out theme preferences 
+        // and other non-authenticated persisted data like notification read status.
+        // If notifications are truly user-specific, we can call clearNotifications()
+        // below, but according to user preference, they want read status to persist.
+        
+        // localStorage.removeItem('auth-storage');
+        // localStorage.removeItem('accounts-storage');
+
         sessionStorage.clear();
         navigate('/');
     };
@@ -446,11 +462,27 @@ const DashboardLayout = ({ children }) => {
                                                             className={`px-5 py-4 border-b border-neutral-50 dark:border-neutral-800/40 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all cursor-pointer relative group ${!notif.isRead ? 'bg-brand-50/30 dark:bg-brand-500/5' : ''}`}
                                                         >
                                                             {!notif.isRead && <div className="absolute left-0 top-0 bottom-0 w-1 bg-brand-500"></div>}
-                                                            <div className="flex justify-between items-start mb-1">
-                                                                <h5 className={`text-[11px] font-black ${!notif.isRead ? 'text-neutral-900 dark:text-white' : 'text-neutral-500'}`}>{notif.title}</h5>
-                                                                <span className="text-[9px] font-bold text-neutral-400 whitespace-nowrap">{notif.time}</span>
+                                                            <div className="flex gap-3 items-start relative z-10">
+                                                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                                                                    notif.type === 'success' ? 'bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-400' :
+                                                                    notif.type === 'warning' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400' :
+                                                                    notif.type === 'error' ? 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400' :
+                                                                    'bg-brand-100 text-brand-600 dark:bg-brand-900/40 dark:text-brand-400'}`}>
+                                                                    {notif.type === 'success' ? <CheckCircleIcon className="w-4 h-4"/> :
+                                                                     notif.type === 'warning' ? <ExclamationTriangleIcon className="w-4 h-4"/> :
+                                                                     notif.type === 'error' ? <ExclamationTriangleIcon className="w-4 h-4"/> :
+                                                                     <InformationCircleIcon className="w-4 h-4"/>}
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <div className="flex justify-between items-start mb-1">
+                                                                        <h5 className={`text-[11px] font-black ${!notif.isRead ? 'text-neutral-900 dark:text-white' : 'text-neutral-500'}`}>{notif.title}</h5>
+                                                                        <span className="text-[9px] font-bold text-neutral-400 whitespace-nowrap">
+                                                                            {notif.timestamp ? formatDistanceToNow(new Date(notif.timestamp), { addSuffix: true }) : 'Just now'}
+                                                                        </span>
+                                                                    </div>
+                                                                    <p className="text-[10px] font-medium text-neutral-500 leading-normal">{notif.message}</p>
+                                                                </div>
                                                             </div>
-                                                            <p className="text-[10px] font-medium text-neutral-500 leading-normal">{notif.message}</p>
                                                         </div>
                                                     ))
                                                 )}

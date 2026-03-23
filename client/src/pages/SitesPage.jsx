@@ -10,6 +10,7 @@ import {
     ChartBarIcon
 } from '@heroicons/react/24/outline';
 import { useAccountsStore } from '../store/accountsStore';
+import { useNotificationStore } from '../store/notificationStore';
 import { deleteSite, listSites } from '../api/accountApi';
 import toast from 'react-hot-toast';
 
@@ -47,6 +48,14 @@ const SitesPage = () => {
         try {
             await deleteSite(id);
             toast.success(`Site "${name}" deleted`);
+            
+            // Add to persistent notifications
+            const { addNotification } = useNotificationStore.getState();
+            addNotification({
+                type: 'info',
+                title: 'Site Deleted',
+                message: `Website "${name}" and its associated data were removed from your dashboard.`,
+            });
             
             // If we deleted the active site, reset it
             if (activeSiteId === id) {
