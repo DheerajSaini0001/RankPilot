@@ -266,7 +266,7 @@ Give me a 3-part strategic review:
               <FilterBar loading={loading} onRefresh={handleManualRefresh} />
 
               {/* SECTION 4 — Platform Status Bar (4 cards) */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {[
                   { label: 'Google Analytics 4', icon: '📊', connected: !!activeGa4PropertyId, metric: overviewData.ga4 ? formatNumber(overviewData.ga4.users) : '—', metricLabel: 'Users', path: '/dashboard/ga4' },
                   { label: 'Search Console', icon: '🔍', connected: !!activeGscSite, metric: overviewData.gsc ? formatNumber(overviewData.gsc.clicks) : '—', metricLabel: 'Clicks', path: '/dashboard/gsc' },
@@ -295,7 +295,7 @@ Give me a 3-part strategic review:
               </div>
 
               {/* SECTION 5 — KPI Cards — rebuild with 6 cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* Card 1 — Total Traffic */}
                 <KpiCard
                   title="Total Traffic"
@@ -390,9 +390,9 @@ Give me a 3-part strategic review:
                     </div>
                   </div>
                   {loading ? (
-                    <div className="grid grid-cols-3 gap-3">{[...Array(6)].map((_, i) => <div key={i} className="h-16 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse" />)}</div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">{[...Array(6)].map((_, i) => <div key={i} className="h-16 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse" />)}</div>
                   ) : !activeGa4PropertyId ? <EmptyState message="GA4 not connected" sub="Connect in Integrations" /> : (
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {[
                         { label: 'Users', value: formatNumber(overviewData.ga4?.users) },
                         { label: 'Sessions', value: formatNumber(overviewData.ga4?.sessions) },
@@ -422,9 +422,9 @@ Give me a 3-part strategic review:
                     </div>
                   </div>
                   {loading ? (
-                    <div className="grid grid-cols-3 gap-3">{[...Array(6)].map((_, i) => <div key={i} className="h-16 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse" />)}</div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">{[...Array(6)].map((_, i) => <div key={i} className="h-16 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse" />)}</div>
                   ) : !activeGscSite ? <EmptyState message="GSC not connected" sub="Connect in Integrations" /> : (
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {[
                         { label: 'Clicks', value: formatNumber(overviewData.gsc?.clicks) },
                         { label: 'Impressions', value: formatNumber(overviewData.gsc?.impressions) },
@@ -454,9 +454,9 @@ Give me a 3-part strategic review:
                     </div>
                   </div>
                   {loading ? (
-                    <div className="grid grid-cols-3 gap-3">{[...Array(6)].map((_, i) => <div key={i} className="h-16 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse" />)}</div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">{[...Array(6)].map((_, i) => <div key={i} className="h-16 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse" />)}</div>
                   ) : !activeGoogleAdsCustomerId ? <EmptyState message="Google Ads not connected" /> : (
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {[
                         { label: 'Spend', value: formatCurrency(overviewData.googleAds?.spend) },
                         { label: 'Clicks', value: formatNumber(overviewData.googleAds?.clicks) },
@@ -486,9 +486,9 @@ Give me a 3-part strategic review:
                     </div>
                   </div>
                   {loading ? (
-                    <div className="grid grid-cols-3 gap-3">{[...Array(6)].map((_, i) => <div key={i} className="h-16 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse" />)}</div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">{[...Array(6)].map((_, i) => <div key={i} className="h-16 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse" />)}</div>
                   ) : !activeFacebookAdAccountId ? <EmptyState message="Facebook Ads not connected" /> : (
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {[
                         { label: 'Spend', value: formatCurrency(overviewData.facebookAds?.spend) },
                         { label: 'Reach', value: formatNumber(overviewData.facebookAds?.reach || 0) },
@@ -600,9 +600,9 @@ Give me a 3-part strategic review:
                       <p className="text-xs font-bold text-neutral-400 dark:text-neutral-500">Real-time performance distribution</p>
                     </div>
                   </div>
-                  <div className="flex bg-neutral-100 dark:bg-dark-bg/50 rounded-2xl p-1.5 border border-neutral-200 dark:border-neutral-800/50">
+                  <div className="flex bg-neutral-100 dark:bg-dark-bg/50 rounded-2xl p-1.5 border border-neutral-200 dark:border-neutral-800/50 overflow-x-auto w-full sm:w-auto">
                     {['Sessions', 'Clicks', 'Impressions', 'Spend', 'Conversions'].map((m) => (
-                      <button key={m} onClick={() => setSelectedMetric(m)} className={`px-5 py-2 rounded-xl text-xs font-black transition-all ${selectedMetric === m ? 'bg-white dark:bg-dark-card text-brand-600 dark:text-brand-400 shadow-xl' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}>{m}</button>
+                      <button key={m} onClick={() => setSelectedMetric(m)} className={`px-5 py-2 rounded-xl text-xs font-black transition-all whitespace-nowrap ${selectedMetric === m ? 'bg-white dark:bg-dark-card text-brand-600 dark:text-brand-400 shadow-xl' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'}`}>{m}</button>
                     ))}
                   </div>
                 </div>
@@ -658,7 +658,7 @@ Give me a 3-part strategic review:
                 <div className="lg:col-span-2 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 shadow-sm">
                   <h3 className="text-sm font-black text-neutral-900 dark:text-white mb-1">Quick Navigation</h3>
                   <p className="text-xs text-neutral-400 mb-5">Jump to any analytics dashboard</p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {[
                       { label: 'GA4', desc: 'Traffic & engagement', icon: '📊', path: '/dashboard/ga4', color: 'bg-orange-50 dark:bg-orange-900/10 border-orange-100 dark:border-orange-800 hover:border-orange-300' },
                       { label: 'Search Console', desc: 'SEO & keywords', icon: '🔍', path: '/dashboard/gsc', color: 'bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-800 hover:border-green-300' },

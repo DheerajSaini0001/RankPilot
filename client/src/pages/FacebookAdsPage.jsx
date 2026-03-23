@@ -227,7 +227,7 @@ const FacebookAdsPage = () => {
     return (
         <DashboardLayout>
             <div className="flex flex-col space-y-8">
-                <div className="flex items-center justify-between bg-white dark:bg-dark-card p-6 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-sm relative overflow-hidden group">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-dark-card p-6 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-sm relative overflow-hidden group">
                      <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-32 -mt-32 group-hover:bg-blue-500/10 transition-colors duration-700"></div>
                      <div className="relative z-10">
                         <h1 className="text-2xl lg:text-3xl font-black text-neutral-900 dark:text-white tracking-tight">Facebook Ads Performance</h1>
@@ -302,7 +302,7 @@ Please provide:
                 </div>
 
                 {/* ADD 2 — Extra KPI Cards Row (ROAS, CPM, Reach, Frequency) */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
                 {/* ROAS */}
                 <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
@@ -350,7 +350,7 @@ Please provide:
                 </div>
 
                 {/* ADD 3 — Summary Strip */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
                     { label: 'Best Campaign',     value: bestCampaign ? (bestCampaign.name?.length > 18 ? bestCampaign.name.slice(0,18)+'...' : bestCampaign.name) : '—', icon: '🏆' },
                     { label: 'Conv. Rate',        value: `${convRate}%`,                                              icon: '🎯' },

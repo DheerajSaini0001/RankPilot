@@ -190,8 +190,8 @@ const ConnectAccountsPage = () => {
                         {/* 4. Google Integration Card */}
                         <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-sm overflow-hidden transition-all hover:shadow-md hover:border-neutral-300 dark:hover:border-neutral-600">
                           {/* Card Header */}
-                          <div className="flex items-center justify-between p-6 border-b border-neutral-100 dark:border-neutral-800">
-                            <div className="flex items-center gap-4">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-6 border-b border-neutral-100 dark:border-neutral-800 gap-4">
+                            <div className="flex items-start sm:items-center gap-4">
                               {/* Google Logo */}
                               <div className="w-12 h-12 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center p-2.5 shadow-sm">
                                 <svg viewBox="0 0 24 24" className="w-full h-full">
@@ -304,8 +304,8 @@ const ConnectAccountsPage = () => {
                         {/* 5. Facebook Integration Card */}
                         <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-sm overflow-hidden transition-all hover:shadow-md hover:border-neutral-300 dark:hover:border-neutral-600">
                           {/* Card Header */}
-                          <div className="flex items-center justify-between p-6 border-b border-neutral-100 dark:border-neutral-800">
-                            <div className="flex items-center gap-4">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-6 border-b border-neutral-100 dark:border-neutral-800 gap-4">
+                            <div className="flex items-start sm:items-center gap-4">
                               {/* Facebook Logo */}
                               <div className="w-12 h-12 rounded-xl bg-[#1877F2] flex items-center justify-center p-2.5 shadow-sm">
                                 <svg fill="white" viewBox="0 0 24 24" className="w-full h-full">

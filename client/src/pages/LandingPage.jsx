@@ -36,13 +36,13 @@ const LandingPage = () => {
                     </div>
 
                     {/* CTA buttons */}
-                    <div className="flex items-center gap-3">
-                        <NavLink to="/login" className="text-sm font-bold text-slate-400 hover:text-white transition-colors px-4 py-2">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <NavLink to="/login" className="text-xs sm:text-sm font-bold text-slate-400 hover:text-white transition-colors px-2 sm:px-4 py-2">
                             Log in
                         </NavLink>
                         <NavLink to="/register"
-                            className="text-sm font-bold text-white bg-brand-600 hover:bg-brand-500 px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-brand-500/25 hover:-translate-y-0.5 active:scale-95">
-                            Get Started →
+                            className="text-xs sm:text-sm font-bold text-white bg-brand-600 hover:bg-brand-500 px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl transition-all shadow-lg shadow-brand-500/25 hover:-translate-y-0.5 active:scale-95">
+                            Get Started
                         </NavLink>
                     </div>
                 </div>
@@ -69,7 +69,7 @@ const LandingPage = () => {
                     </div>
 
                     {/* Headline */}
-                    <h1 className="text-6xl md:text-7xl lg:text-8xl font-black text-white tracking-tighter leading-[0.9] mb-6">
+                    <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-white tracking-tighter leading-[1.1] sm:leading-[0.9] mb-6">
                         Your Data.<br/>
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 via-blue-400 to-indigo-400">
                             Finally Clear.

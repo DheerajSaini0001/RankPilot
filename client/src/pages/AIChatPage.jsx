@@ -88,7 +88,7 @@ const ChatMessage = React.memo(({ msg, userName }) => {
     if (isUser) {
         return (
             <div className="flex justify-end">
-                <div className="flex items-end gap-2.5 flex-row-reverse max-w-[75%]">
+                <div className="flex items-end gap-2.5 flex-row-reverse max-w-[85%] sm:max-w-[75%]">
                     <div className="w-7 h-7 rounded-full bg-neutral-800 dark:bg-neutral-600 text-white flex items-center justify-center text-[10px] font-black flex-shrink-0">
                         {userName?.charAt(0)?.toUpperCase() || 'U'}
                     </div>
@@ -102,7 +102,7 @@ const ChatMessage = React.memo(({ msg, userName }) => {
 
     return (
         <div className="flex justify-start">
-            <div className="flex items-start gap-3 max-w-[85%]">
+            <div className="flex items-start gap-3 max-w-[95%] sm:max-w-[85%]">
                 <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
                     <SparklesIcon className="w-3.5 h-3.5 text-white"/>
                 </div>
@@ -436,7 +436,7 @@ const AIChatPage = () => {
 
     return (
         <DashboardLayout>
-            <div className="pt-10 pb-2 flex-1 flex flex-col min-h-0 h-full w-full overflow-hidden bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700/60 rounded-2xl shadow-sm relative">
+            <div className="pt-2 pb-2 flex-1 flex flex-col min-h-0 h-full w-full overflow-hidden bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700/60 rounded-2xl shadow-sm relative">
                     
                     {/* Mobile Header */}
                     <div className="lg:hidden shrink-0 p-4 border-b border-neutral-200/60 dark:border-neutral-800 flex items-center justify-between bg-white dark:bg-dark-card relative z-20 shadow-sm">
@@ -660,7 +660,7 @@ const AIChatPage = () => {
                                     {/* Left buttons */}
                                     <div className="flex items-center gap-0.5 flex-shrink-0">
                                         <button type="button" onClick={handleNewChat} title="New Chat"
-                                            className="w-8 h-8 flex items-center justify-center rounded-xl text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all">
+                                            className="hidden sm:flex w-8 h-8 items-center justify-center rounded-xl text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all">
                                             <PlusIcon className="w-4 h-4"/>
                                         </button>
                                         <button type="button" title="Weekly Insight"
@@ -670,7 +670,7 @@ const AIChatPage = () => {
                                         </button>
                                         <button type="button" title="Chat History"
                                             onClick={() => { setIsHistoryOpen(!isHistoryOpen); if (!isHistoryOpen) setIsInsightOpen(false); }}
-                                            className={`w-8 h-8 flex items-center justify-center rounded-xl transition-all ${isHistoryOpen ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20'}`}>
+                                            className={`hidden sm:flex w-8 h-8 items-center justify-center rounded-xl transition-all ${isHistoryOpen ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20'}`}>
                                             <ChatBubbleLeftRightIcon className="w-4 h-4"/>
                                         </button>
                                     </div>

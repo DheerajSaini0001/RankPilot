@@ -135,9 +135,10 @@ const SitesPage = () => {
 
                 {userSites.length > 0 && (
                     <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-sm overflow-hidden">
-
-                        {/* Table header */}
-                        <div className="grid grid-cols-[2fr_2fr_1fr_auto] gap-0 bg-neutral-50 dark:bg-neutral-800/50 border-b border-neutral-200 dark:border-neutral-700">
+                        <div className="overflow-x-auto">
+                            <div className="min-w-[700px]">
+                                {/* Table header */}
+                                <div className="grid grid-cols-[2fr_2fr_1fr_auto] gap-0 bg-neutral-50 dark:bg-neutral-800/50 border-b border-neutral-200 dark:border-neutral-700">
                         {['Website', 'Integrations', 'Status', 'Actions'].map(h => (
                             <div key={h} className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500 last:text-right">{h}</div>
                         ))}
@@ -225,6 +226,8 @@ const SitesPage = () => {
                             </div>
                             );
                         })}
+                        </div>
+                            </div>
                         </div>
 
                         {/* Footer */}

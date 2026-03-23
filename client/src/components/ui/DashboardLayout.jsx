@@ -293,25 +293,25 @@ const DashboardLayout = ({ children }) => {
             {/* Main Content Area */}
             <main className="flex-1 flex flex-col h-full bg-neutral-50 dark:bg-dark-bg overflow-hidden">
                 {/* Header */}
-                <header className="flex-shrink-0 flex items-center justify-between px-5 py-3 bg-white dark:bg-dark-surface border-b border-neutral-200 dark:border-neutral-800 z-20">
-                    <div className="flex items-center gap-4 md:gap-8 flex-1">
+                <header className="flex-shrink-0 flex items-center justify-between px-3 sm:px-5 py-2.5 sm:py-3 bg-white dark:bg-dark-surface border-b border-neutral-200 dark:border-neutral-800 z-20">
+                    <div className="flex items-center gap-2 sm:gap-4 md:gap-8 flex-1">
                         {/* Mobile Menu Toggle */}
                         <button 
                             onClick={() => setIsSidebarOpen(true)}
-                            className="p-2 -ml-2 text-neutral-500 hover:text-brand-500 md:hidden"
+                            className="p-1.5 sm:p-2 -ml-1 sm:-ml-2 text-neutral-500 hover:text-brand-500 md:hidden"
                         >
                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16m-7 6h7" />
                             </svg>
                         </button>
 
-                        <div className="hidden xl:flex flex-col">
+                        <div className="hidden md:flex flex-col">
                             <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400">
                                 <span>Platform</span>
                                 <span className="text-neutral-300">/</span>
                                 <span className="text-brand-500">Overview</span>
                             </div>
-                            <h2 className="text-base font-black text-neutral-900 dark:text-white leading-tight">Insight Dashboard</h2>
+                            <h2 className="text-sm sm:text-base font-black text-neutral-900 dark:text-white leading-tight">Insight Dashboard</h2>
                         </div>
 
                         <div className="hidden lg:flex flex-col flex-1 max-w-md relative group">
@@ -429,7 +429,7 @@ const DashboardLayout = ({ children }) => {
                                 {isNotifOpen && (
                                     <>
                                         <div className="fixed inset-0 z-40" onClick={() => setIsNotifOpen(false)}></div>
-                                        <div className="absolute right-0 mt-3 w-80 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700/60 rounded-2xl shadow-2xl z-50 overflow-hidden transform animate-in fade-in slide-in-from-top-2 duration-200">
+                                        <div className="fixed inset-x-4 top-[64px] sm:absolute sm:top-auto sm:inset-auto sm:right-0 sm:mt-3 sm:w-80 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700/60 rounded-2xl shadow-2xl z-50 overflow-hidden transform animate-in fade-in slide-in-from-top-2 duration-200">
                                             <div className="px-5 py-4 border-b border-neutral-100 dark:border-neutral-800/60 bg-neutral-50/50 dark:bg-dark-surface/50 flex justify-between items-center">
                                                 <h4 className="text-xs font-black uppercase tracking-widest text-neutral-900 dark:text-white">Notifications</h4>
                                                 {unreadCount > 0 && (
@@ -497,7 +497,7 @@ const DashboardLayout = ({ children }) => {
                             {isUserMenuOpen && (
                                 <>
                                     <div className="fixed inset-0 z-40" onClick={() => setIsUserMenuOpen(false)}></div>
-                                    <div className="absolute right-0 mt-3 w-48 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700/60 rounded-xl shadow-xl py-1 z-50 overflow-hidden transform opacity-100 scale-100 transition-all origin-top-right">
+                                    <div className="fixed inset-x-4 top-[64px] sm:absolute sm:top-auto sm:inset-auto sm:right-0 sm:mt-3 sm:w-48 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700/60 rounded-xl shadow-xl py-1 z-50 overflow-hidden transform opacity-100 scale-100 transition-all origin-top-right">
                                         <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800/60 bg-neutral-50/50 dark:bg-dark-surface/50">
                                             <p className="text-sm font-bold text-neutral-900 dark:text-white truncate">{user?.name || 'User'}</p>
                                             <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400 truncate tracking-wide">{user?.email}</p>
@@ -540,7 +540,7 @@ const DashboardLayout = ({ children }) => {
                 </header>
 
                 {/* Content Area */}
-                <div className="flex-1 overflow-x-hidden overflow-y-auto p-5 md:p-7">
+                <div className="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-5 md:p-7">
                     <div className="relative z-10">
                         {children}
                     </div>

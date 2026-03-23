@@ -239,166 +239,187 @@ const AiSectionChat = ({
             <button
                 onClick={() => setIsOpen(true)}
                 title={label || `Ask AI about ${sectionTitle}`}
-                className={`relative flex items-center justify-center ${label ? 'px-4 py-2.5 gap-2 w-full sm:w-auto' : iconClass} rounded-xl bg-gradient-to-br from-brand-500/10 to-purple-500/10 border border-brand-500/20 dark:border-brand-500/30 text-brand-600 dark:text-brand-400 hover:from-brand-500/20 hover:to-purple-500/20 hover:border-brand-500/40 hover:scale-105 active:scale-95 transition-all duration-200 shadow-sm hover:shadow-brand-500/20 hover:shadow-lg group overflow-hidden`}
-            >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer" />
-                <SparklesIcon className={`${sparkleClass} group-hover:animate-pulse shrink-0`} />
-                {label && <span className="text-xs font-black uppercase tracking-wider whitespace-nowrap">{label}</span>}
+                className={`relative flex items-center justify-center ${
+                    label
+                    ? 'px-3.5 py-2 gap-1.5 w-full sm:w-auto'
+                    : iconClass
+                } rounded-xl bg-brand-600/10 dark:bg-brand-500/10 border border-brand-500/20 dark:border-brand-500/25 text-brand-600 dark:text-brand-400 hover:bg-brand-600/15 dark:hover:bg-brand-500/15 hover:border-brand-500/35 hover:-translate-y-0.5 active:scale-95 transition-all duration-200 shadow-sm hover:shadow-brand-500/15 hover:shadow-md group`}
+                >
+                <SparklesIcon className={`${sparkleClass} flex-shrink-0 group-hover:rotate-12 transition-transform duration-300`}/>
+                {label && (
+                    <span className="text-[11px] font-black uppercase tracking-wide whitespace-nowrap">{label}</span>
+                )}
             </button>
 
             {isOpen && createPortal(
-                <div className="fixed inset-0 z-[999999] bg-neutral-900/60 backdrop-blur-md animate-fade-in flex items-center justify-center p-4">
-                    <div
-                        ref={panelRef}
-                        className="pointer-events-auto w-full max-w-2xl bg-white dark:bg-[#111] border border-neutral-200/80 dark:border-neutral-700/80 rounded-[2rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] flex flex-col max-h-[85vh] overflow-hidden"
-                        style={{ animation: 'slideUp 0.28s cubic-bezier(0.22,1,0.36,1)' }}
+            <div className="fixed inset-0 z-[999999] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6">
+
+                {/* Backdrop */}
+                <div
+                className="absolute inset-0 bg-neutral-950/50 backdrop-blur-sm"
+                onClick={() => setIsOpen(false)}
+                style={{ animation: 'fadeIn 0.2s ease-out' }}
+                />
+
+                {/* Panel */}
+                <div
+                ref={panelRef}
+                className="relative w-full sm:max-w-xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/60 rounded-t-3xl sm:rounded-3xl shadow-[0_32px_80px_-12px_rgba(0,0,0,0.4)] flex flex-col overflow-hidden max-h-[90vh] sm:max-h-[85vh]"
+                style={{
+                    animation: 'slideUp 0.25s cubic-bezier(0.22,1,0.36,1)'
+                }}
+                >
+
+                {/* Header */}
+                <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+                    <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-2xl bg-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/30 flex-shrink-0">
+                        <SparklesIcon className="w-4.5 h-4.5 text-white" style={{width:'18px',height:'18px'}}/>
+                    </div>
+                    <div>
+                        <p className="text-sm font-black text-neutral-900 dark:text-white leading-tight">RankPilot AI</p>
+                        <p className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mt-0.5">{sectionTitle}</p>
+                    </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                    <button
+                        onClick={handleReset}
+                        title="Reset conversation"
+                        className="w-8 h-8 flex items-center justify-center rounded-xl text-neutral-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all"
                     >
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 dark:border-neutral-800 shrink-0">
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center shadow-lg">
-                                    <SparklesIcon className="w-4 h-4 text-white" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-black text-neutral-900 dark:text-white leading-none">RankPilot AI</p>
-                                    <p className="text-[10px] text-neutral-400 mt-1 font-bold tracking-wide uppercase">{sectionTitle}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <button onClick={handleReset} title="Reset conversation" className="p-2 rounded-xl text-neutral-400 hover:text-brand-600 hover:bg-brand-50 transition-all">
-                                    <ArrowPathIcon className="w-4 h-4" />
-                                </button>
-                                <button onClick={() => setIsOpen(false)} className="p-2 rounded-xl text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-all">
-                                    <XMarkIcon className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
+                        <ArrowPathIcon className="w-4 h-4"/>
+                    </button>
+                    <button
+                        onClick={() => setIsOpen(false)}
+                        className="w-8 h-8 flex items-center justify-center rounded-xl text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+                    >
+                        <XMarkIcon className="w-4 h-4"/>
+                    </button>
+                    </div>
+                </div>
 
-                        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 scroll-smooth custom-scrollbar">
-                            {messages.length === 0 && !loading && (
-                                <div className="flex flex-col items-center justify-center h-full gap-3 text-neutral-400 py-12">
-                                    <div className="w-16 h-16 rounded-3xl bg-neutral-50 dark:bg-neutral-800/50 flex items-center justify-center border border-neutral-100 dark:border-neutral-800">
-                                        <SparklesIcon className="w-8 h-8 opacity-20" />
-                                    </div>
-                                    <p className="text-xs font-bold uppercase tracking-widest opacity-60">Ready to analyze {sectionTitle}</p>
-                                </div>
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto px-4 sm:px-5 md:px-6 py-4 sm:py-5 md:py-6 space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+
+                    {/* Empty state */}
+                    {messages.length === 0 && !loading && (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <div className="w-14 h-14 rounded-2xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700 flex items-center justify-center mb-4">
+                        <SparklesIcon className="w-7 h-7 text-neutral-300 dark:text-neutral-600"/>
+                        </div>
+                        <p className="text-xs font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
+                        Ready to analyze
+                        </p>
+                        <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1 font-medium">{sectionTitle}</p>
+                    </div>
+                    )}
+
+                    {/* Messages */}
+                    {messages.map((msg, idx) => (
+                    <div
+                        key={idx}
+                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                        style={{ animation: 'fadeIn 0.2s ease-out' }}
+                    >
+                        <div className={`flex items-start gap-2.5 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+
+                        {/* Avatar */}
+                        <div className="flex-shrink-0 mt-0.5">
+                            {msg.role === 'user' ? (
+                            <div className="w-7 h-7 rounded-full bg-neutral-800 dark:bg-neutral-700 text-white flex items-center justify-center text-[10px] font-black">
+                                {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                            </div>
+                            ) : (
+                            <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center shadow-sm">
+                                <SparklesIcon className="w-3.5 h-3.5 text-white"/>
+                            </div>
                             )}
-
-                            {messages.map((msg, idx) => (
-                                <div
-                                    key={idx}
-                                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in-up`}
-                                >
-                                    <div className={`flex max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} items-start gap-4`}>
-                                        <div className="shrink-0 mt-1">
-                                            {msg.role === 'user' ? (
-                                                <div className="w-8 h-8 rounded-xl bg-neutral-900 text-white flex items-center justify-center text-xs font-black border border-neutral-700 shadow-xl">
-                                                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                                                </div>
-                                            ) : (
-                                                <div className="w-8 h-8 rounded-xl bg-white dark:bg-neutral-800 flex items-center justify-center shadow-md border border-neutral-100 dark:border-neutral-700">
-                                                    <SparklesIcon className="w-4 h-4 text-brand-600" />
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div
-                                            className={`px-4 py-3 leading-relaxed shadow-sm ${
-                                                msg.role === 'user'
-                                                    ? 'bg-brand-600 text-white rounded-[1.25rem] rounded-tr-sm font-bold text-sm shadow-brand-500/20'
-                                                    : msg.isError
-                                                        ? 'bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/20 rounded-[1.25rem] rounded-tl-sm text-sm'
-                                                        : 'text-neutral-800 dark:text-neutral-200 prose prose-neutral dark:prose-invert max-w-none text-sm'
-                                            }`}
-                                        >
-                                            {msg.role === 'assistant'
-                                                ? msg.isLoading
-                                                    ? <TypingDots />
-                                                    : msg.content 
-                                                        ? (
-                                                            <>
-                                                                <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD}>
-                                                                    {msg.content}
-                                                                </ReactMarkdown>
-                                                                {msg.isError && msg.retryQuestion && (
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            setMessages(prev => prev.slice(0, -2));
-                                                                            setTimeout(() => sendMessage(msg.retryQuestion), 50);
-                                                                        }}
-                                                                        className="mt-3 flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-xl bg-red-100/50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-all border border-red-200/50 dark:border-red-800/30"
-                                                                    >
-                                                                        🔄 Try Again
-                                                                    </button>
-                                                                )}
-                                                            </>
-                                                        )
-                                                        : (
-                                                            <div className="flex items-center gap-2 text-neutral-400 italic text-xs">
-                                                                <div className="w-1.5 h-1.5 bg-neutral-400 rounded-full animate-pulse" />
-                                                                No response generated. Please check your connection.
-                                                            </div>
-                                                        )
-                                                : msg.content
-                                            }
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                            <div ref={messagesEndRef} />
                         </div>
 
-                        <div className="p-6 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50">
-                            <div className="relative flex items-center gap-2 bg-white dark:bg-[#1a1a1a] border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-2 shadow-sm focus-within:ring-2 ring-brand-500/20 transition-all">
-                                <textarea
-                                    ref={inputRef}
-                                    rows={1}
-                                    value={input}
-                                    onChange={e => setInput(e.target.value)}
-                                    onKeyDown={handleKeyDown}
-                                    disabled={loading}
-                                    placeholder="Type a message..."
-                                    className="flex-1 bg-transparent border-none outline-none text-sm text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 resize-none max-h-32 min-h-[24px] leading-6"
-                                />
-                                <button
-                                    onClick={() => sendMessage()}
-                                    disabled={!input.trim() || loading}
-                                    className="p-2 rounded-xl bg-brand-600 text-white disabled:opacity-40 hover:bg-brand-700 transition-all shadow-lg active:scale-95 shrink-0"
-                                >
-                                    {loading
-                                        ? <ArrowPathIcon className="w-4 h-4 animate-spin" />
-                                        : <PaperAirplaneIcon className="w-4 h-4 -rotate-45" />
-                                    }
-                                </button>
-                            </div>
-                            <p className="text-[10px] text-neutral-400 text-center mt-3 font-bold uppercase tracking-widest opacity-60">
-                                AI Pulse · Press <kbd className="bg-neutral-200 dark:bg-neutral-800 px-1 rounded text-neutral-600">Enter</kbd> to send
-                            </p>
+                        {/* Bubble */}
+                        <div className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                            msg.role === 'user'
+                            ? 'bg-brand-600 text-white font-medium rounded-tr-sm shadow-md shadow-brand-500/20'
+                            : msg.isError
+                            ? 'bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-800/30 rounded-tl-sm'
+                            : 'bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-700/50 rounded-tl-sm'
+                        }`}>
+                            {msg.role === 'assistant' ? (
+                            msg.isLoading ? (
+                                <TypingDots/>
+                            ) : msg.content ? (
+                                <>
+                                <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD}>
+                                    {msg.content}
+                                </ReactMarkdown>
+                                {msg.isError && msg.retryQuestion && (
+                                    <button
+                                    onClick={() => {
+                                        setMessages(prev => prev.slice(0, -2));
+                                        setTimeout(() => sendMessage(msg.retryQuestion), 50);
+                                    }}
+                                    className="mt-2 flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-red-100/60 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-all border border-red-200/50 dark:border-red-800/30"
+                                    >
+                                    🔄 Try Again
+                                    </button>
+                                )}
+                                </>
+                            ) : (
+                                <div className="flex items-center gap-2 text-xs text-neutral-400 italic">
+                                <span className="w-1 h-1 rounded-full bg-neutral-400 animate-pulse"/>
+                                No response. Please check your connection.
+                                </div>
+                            )
+                            ) : msg.content}
+                        </div>
                         </div>
                     </div>
-                </div>,
-                document.body
+                    ))}
+                    <div ref={messagesEndRef}/>
+                </div>
+
+                {/* Input area */}
+                <div className="shrink-0 px-4 sm:px-5 md:px-6 py-3 sm:py-4 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50">
+                    <div className="flex items-end gap-2 bg-white dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 rounded-2xl px-4 py-3 shadow-sm focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/10 transition-all">
+                    <textarea
+                        ref={inputRef}
+                        rows={1}
+                        value={input}
+                        onChange={e => setInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        disabled={loading}
+                        placeholder="Ask a follow-up question..."
+                        className="flex-1 bg-transparent border-none outline-none text-sm text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 resize-none max-h-28 min-h-[22px] leading-snug font-medium"
+                    />
+                    <button
+                        onClick={() => sendMessage()}
+                        disabled={!input.trim() || loading}
+                        className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-xl bg-brand-600 hover:bg-brand-700 text-white disabled:bg-neutral-200 dark:disabled:bg-neutral-700 disabled:text-neutral-400 transition-all shadow-md shadow-brand-500/20 active:scale-95"
+                    >
+                        {loading
+                        ? <ArrowPathIcon className="w-3.5 h-3.5 animate-spin"/>
+                        : <PaperAirplaneIcon className="w-3.5 h-3.5"/>
+                        }
+                    </button>
+                    </div>
+                    <p className="text-center text-[10px] text-neutral-400 dark:text-neutral-500 mt-2.5 font-medium">
+                    Press <kbd className="px-1.5 py-0.5 rounded-md bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400 text-[9px] font-black">Enter</kbd> to send · <kbd className="px-1.5 py-0.5 rounded-md bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400 text-[9px] font-black">Esc</kbd> to close
+                    </p>
+                </div>
+                </div>
+            </div>,
+            document.body
             )}
 
             <style>{`
-                @keyframes slideUp {
-                    from { opacity: 0; transform: translateY(32px) scale(0.97); }
-                    to   { opacity: 1; transform: translateY(0) scale(1); }
-                }
-                @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to   { opacity: 1; }
-                }
-                @keyframes shimmer {
-                    from { transform: translateX(-100%); }
-                    to   { transform: translateX(100%); }
-                }
-                .group:hover .group-hover:animate-shimmer {
-                    animation: shimmer 1s infinite linear;
-                }
-                .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
-                .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; }
+            @keyframes slideUp {
+                from { opacity: 0; transform: translateY(24px) scale(0.98); }
+                to   { opacity: 1; transform: translateY(0) scale(1); }
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to   { opacity: 1; }
+            }
             `}</style>
         </>
     );
