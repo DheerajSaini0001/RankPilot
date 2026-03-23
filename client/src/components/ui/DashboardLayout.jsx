@@ -21,6 +21,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useAccountsStore } from '../../store/accountsStore';
 import { useFilterStore } from '../../store/filterStore';
 import { useNotificationStore } from '../../store/notificationStore';
+import { useThemeStore } from '../../store/themeStore';
 import { listSites, getActiveAccounts } from '../../api/accountApi';
 
 const DashboardLayout = ({ children }) => {
@@ -107,18 +108,11 @@ const DashboardLayout = ({ children }) => {
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [isNotifOpen, setIsNotifOpen] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+    const { theme, toggleTheme } = useThemeStore();
+    const isDark = theme === 'dark';
 
     const toggleDark = () => {
-        const next = !isDark;
-        setIsDark(next);
-        if (next) {
-            document.documentElement.classList.add('dark');
-            localStorage.setItem('theme', 'dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-            localStorage.setItem('theme', 'light');
-        }
+        toggleTheme();
     };
 
     const handleLogout = () => {
@@ -488,8 +482,7 @@ const DashboardLayout = ({ children }) => {
                                     <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-semantic-success rounded-full border-2 border-white dark:border-dark-bg"></div>
                                 </div>
                                 <div className="hidden sm:block text-left">
-                                    <p className="text-xs font-black text-neutral-900 dark:text-white leading-none mb-0.5">{user?.name?.split(' ')[0] || 'User'}</p>
-                                    <p className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 leading-none lowercase">{isAdmin ? 'Admin' : 'Pro Pilot'}</p>
+                                    <p className="text-xs font-black text-neutral-900 dark:text-white leading-none">{user?.name?.split(' ')[0] || 'User'}</p>
                                 </div>
                                 <ChevronDownIcon className="w-3.5 h-3.5 text-neutral-400 group-hover:text-neutral-600 transition-colors" strokeWidth={3} />
                             </button>

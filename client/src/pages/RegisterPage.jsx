@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
-import toast from 'react-hot-toast';
 import { registerUser } from '../api/authApi';
+import { useThemeStore } from '../store/themeStore';
 
 const RegisterPage = () => {
     const [name, setName] = useState('');
@@ -26,8 +26,10 @@ const RegisterPage = () => {
         }
     };
 
+    const { theme } = useThemeStore();
+
     return (
-        <div className="min-h-screen bg-slate-950 flex">
+        <div className="min-h-screen bg-neutral-50 dark:bg-slate-950 flex transition-colors duration-500">
 
             {/* Left Panel — branding side (hidden on mobile) */}
             <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-between p-12">
@@ -87,7 +89,7 @@ const RegisterPage = () => {
             </div>
 
             {/* Right Panel — form */}
-            <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-slate-950">
+            <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-white dark:bg-slate-950">
                 <div className="w-full max-w-md">
                     {/* Mobile logo */}
                     <div className="flex items-center gap-2 mb-10 lg:hidden">
@@ -96,20 +98,20 @@ const RegisterPage = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
                             </svg>
                         </div>
-                        <span className="text-lg font-black text-white">RankPilot</span>
+                        <span className="text-lg font-black text-neutral-900 dark:text-white">RankPilot</span>
                     </div>
 
                     {/* Heading */}
                     <div className="mb-8">
-                        <h1 className="text-3xl font-black text-white tracking-tight mb-2">Create your account</h1>
-                        <p className="text-sm text-slate-400 font-medium">Free forever. No credit card required.</p>
+                        <h1 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight mb-2">Create your account</h1>
+                        <p className="text-sm text-neutral-500 dark:text-slate-400 font-medium">Free forever. No credit card required.</p>
                     </div>
 
                     {/* Register form */}
                     <form onSubmit={handleRegister} className="space-y-4">
 
                         <div className="space-y-1.5">
-                            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">Full Name</label>
+                            <label className="text-xs font-black text-neutral-500 dark:text-slate-400 uppercase tracking-wider">Full Name</label>
                             <Input
                                 type="text"
                                 value={name}
@@ -120,7 +122,7 @@ const RegisterPage = () => {
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">Email Address</label>
+                            <label className="text-xs font-black text-neutral-500 dark:text-slate-400 uppercase tracking-wider">Email Address</label>
                             <Input
                                 type="email"
                                 value={email}
@@ -131,7 +133,7 @@ const RegisterPage = () => {
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">Password</label>
+                            <label className="text-xs font-black text-neutral-500 dark:text-slate-400 uppercase tracking-wider">Password</label>
                             <Input
                                 type="password"
                                 value={password}
@@ -160,17 +162,17 @@ const RegisterPage = () => {
                     </form>
 
                     {/* Already have account */}
-                    <p className="text-center text-xs text-slate-500 mt-8">
+                    <p className="text-center text-xs text-neutral-500 dark:text-slate-500 mt-8">
                         Already have an account?{' '}
-                        <NavLink to="/login" className="text-brand-400 hover:text-brand-300 font-black transition-colors">
+                        <NavLink to="/login" className="text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-black transition-colors">
                             Sign in →
                         </NavLink>
                     </p>
 
                     {/* Trust badges */}
-                    <div className="flex items-center justify-center gap-4 mt-8 pt-6 border-t border-white/5">
+                    <div className="flex items-center justify-center gap-4 mt-8 pt-6 border-t border-neutral-100 dark:border-white/5">
                         {['🔒 Encrypted', '⚡ Instant Setup', '🤖 AI Powered'].map((badge, i) => (
-                            <span key={i} className="text-[10px] font-bold text-slate-600">{badge}</span>
+                            <span key={i} className="text-[10px] font-bold text-neutral-400 dark:text-slate-600">{badge}</span>
                         ))}
                     </div>
                 </div>

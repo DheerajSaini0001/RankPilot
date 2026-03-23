@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import { getMe, resendVerification, loginUser } from '../api/authApi';
 import { getApiUrl } from '../api/index';
+import { useThemeStore } from '../store/themeStore';
 
 const LoginPage = () => {
     const [email, setEmail] = useState('');
@@ -62,8 +63,10 @@ const LoginPage = () => {
         window.location.href = getApiUrl('/auth/google');
     };
 
+    const { theme } = useThemeStore();
+
     return (
-        <div className="min-h-screen bg-slate-950 flex">
+        <div className="min-h-screen bg-neutral-50 dark:bg-slate-950 flex transition-colors duration-500">
             {/* Left Panel — branding side (hidden on mobile) */}
             <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-between p-12">
                 {/* Background mesh & blobs */}
@@ -110,7 +113,7 @@ const LoginPage = () => {
             </div>
 
             {/* Right Panel — form */}
-            <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-slate-950">
+            <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-white dark:bg-slate-950">
                 <div className="w-full max-w-md">
                     {/* Mobile logo */}
                     <div className="flex items-center gap-2 mb-10 lg:hidden">
@@ -119,19 +122,19 @@ const LoginPage = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
                             </svg>
                         </div>
-                        <span className="text-lg font-black text-white">RankPilot</span>
+                        <span className="text-lg font-black text-neutral-900 dark:text-white">RankPilot</span>
                     </div>
 
                     {/* Heading */}
                     <div className="mb-8">
-                        <h1 className="text-3xl font-black text-white tracking-tight mb-2">Welcome back</h1>
-                        <p className="text-sm text-slate-400 font-medium">Sign in to your analytics dashboard</p>
+                        <h1 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight mb-2">Welcome back</h1>
+                        <p className="text-sm text-neutral-500 dark:text-slate-400 font-medium">Sign in to your analytics dashboard</p>
                     </div>
 
                     {/* Google button */}
                     <button
                         onClick={loginGoogle}
-                        className="w-full flex items-center justify-center gap-3 py-3 px-5 bg-white hover:bg-neutral-100 text-neutral-800 font-black text-sm rounded-xl transition-all shadow-lg hover:-translate-y-0.5 active:scale-95 mb-6"
+                        className="w-full flex items-center justify-center gap-3 py-3 px-5 bg-white dark:bg-white/10 border border-neutral-200 dark:border-white/10 hover:bg-neutral-50 dark:hover:bg-white/20 text-neutral-800 dark:text-white font-black text-sm rounded-xl transition-all shadow-sm hover:-translate-y-0.5 active:scale-95 mb-6"
                     >
                         <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
                             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -144,15 +147,15 @@ const LoginPage = () => {
 
                     {/* Divider */}
                     <div className="flex items-center gap-3 mb-6">
-                        <div className="flex-1 h-px bg-white/10" />
-                        <span className="text-xs font-bold text-slate-600 uppercase tracking-widest">or</span>
-                        <div className="flex-1 h-px bg-white/10" />
+                        <div className="flex-1 h-px bg-neutral-200 dark:bg-white/10" />
+                        <span className="text-xs font-bold text-neutral-400 dark:text-slate-600 uppercase tracking-widest">or</span>
+                        <div className="flex-1 h-px bg-neutral-200 dark:bg-white/10" />
                     </div>
 
                     {/* Email/password form */}
                     <form onSubmit={handleLogin} className="space-y-4">
                         <div className="space-y-1.5">
-                            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">Email Address</label>
+                            <label className="text-xs font-black text-neutral-500 dark:text-slate-400 uppercase tracking-wider">Email Address</label>
                             <Input
                                 type="email"
                                 value={email}
@@ -163,8 +166,8 @@ const LoginPage = () => {
                         </div>
                         <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
-                                <label className="text-xs font-black text-slate-400 uppercase tracking-wider">Password</label>
-                                <Link to="/forgot-password" className="text-xs text-brand-400 hover:text-brand-300 font-bold transition-colors">
+                                <label className="text-xs font-black text-neutral-500 dark:text-slate-400 uppercase tracking-wider">Password</label>
+                                <Link to="/forgot-password" className="text-xs text-brand-600 dark:text-brand-400 hover:text-brand-500 dark:hover:text-brand-300 font-bold transition-colors">
                                     Forgot password?
                                 </Link>
                             </div>
@@ -214,17 +217,17 @@ const LoginPage = () => {
                     )}
 
                     {/* Sign up link */}
-                    <p className="text-center text-xs text-slate-500 mt-8">
+                    <p className="text-center text-xs text-neutral-500 dark:text-slate-500 mt-8">
                         Don't have an account?{' '}
-                        <NavLink to="/register" className="text-brand-400 hover:text-brand-300 font-black transition-colors">
+                        <NavLink to="/register" className="text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-black transition-colors">
                             Create one free →
                         </NavLink>
                     </p>
 
                     {/* Trust badges */}
-                    <div className="flex items-center justify-center gap-4 mt-8 pt-6 border-t border-white/5">
+                    <div className="flex items-center justify-center gap-4 mt-8 pt-6 border-t border-neutral-100 dark:border-white/5">
                         {['🔒 Encrypted', '⚡ Instant Setup', '🤖 AI Powered'].map((badge, i) => (
-                            <span key={i} className="text-[10px] font-bold text-slate-600">{badge}</span>
+                            <span key={i} className="text-[10px] font-bold text-neutral-400 dark:text-slate-600">{badge}</span>
                         ))}
                     </div>
                 </div>

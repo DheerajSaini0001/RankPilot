@@ -22,9 +22,20 @@ import { ProtectedRoute, AuthRoute, AdminRoute } from './components/ui/RouteWrap
 import { getMe } from './api/authApi';
 import { useAuthStore } from './store/authStore';
 import { useAccountsStore } from './store/accountsStore';
+import { useThemeStore } from './store/themeStore';
 
 
 const App = () => {
+  const { theme } = useThemeStore();
+
+  React.useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
+
   return (
     <BrowserRouter>
       <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
