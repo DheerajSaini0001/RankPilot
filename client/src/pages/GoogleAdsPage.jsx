@@ -47,6 +47,7 @@ const GoogleAdsPage = () => {
     const [loading, setLoading] = useState(false);
     
     const [overview, setOverview] = useState(null);
+    const [priorOverview, setPriorOverview] = useState(null);
     const [timeseries, setTimeseries] = useState([]);
     const [campaigns, setCampaigns] = useState([]);
     const [keywords, setKeywords] = useState([]);
@@ -67,6 +68,7 @@ const GoogleAdsPage = () => {
             const data = res.data;
 
             setOverview(data.overview);
+            setPriorOverview(data.priorOverview);
             setTimeseries(data.timeseries);
             setCampaigns(data.campaigns);
             setKeywords(data.keywords);
@@ -164,16 +166,32 @@ const GoogleAdsPage = () => {
       cost: d.cost || 0,
     }));
 
-    // Period comparison
+    const calculateGrowth = (curr, prev) => {
+        if (!prev || prev === 0) return curr > 0 ? 100 : 0;
+        return ((curr - prev) / prev) * 100;
+    };
+
+    const periodComparisonData = (metric, curr, prev, note = '', inverse = false) => {
+        const change = calculateGrowth(curr, prev);
+        const up = inverse ? change < 0 : change > 0;
+        return { metric, current: curr, prior: prev, change: change.toFixed(1), up, note };
+    };
+
     const comparison = overview ? [
-      { metric: '💰 Total Spend',      current: formatCurrency(overview.cost),                    prior: formatCurrency(overview.cost * 1.045),              change: -4.5,  up: false, note: 'Lower is better' },
-      { metric: '👁️ Impressions',     current: formatNumber(overview.impressions),               prior: formatNumber(Math.round(overview.impressions * 0.85)),change: 18.2,  up: true  },
-      { metric: '🖱️ Clicks',          current: formatNumber(overview.clicks),                    prior: formatNumber(Math.round(overview.clicks * 0.92)),    change: 8.7,   up: true  },
-      { metric: '🎯 CTR',             current: `${ctr}%`,                                         prior: `${(parseFloat(ctr) * 0.94).toFixed(2)}%`,          change: 6.4,   up: true  },
-      { metric: '✅ Conversions',     current: formatNumber(overview.conversions),               prior: formatNumber(Math.round(overview.conversions * 0.95)),change: 5.4,   up: true  },
-      { metric: '📊 Conv. Rate',      current: `${convRate}%`,                                    prior: `${(parseFloat(convRate) * 0.96).toFixed(2)}%`,     change: 4.2,   up: true  },
-      { metric: '💵 CPC',             current: formatCurrency(overview.cpc),                     prior: formatCurrency(overview.cpc * 1.021),               change: -2.1,  up: true, note: 'Lower is better' },
-      { metric: '🔁 ROAS',            current: `${roas}x`,                                        prior: `${(parseFloat(roas) * 0.94).toFixed(2)}x`,         change: 6.4,   up: true  },
+      periodComparisonData('💰 Total Spend', formatCurrency(overview.cost), formatCurrency(priorOverview?.cost || 0), 'Lower is better', true),
+      periodComparisonData('👁️ Impressions', formatNumber(overview.impressions), formatNumber(priorOverview?.impressions || 0)),
+      periodComparisonData('🖱️ Clicks', formatNumber(overview.clicks), formatNumber(priorOverview?.clicks || 0)),
+      periodComparisonData('🎯 CTR', `${ctr}%`, `${priorOverview?.impressions > 0 ? ((priorOverview.clicks/priorOverview.impressions)*100).toFixed(2) : '0.00'}%`),
+      periodComparisonData('✅ Conversions', formatNumber(overview.conversions), formatNumber(priorOverview?.conversions || 0)),
+      periodComparisonData('📊 Conv. Rate', `${convRate}%`, `${priorOverview?.clicks > 0 ? ((priorOverview.conversions/priorOverview.clicks)*100).toFixed(2) : '0.00'}%`),
+      periodComparisonData('💵 CPC', formatCurrency(overview.cpc), formatCurrency(priorOverview?.clicks > 0 ? priorOverview.cost / priorOverview.clicks : 0), 'Lower is better', true),
+      { 
+        metric: '🔁 ROAS', 
+        current: `${roas}x`, 
+        prior: `${priorOverview?.cost > 0 ? ((priorOverview.conversions * 50) / priorOverview.cost).toFixed(2) : '0.00'}x`, 
+        change: calculateGrowth(parseFloat(roas), priorOverview?.cost > 0 ? (priorOverview.conversions * 50) / priorOverview.cost : 0).toFixed(1),
+        up: true 
+      },
     ] : [];
 
 

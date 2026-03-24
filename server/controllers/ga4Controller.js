@@ -1,9 +1,11 @@
 import DailyMetric from '../models/DailyMetric.js';
+import { buildMatchFilter } from './analyticsController.js';
 
 export const getOverview = async (req, res) => {
     const { startDate, endDate } = req.query;
+    const filter = await buildMatchFilter(req.user._id, 'ga4', req.query);
     const results = await DailyMetric.aggregate([
-        { $match: { userId: req.user._id, source: 'ga4', date: { $gte: startDate, $lte: endDate } } },
+        { $match: filter },
         { $group: {
             _id: null,
             activeUsers: { $sum: "$metrics.users" },
@@ -29,11 +31,12 @@ export const getOverview = async (req, res) => {
 };
 
 export const getTimeseries = async (req, res) => {
-    const { startDate, endDate, metric } = req.query;
+    const { metric } = req.query;
     const mKey = metric === 'users' ? 'users' : (metric || 'sessions');
+    const filter = await buildMatchFilter(req.user._id, 'ga4', req.query);
     
     const data = await DailyMetric.aggregate([
-        { $match: { userId: req.user._id, source: 'ga4', date: { $gte: startDate, $lte: endDate } } },
+        { $match: filter },
         { $group: {
             _id: "$date",
             value: { $sum: `$metrics.${mKey}` }
@@ -50,9 +53,9 @@ export const getTimeseries = async (req, res) => {
 };
 
 export const getTraffic = async (req, res) => {
-    const { startDate, endDate } = req.query;
+    const filter = await buildMatchFilter(req.user._id, 'ga4', req.query);
     const data = await DailyMetric.aggregate([
-        { $match: { userId: req.user._id, source: 'ga4', date: { $gte: startDate, $lte: endDate } } },
+        { $match: filter },
         { $group: {
             _id: "$dimensions.source",
             sessions: { $sum: "$metrics.sessions" },
@@ -74,9 +77,9 @@ export const getPages = async (req, res) => {
 };
 
 export const getDevices = async (req, res) => {
-    const { startDate, endDate } = req.query;
+    const filter = await buildMatchFilter(req.user._id, 'ga4', req.query);
     const data = await DailyMetric.aggregate([
-        { $match: { userId: req.user._id, source: 'ga4', date: { $gte: startDate, $lte: endDate } } },
+        { $match: filter },
         { $group: {
             _id: "$dimensions.device",
             sessions: { $sum: "$metrics.sessions" },

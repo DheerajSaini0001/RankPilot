@@ -94,7 +94,9 @@ export const resendVerification = async (req, res) => {
 
 export const login = async (req, res) => {
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
+    
+    const safeEmail = String(email || '').toLowerCase();
+    const user = await User.findOne({ email: safeEmail });
 
     if (!user) {
         return res.status(401).json({ success: false, message: 'Invalid credentials' });

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/ui/DashboardLayout';
 import Button from '../components/ui/Button';
 import { getMe } from '../api/authApi';
-import { listGa4, listGsc, listGoogleAds, listFacebookAds, selectAccounts, getActiveAccounts } from '../api/accountApi';
+import { listGa4, listGsc, listGoogleAds, listGoogleAccounts, listFacebookAds, listFacebookAccounts, selectAccounts, getActiveAccounts } from '../api/accountApi';
 import { useAccountsStore } from '../store/accountsStore';
 import { useAuthStore } from '../store/authStore';
 import { useNotificationStore } from '../store/notificationStore';
@@ -21,13 +21,22 @@ const ConnectAccountsPage = () => {
     const isNew = queryParams.get('new') === 'true';
     const isViewOnly = queryParams.get('view') === 'true';
 
+    const [googleAccounts, setGoogleAccounts] = useState([]);
+    const [facebookAccounts, setFacebookAccounts] = useState([]);
+    
     // Data lists
     const [ga4Props, setGa4Props] = useState([]);
     const [gscSites, setGscSites] = useState([]);
     const [gAdsAccounts, setGAdsAccounts] = useState([]);
     const [fbAdAccounts, setFbAdAccounts] = useState([]);
 
-    // Selections
+    // Selection Mappings (Token IDs)
+    const [ga4TokenId, setGa4TokenId] = useState('');
+    const [gscTokenId, setGscTokenId] = useState('');
+    const [googleAdsTokenId, setGoogleAdsTokenId] = useState('');
+    const [facebookTokenId, setFacebookTokenId] = useState('');
+
+    // Selections (Property/Site IDs)
     const [selectedGa4, setSelectedGa4] = useState('');
     const [selectedGsc, setSelectedGsc] = useState('');
     const [selectedGAds, setSelectedGAds] = useState('');
@@ -43,45 +52,53 @@ const ConnectAccountsPage = () => {
                 const me = await getMe();
                 setAccounts({ connectedSources: me.data.connectedSources });
 
-                // Only load active accounts if we are NOT in "new site" mode
+                // Load already connected Google accounts
+                if (me.data.connectedSources.includes('google')) {
+                    const accs = await listGoogleAccounts();
+                    setGoogleAccounts(accs.data || []);
+                }
+
                 if (!isNew) {
                     const active = await getActiveAccounts(activeSiteId);
                     if (active.data) {
                         const vals = {
                             siteName: active.data.siteName || '',
                             ga4: active.data.ga4PropertyId || '',
+                            ga4TokenId: active.data.ga4TokenId || '',
                             gsc: active.data.gscSiteUrl || '',
+                            gscTokenId: active.data.gscTokenId || '',
                             gAds: active.data.googleAdsCustomerId || '',
-                            fbAds: active.data.facebookAdAccountId || ''
+                            googleAdsTokenId: active.data.googleAdsTokenId || '',
+                            fbAds: active.data.facebookAdAccountId || '',
+                            facebookTokenId: active.data.facebookTokenId || ''
                         };
                         setInitialValues(vals);
                         if (vals.siteName) setSiteName(vals.siteName);
                         if (vals.ga4) setSelectedGa4(vals.ga4);
+                        if (vals.ga4TokenId) setGa4TokenId(vals.ga4TokenId);
                         if (vals.gsc) setSelectedGsc(vals.gsc);
+                        if (vals.gscTokenId) setGscTokenId(vals.gscTokenId);
                         if (vals.gAds) setSelectedGAds(vals.gAds);
+                        if (vals.googleAdsTokenId) setGoogleAdsTokenId(vals.googleAdsTokenId);
                         if (vals.fbAds) setSelectedFbAds(vals.fbAds);
+                        if (vals.facebookTokenId) setFacebookTokenId(vals.facebookTokenId);
                     }
                 } else {
                     setInitialValues({});
-                    // Reset selections for new site
                     setSiteName('New Website');
                     setSelectedGa4('');
                     setSelectedGsc('');
                     setSelectedGAds('');
                     setSelectedFbAds('');
+                    setGa4TokenId('');
+                    setGscTokenId('');
+                    setGoogleAdsTokenId('');
+                    setFacebookTokenId('');
                 }
 
-                if (me.data.connectedSources.includes('google')) {
-                    const p = await listGa4().catch(() => ({ data: [] }));
-                    setGa4Props(p.data || []);
-                    const s = await listGsc().catch(() => ({ data: [] }));
-                    setGscSites(s.data || []);
-                    const g = await listGoogleAds().catch(() => ({ data: [] }));
-                    setGAdsAccounts(g.data || []);
-                }
                 if (me.data.connectedSources.includes('facebook')) {
-                    const f = await listFacebookAds().catch(() => ({ data: [] }));
-                    setFbAdAccounts(f.data || []);
+                    const faccs = await listFacebookAccounts();
+                    setFacebookAccounts(faccs.data || []);
                 }
             } catch (err) {
                 console.error(err);
@@ -92,6 +109,39 @@ const ConnectAccountsPage = () => {
 
         loadData();
     }, [activeSiteId, isNew, setAccounts]);
+
+    // Side Effects: Fetch properties when Token is selected
+    useEffect(() => {
+        if (ga4TokenId) {
+            listGa4(ga4TokenId).then(res => setGa4Props(res.data || [])).catch(() => setGa4Props([]));
+        } else {
+            setGa4Props([]);
+        }
+    }, [ga4TokenId]);
+
+    useEffect(() => {
+        if (gscTokenId) {
+            listGsc(gscTokenId).then(res => setGscSites(res.data || [])).catch(() => setGscSites([]));
+        } else {
+            setGscSites([]);
+        }
+    }, [gscTokenId]);
+
+    useEffect(() => {
+        if (googleAdsTokenId) {
+            listGoogleAds(googleAdsTokenId).then(res => setGAdsAccounts(res.data || [])).catch(() => setGAdsAccounts([]));
+        } else {
+            setGAdsAccounts([]);
+        }
+    }, [googleAdsTokenId]);
+
+    useEffect(() => {
+        if (facebookTokenId) {
+            listFacebookAds(facebookTokenId).then(res => setFbAdAccounts(res.data || [])).catch(() => setFbAdAccounts([]));
+        } else {
+            setFbAdAccounts([]);
+        }
+    }, [facebookTokenId]);
 
     const handleSave = async () => {
         if (!siteName.trim()) {
@@ -110,11 +160,15 @@ const ConnectAccountsPage = () => {
                 ga4PropertyId: selectedGa4,
                 ga4PropertyName: selectedGa4Obj?.name || '',
                 ga4AccountId: selectedGa4Obj?.accountId || '',
+                ga4TokenId: ga4TokenId,
                 gscSiteUrl: selectedGsc,
+                gscTokenId: gscTokenId,
                 googleAdsCustomerId: selectedGAds,
-                googleAdsAccountName: selectedGAdsObj || '', // Google Ads list currently returns just IDs
+                googleAdsAccountName: selectedGAdsObj || '',
+                googleAdsTokenId: googleAdsTokenId,
                 facebookAdAccountId: selectedFbAds,
-                facebookAdAccountName: selectedFbAdsObj?.name || ''
+                facebookAdAccountName: selectedFbAdsObj?.name || '',
+                facebookTokenId: facebookTokenId
             };
             
             const res = await selectAccounts(data);
@@ -243,71 +297,99 @@ const ConnectAccountsPage = () => {
                           {/* Configure Services — only if connected */}
                           {connectedSources.includes('google') && (
                             <div className="p-6">
-                              <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-4">Configure Services</p>
+                              <div className="flex items-center justify-between mb-4">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500">Configure Services</p>
+                                <Button 
+                                  variant="secondary" 
+                                  className="text-[10px] py-1 px-3 h-auto uppercase tracking-tighter"
+                                  onClick={() => window.location.href = getApiUrl(`/auth/google?token=${encodeURIComponent(token)}`)}
+                                >
+                                  + Link Another Account
+                                </Button>
+                              </div>
                               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                 {/* GA4 */}
+                                 <div className="space-y-3 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800">
+                                   <div className="space-y-1">
+                                      <label className="text-[11px] font-black uppercase tracking-wider text-brand-600 dark:text-brand-400">Step 1: Select Account (GA4)</label>
+                                      <select
+                                        value={ga4TokenId}
+                                        onChange={e => setGa4TokenId(e.target.value)}
+                                        className="w-full text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2 px-3 outline-none focus:ring-2 focus:ring-brand-500 transition-all shadow-sm"
+                                      >
+                                        <option value="">Select Account...</option>
+                                        {googleAccounts.map(acc => <option key={acc._id} value={acc._id}>{acc.email}</option>)}
+                                      </select>
+                                   </div>
+                                   <div className="space-y-1">
+                                      <label className="text-[11px] font-black uppercase tracking-wider text-brand-600 dark:text-brand-400">Step 2: Property (GA4)</label>
+                                      <select
+                                        value={selectedGa4}
+                                        onChange={e => setSelectedGa4(e.target.value)}
+                                        disabled={!ga4TokenId}
+                                        className={`w-full text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2 px-3 outline-none focus:ring-2 focus:ring-brand-500 transition-all shadow-sm ${!ga4TokenId ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                      >
+                                        <option value="">Select Property...</option>
+                                        {ga4Props.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                      </select>
+                                   </div>
+                                 </div>
 
-                                {/* GA4 */}
-                                <div className="space-y-1.5">
-                                  <label className="text-[11px] font-black uppercase tracking-wider text-brand-600 dark:text-brand-400">Property (GA4)</label>
-                                  <select
-                                    value={selectedGa4}
-                                    onChange={e => setSelectedGa4(e.target.value)}
-                                    disabled={!!initialValues.ga4}
-                                    className={`w-full text-sm font-medium rounded-xl border bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2.5 px-3 outline-none transition-all focus:ring-2 focus:ring-brand-500 focus:border-transparent shadow-sm
-                                      ${initialValues.ga4
-                                        ? 'border-neutral-200 dark:border-neutral-700 opacity-60 cursor-not-allowed'
-                                        : 'border-neutral-200 dark:border-neutral-700 hover:border-brand-300 dark:hover:border-brand-700'
-                                      }`}
-                                  >
-                                    <option value="">Select Property...</option>
-                                    {ga4Props.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                  </select>
-                                  {initialValues.ga4 && (
-                                    <p className="text-[10px] text-amber-500 font-bold flex items-center gap-1">🔒 Locked — security mode active</p>
-                                  )}
-                                </div>
+                                 {/* GSC */}
+                                 <div className="space-y-3 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800">
+                                   <div className="space-y-1">
+                                      <label className="text-[11px] font-black uppercase tracking-wider text-brand-600 dark:text-brand-400">Step 1: Select Account (GSC)</label>
+                                      <select
+                                        value={gscTokenId}
+                                        onChange={e => setGscTokenId(e.target.value)}
+                                        className="w-full text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2 px-3 outline-none focus:ring-2 focus:ring-brand-500 transition-all shadow-sm"
+                                      >
+                                        <option value="">Select Account...</option>
+                                        {googleAccounts.map(acc => <option key={acc._id} value={acc._id}>{acc.email}</option>)}
+                                      </select>
+                                   </div>
+                                   <div className="space-y-1">
+                                      <label className="text-[11px] font-black uppercase tracking-wider text-brand-600 dark:text-brand-400">Step 2: Target Site (GSC)</label>
+                                      <select
+                                        value={selectedGsc}
+                                        onChange={e => setSelectedGsc(e.target.value)}
+                                        disabled={!gscTokenId}
+                                        className={`w-full text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2 px-3 outline-none focus:ring-2 focus:ring-brand-500 transition-all shadow-sm ${!gscTokenId ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                      >
+                                        <option value="">Select Site...</option>
+                                        {gscSites.map(s => <option key={s.siteUrl} value={s.siteUrl}>{s.siteUrl}</option>)}
+                                      </select>
+                                   </div>
+                                 </div>
 
-                                {/* GSC */}
-                                <div className="space-y-1.5">
-                                  <label className="text-[11px] font-black uppercase tracking-wider text-brand-600 dark:text-brand-400">Target Site (GSC)</label>
-                                  <select
-                                    value={selectedGsc}
-                                    onChange={e => setSelectedGsc(e.target.value)}
-                                    disabled={!!initialValues.gsc}
-                                    className={`w-full text-sm font-medium rounded-xl border bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2.5 px-3 outline-none transition-all focus:ring-2 focus:ring-brand-500 focus:border-transparent shadow-sm
-                                      ${initialValues.gsc
-                                        ? 'border-neutral-200 dark:border-neutral-700 opacity-60 cursor-not-allowed'
-                                        : 'border-neutral-200 dark:border-neutral-700 hover:border-brand-300 dark:hover:border-brand-700'
-                                      }`}
-                                  >
-                                    <option value="">Select Site...</option>
-                                    {gscSites.map(s => <option key={s.siteUrl} value={s.siteUrl}>{s.siteUrl}</option>)}
-                                  </select>
-                                  {initialValues.gsc && (
-                                    <p className="text-[10px] text-amber-500 font-bold flex items-center gap-1">🔒 Locked — security mode active</p>
-                                  )}
-                                </div>
-
-                                {/* Google Ads — full width */}
-                                <div className="lg:col-span-2 space-y-1.5">
-                                  <label className="text-[11px] font-black uppercase tracking-wider text-brand-600 dark:text-brand-400">Ads Account</label>
-                                  <select
-                                    value={selectedGAds}
-                                    onChange={e => setSelectedGAds(e.target.value)}
-                                    disabled={!!initialValues.gAds}
-                                    className={`w-full text-sm font-medium rounded-xl border bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2.5 px-3 outline-none transition-all focus:ring-2 focus:ring-brand-500 focus:border-transparent shadow-sm
-                                      ${initialValues.gAds
-                                        ? 'border-neutral-200 dark:border-neutral-700 opacity-60 cursor-not-allowed'
-                                        : 'border-neutral-200 dark:border-neutral-700 hover:border-brand-300 dark:hover:border-brand-700'
-                                      }`}
-                                  >
-                                    <option value="">Select Account...</option>
-                                    {gAdsAccounts.map(g => <option key={g} value={g}>{g}</option>)}
-                                  </select>
-                                  {initialValues.gAds && (
-                                    <p className="text-[10px] text-amber-500 font-bold flex items-center gap-1">🔒 Locked — security mode active</p>
-                                  )}
-                                </div>
+                                 {/* Google Ads */}
+                                 <div className="lg:col-span-2 space-y-3 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800">
+                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                      <div className="space-y-1">
+                                        <label className="text-[11px] font-black uppercase tracking-wider text-brand-600 dark:text-brand-400">Step 1: Select Account (Ads)</label>
+                                        <select
+                                          value={googleAdsTokenId}
+                                          onChange={e => setGoogleAdsTokenId(e.target.value)}
+                                          className="w-full text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2 px-3 outline-none focus:ring-2 focus:ring-brand-500 transition-all shadow-sm"
+                                        >
+                                          <option value="">Select Account...</option>
+                                          {googleAccounts.map(acc => <option key={acc._id} value={acc._id}>{acc.email}</option>)}
+                                        </select>
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-[11px] font-black uppercase tracking-wider text-brand-600 dark:text-brand-400">Step 2: Ads Customer ID</label>
+                                        <select
+                                          value={selectedGAds}
+                                          onChange={e => setSelectedGAds(e.target.value)}
+                                          disabled={!googleAdsTokenId}
+                                          className={`w-full text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2 px-3 outline-none focus:ring-2 focus:ring-brand-500 transition-all shadow-sm ${!googleAdsTokenId ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        >
+                                          <option value="">Select Ads ID...</option>
+                                          {gAdsAccounts.map(g => <option key={g} value={g}>{g}</option>)}
+                                        </select>
+                                      </div>
+                                   </div>
+                                 </div>
                               </div>
                             </div>
                           )}
@@ -354,25 +436,40 @@ const ConnectAccountsPage = () => {
                           {/* Configure Ad Account */}
                           {connectedSources.includes('facebook') && (
                             <div className="p-6">
-                              <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-4">Configure Ad Account</p>
-                              <div className="max-w-sm space-y-1.5">
-                                <label className="text-[11px] font-black uppercase tracking-wider text-brand-600 dark:text-brand-400">Primary Ad Account</label>
-                                <select
-                                  value={selectedFbAds}
-                                  onChange={e => setSelectedFbAds(e.target.value)}
-                                  disabled={!!initialValues.fbAds}
-                                  className={`w-full text-sm font-medium rounded-xl border bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2.5 px-3 outline-none transition-all focus:ring-2 focus:ring-brand-500 focus:border-transparent shadow-sm
-                                    ${initialValues.fbAds
-                                      ? 'border-neutral-200 dark:border-neutral-700 opacity-60 cursor-not-allowed'
-                                      : 'border-neutral-200 dark:border-neutral-700 hover:border-brand-300 dark:hover:border-brand-700'
-                                    }`}
+                              <div className="flex items-center justify-between mb-4">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500">Configure Ad Account</p>
+                                <Button 
+                                  variant="secondary" 
+                                  className="text-[10px] py-1 px-3 h-auto uppercase tracking-tighter"
+                                  onClick={() => window.location.href = getApiUrl(`/auth/facebook?token=${encodeURIComponent(token)}`)}
                                 >
-                                  <option value="">Select Ad Account...</option>
-                                  {fbAdAccounts.map(f => <option key={f.id} value={f.id}>{f.name} ({f.id})</option>)}
-                                </select>
-                                {initialValues.fbAds && (
-                                  <p className="text-[10px] text-amber-500 font-bold flex items-center gap-1">🔒 Locked — security mode active</p>
-                                )}
+                                  + Link Another Profile
+                                </Button>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800">
+                                <div className="space-y-1">
+                                  <label className="text-[11px] font-black uppercase tracking-wider text-[#1877F2]">Step 1: Select Profile</label>
+                                  <select
+                                    value={facebookTokenId}
+                                    onChange={e => setFacebookTokenId(e.target.value)}
+                                    className="w-full text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2 px-3 outline-none focus:ring-2 focus:ring-[#1877F2] transition-all"
+                                  >
+                                    <option value="">Select Profile...</option>
+                                    {facebookAccounts.map(f => <option key={f._id} value={f._id}>{f.name}</option>)}
+                                  </select>
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[11px] font-black uppercase tracking-wider text-[#1877F2]">Step 2: Ad Account</label>
+                                  <select
+                                    value={selectedFbAds}
+                                    onChange={e => setSelectedFbAds(e.target.value)}
+                                    disabled={!facebookTokenId}
+                                    className={`w-full text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2 px-3 outline-none focus:ring-2 focus:ring-[#1877F2] transition-all ${!facebookTokenId ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                  >
+                                    <option value="">Select Account...</option>
+                                    {fbAdAccounts.map(f => <option key={f.id} value={f.id}>{f.name} ({f.id})</option>)}
+                                  </select>
+                                </div>
                               </div>
                             </div>
                           )}

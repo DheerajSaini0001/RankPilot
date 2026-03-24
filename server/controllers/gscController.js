@@ -1,9 +1,10 @@
 import DailyMetric from '../models/DailyMetric.js';
+import { buildMatchFilter } from './analyticsController.js';
 
 export const getOverview = async (req, res) => {
-    const { startDate, endDate } = req.query;
+    const filter = await buildMatchFilter(req.user._id, 'gsc', req.query);
     const results = await DailyMetric.aggregate([
-        { $match: { userId: req.user._id, source: 'gsc', date: { $gte: startDate, $lte: endDate } } },
+        { $match: filter },
         { $group: {
             _id: null,
             clicks: { $sum: "$metrics.clicks" },
@@ -23,9 +24,9 @@ export const getOverview = async (req, res) => {
 };
 
 export const getQueries = async (req, res) => {
-    const { startDate, endDate } = req.query;
+    const filter = await buildMatchFilter(req.user._id, 'gsc', req.query);
     const data = await DailyMetric.aggregate([
-        { $match: { userId: req.user._id, source: 'gsc', date: { $gte: startDate, $lte: endDate } } },
+        { $match: filter },
         { $group: {
             _id: "$dimensions.query",
             clicks: { $sum: "$metrics.clicks" },
@@ -48,9 +49,9 @@ export const getQueries = async (req, res) => {
 };
 
 export const getPages = async (req, res) => {
-    const { startDate, endDate } = req.query;
+    const filter = await buildMatchFilter(req.user._id, 'gsc', req.query);
     const data = await DailyMetric.aggregate([
-        { $match: { userId: req.user._id, source: 'gsc', date: { $gte: startDate, $lte: endDate } } },
+        { $match: filter },
         { $group: {
             _id: "$dimensions.page",
             clicks: { $sum: "$metrics.clicks" },
@@ -77,9 +78,9 @@ export const getCountries = async (req, res) => {
 };
 
 export const getTimeseries = async (req, res) => {
-    const { startDate, endDate } = req.query;
+    const filter = await buildMatchFilter(req.user._id, 'gsc', req.query);
     const data = await DailyMetric.aggregate([
-        { $match: { userId: req.user._id, source: 'gsc', date: { $gte: startDate, $lte: endDate } } },
+        { $match: filter },
         { $group: {
             _id: "$date",
             clicks: { $sum: "$metrics.clicks" },

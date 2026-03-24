@@ -15,7 +15,6 @@ const defaultConfigs = [
 
     { key: 'JWT_SECRET', label: 'JWT Secret Key', group: 'security', isSecret: true },
     { key: 'JWT_EXPIRES_IN', label: 'JWT Expiry Duration', group: 'security', isSecret: false },
-    { key: 'ENCRYPTION_KEY', label: 'Platform Encryption Key (32 bytes hex)', group: 'security', isSecret: true },
 
     { key: 'GOOGLE_CLIENT_ID', label: 'Google OAuth Client ID', group: 'google', isSecret: true },
     { key: 'GOOGLE_CLIENT_SECRET', label: 'Google OAuth Client Secret', group: 'google', isSecret: true },

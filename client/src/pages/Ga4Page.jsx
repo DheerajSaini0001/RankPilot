@@ -209,7 +209,7 @@ const Ga4Page = () => {
       { metric:'👥 Users',        current: formatNumber(overview.users),                       prior: formatNumber(priorOverview.users),              change: calculateChange(overview.users, priorOverview.users),  up: overview.users >= priorOverview.users },
       { metric:'🔁 Sessions',     current: formatNumber(overview.sessions),                    prior: formatNumber(priorOverview.sessions),           change: calculateChange(overview.sessions, priorOverview.sessions),   up: overview.sessions >= priorOverview.sessions },
       { metric:'📄 Page Views',   current: formatNumber(overview.pageViews),                   prior: formatNumber(priorOverview.pageViews),          change: calculateChange(overview.pageViews, priorOverview.pageViews),  up: overview.pageViews >= priorOverview.pageViews },
-      { metric:'📉 Bounce Rate',  current: `${(overview.bounceRate * 100).toFixed(1)}%`,       prior: `${(priorOverview.bounceRate * 100).toFixed(1)}%`,          change: calculateChange(overview.bounceRate, priorOverview.bounceRate),  up: overview.bounceRate <= priorOverview.bounceRate }, // Down is good for bounce
+      { metric:'📉 Bounce Rate',  current: `${((overview.bounceRate || 0) * 100).toFixed(1)}%`,       prior: `${((priorOverview.bounceRate || 0) * 100).toFixed(1)}%`,          change: calculateChange(overview.bounceRate || 0, priorOverview.bounceRate || 0),  up: (overview.bounceRate || 0) <= (priorOverview.bounceRate || 0) }, // Down is good for bounce
       { metric:'⏱ Avg Duration',  current: formatTime(overview.avgSessionDuration),            prior: formatTime(priorOverview.avgSessionDuration),               change: calculateChange(overview.avgSessionDuration, priorOverview.avgSessionDuration),  up: overview.avgSessionDuration >= priorOverview.avgSessionDuration },
       { metric:'✨ New Users',    current: formatNumber(Math.round(overview.users * 0.59)),    prior: formatNumber(Math.round(priorOverview.users * 0.59)),       change: calculateChange(overview.users, priorOverview.users),  up: overview.users >= priorOverview.users },
     ] : [];
@@ -233,7 +233,7 @@ const Ga4Page = () => {
 - Users: ${formatNumber(overview?.users || 0)} (Change: ${calculateChange(overview?.users, priorOverview?.users)}%)
 - Sessions: ${formatNumber(overview?.sessions || 0)} (Change: ${calculateChange(overview?.sessions, priorOverview?.sessions)}%)
 - Page Views: ${formatNumber(overview?.pageViews || 0)}
-- Bounce Rate: ${(overview?.bounceRate * 100).toFixed(1)}%
+- Bounce Rate: ${( (overview?.bounceRate || 0) * 100).toFixed(1)}%
 
 Top Traffic Sources: ${traffic.slice(0, 3).map(t => t.source).join(', ')}
 

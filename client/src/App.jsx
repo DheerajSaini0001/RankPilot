@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ConnectAccountsPage from './pages/ConnectAccountsPage';
 import DashboardPage from './pages/DashboardPage';
+import NotFoundPage from './pages/NotFoundPage';
 import AIChatPage from './pages/AIChatPage';
 import AdminPage from './pages/AdminPage';
 import SettingsPage from './pages/SettingsPage';
@@ -158,6 +159,7 @@ const App = () => {
         } />
 
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   );

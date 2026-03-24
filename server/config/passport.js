@@ -48,19 +48,27 @@ export const configurePassport = async () => {
                 }
 
                 // Tokens logic
-                if (accessToken && refreshToken) {
+                if (accessToken) {
                     const expiryDate = new Date();
                     expiryDate.setSeconds(expiryDate.getSeconds() + (params.expires_in || 3600));
 
+                    const updateData = {
+                        userId: user._id,
+                        googleId: profile.id,
+                        email: profile.emails[0].value.toLowerCase(),
+                        accessToken: encrypt(accessToken),
+                        expiresAt: expiryDate,
+                        scope: params.scope || ''
+                    };
+
+                    // Only update refreshToken if it's provided (Google only sends it on first consent or if prompted)
+                    if (refreshToken) {
+                        updateData.refreshToken = encrypt(refreshToken);
+                    }
+
                     await GoogleToken.findOneAndUpdate(
-                        { userId: user._id },
-                        {
-                            userId: user._id,
-                            accessToken: encrypt(accessToken),
-                            refreshToken: encrypt(refreshToken),
-                            expiresAt: expiryDate,
-                            scope: params.scope || ''
-                        },
+                        { userId: user._id, googleId: profile.id },
+                        updateData,
                         { upsert: true, returnDocument: 'after' }
                     );
                 }
@@ -111,12 +119,13 @@ export const configurePassport = async () => {
                     expiryDate.setSeconds(expiryDate.getSeconds() + 5184000); // FB long-lived token (60 days)
 
                     await FacebookToken.findOneAndUpdate(
-                        { userId: user._id },
+                        { userId: user._id, facebookUserId: profile.id },
                         {
                             userId: user._id,
+                            facebookUserId: profile.id,
+                            name: profile.displayName || 'Facebook Account',
                             accessToken: encrypt(accessToken),
                             expiresAt: expiryDate,
-                            facebookUserId: profile.id,
                             scope: 'ads_read,ads_management,business_management'
                         },
                         { upsert: true, returnDocument: 'after' }

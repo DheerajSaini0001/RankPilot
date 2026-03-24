@@ -14,8 +14,15 @@ export const getGoogleClient = async () => {
     );
 };
 
-export const getValidGoogleToken = async (userId) => {
-    const tokenDoc = await GoogleToken.findOne({ userId });
+export const getValidGoogleToken = async (userId, tokenId = null) => {
+    let tokenDoc;
+    if (tokenId) {
+        tokenDoc = await GoogleToken.findOne({ _id: tokenId, userId });
+    } else {
+        // Fallback to find the most recent/first token for the user if none specified
+        tokenDoc = await GoogleToken.findOne({ userId }).sort({ updatedAt: -1 });
+    }
+
     if (!tokenDoc) throw new Error('GOOGLE_AUTH_MISSING');
 
     const oauth2Client = await getGoogleClient();
@@ -39,10 +46,17 @@ export const getValidGoogleToken = async (userId) => {
             }
             await tokenDoc.save();
         } catch (err) {
-            console.error('Error refreshing Google limit', err);
+            console.error('Error refreshing Google token', err);
             throw new Error('GOOGLE_AUTH_EXPIRED');
         }
     }
 
     return oauth2Client;
+};
+
+// New helper to get account info
+export const getGoogleAccountInfo = async (auth) => {
+    const oauth2 = google.oauth2({ version: 'v2', auth });
+    const res = await oauth2.userinfo.get();
+    return res.data; // { id, email, name, picture, ... }
 };

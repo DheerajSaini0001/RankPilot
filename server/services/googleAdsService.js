@@ -14,9 +14,9 @@ const getClient = async () => {
     });
 };
 
-export const listAccounts = async (userId) => {
+export const listAccounts = async (userId, tokenId = null) => {
     const api = await getClient();
-    const auth = await getValidGoogleToken(userId);
+    const auth = await getValidGoogleToken(userId, tokenId);
     const credentials = auth.credentials;
 
     const res = await api.listAccessibleCustomers(credentials.refresh_token);
@@ -25,11 +25,11 @@ export const listAccounts = async (userId) => {
 };
 
 
-export const runQuery = async (userId, customerId, reportType, startDate, endDate, queryStr) => {
+export const runQuery = async (userId, customerId, reportType, startDate, endDate, queryStr, tokenId = null) => {
     if (!customerId) throw new Error('GOOGLE_ADS_CUSTOMER_ID_MISSING');
 
     const api = await getClient();
-    const auth = await getValidGoogleToken(userId);
+    const auth = await getValidGoogleToken(userId, tokenId);
     const credentials = auth.credentials;
 
     const customer = api.Customer({

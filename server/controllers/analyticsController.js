@@ -2,7 +2,7 @@ import DailyMetric from '../models/DailyMetric.js';
 import UserAccounts from '../models/UserAccounts.js';
 import { syncGsc, syncGa4, syncGoogleAds, syncFacebookAds } from '../services/syncService.js';
 
-const buildMatchFilter = async (userId, source, query) => {
+export const buildMatchFilter = async (userId, source, query) => {
     const { startDate, endDate, device, campaign, channel, siteId } = query;
     const filter = { userId, date: { $gte: startDate, $lte: endDate } };
     
@@ -410,8 +410,18 @@ export const getGoogleAdsSummary = async (req, res) => {
     const userId = req.user._id;
 
     try {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const diff = end - start;
+        const prevEnd = new Date(start.getTime() - (24 * 60 * 60 * 1000));
+        const prevStart = new Date(prevEnd.getTime() - diff);
+        const prevStartDate = prevStart.toISOString().split('T')[0];
+        const prevEndDate = prevEnd.toISOString().split('T')[0];
+
         const filter = await buildMatchFilter(userId, 'google-ads', req.query);
-        const [overview, timeseries, campaigns, keywords, deviceBreakdown] = await Promise.all([
+        const prevFilter = await buildMatchFilter(userId, 'google-ads', { ...req.query, startDate: prevStartDate, endDate: prevEndDate });
+
+        const [overview, priorOverview, timeseries, campaigns, keywords, deviceBreakdown] = await Promise.all([
             DailyMetric.aggregate([
                 { $match: filter },
                 { $group: {
@@ -432,6 +442,16 @@ export const getGoogleAdsSummary = async (req, res) => {
                     conversions: { $sum: "$metrics.conversions" }
                 } },
                 { $sort: { _id: 1 } }
+            ]),
+            DailyMetric.aggregate([
+                { $match: prevFilter },
+                { $group: {
+                    _id: null,
+                    cost: { $sum: "$metrics.spend" },
+                    impressions: { $sum: "$metrics.impressions" },
+                    clicks: { $sum: "$metrics.clicks" },
+                    conversions: { $sum: "$metrics.conversions" }
+                }}
             ]),
             DailyMetric.aggregate([
                 { $match: filter },
@@ -463,12 +483,22 @@ export const getGoogleAdsSummary = async (req, res) => {
 
 
         const ov = overview[0] || { cost: 0, impressions: 0, clicks: 0, conversions: 0 };
+        const pov = priorOverview[0] || { cost: 0, impressions: 0, clicks: 0, conversions: 0 };
+
         res.status(200).json({
             overview: {
                 ...ov,
+                spend: ov.cost,
                 ctr: ov.impressions > 0 ? ov.clicks / ov.impressions : 0,
                 cpc: ov.clicks > 0 ? ov.cost / ov.clicks : 0,
                 conversionRate: ov.clicks > 0 ? ov.conversions / ov.clicks : 0
+            },
+            priorOverview: {
+                ...pov,
+                spend: pov.cost,
+                ctr: pov.impressions > 0 ? pov.clicks / pov.impressions : 0,
+                cpc: pov.clicks > 0 ? pov.cost / pov.clicks : 0,
+                conversionRate: pov.clicks > 0 ? pov.conversions / pov.clicks : 0
             },
             timeseries: timeseries.map(d => ({ 
                 date: d._id, 
@@ -507,8 +537,18 @@ export const getFacebookAdsSummary = async (req, res) => {
     const userId = req.user._id;
 
     try {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const diff = end - start;
+        const prevEnd = new Date(start.getTime() - (24 * 60 * 60 * 1000));
+        const prevStart = new Date(prevEnd.getTime() - diff);
+        const prevStartDate = prevStart.toISOString().split('T')[0];
+        const prevEndDate = prevEnd.toISOString().split('T')[0];
+
         const filter = await buildMatchFilter(userId, 'facebook-ads', req.query);
-        const [overview, timeseries, campaigns, adsets, deviceBreakdown] = await Promise.all([
+        const prevFilter = await buildMatchFilter(userId, 'facebook-ads', { ...req.query, startDate: prevStartDate, endDate: prevEndDate });
+
+        const [overview, priorOverview, timeseries, campaigns, adsets, deviceBreakdown] = await Promise.all([
             DailyMetric.aggregate([
                 { $match: filter },
                 { $group: {
@@ -531,6 +571,18 @@ export const getFacebookAdsSummary = async (req, res) => {
                     reach: { $sum: "$metrics.reach" }
                 } },
                 { $sort: { _id: 1 } }
+            ]),
+            DailyMetric.aggregate([
+                { $match: prevFilter },
+                { $group: {
+                    _id: null,
+                    spend: { $sum: "$metrics.spend" },
+                    impressions: { $sum: "$metrics.impressions" },
+                    clicks: { $sum: "$metrics.clicks" },
+                    conversions: { $sum: "$metrics.conversions" },
+                    reach: { $sum: "$metrics.reach" },
+                    purchase_value: { $sum: "$metrics.purchase_value" }
+                }}
             ]),
             DailyMetric.aggregate([
                 { $match: filter },
@@ -565,12 +617,20 @@ export const getFacebookAdsSummary = async (req, res) => {
 
 
         const ov = overview[0] || { spend: 0, impressions: 0, clicks: 0, conversions: 0, reach: 0, purchase_value: 0 };
+        const pov = priorOverview[0] || { spend: 0, impressions: 0, clicks: 0, conversions: 0, reach: 0, purchase_value: 0 };
+
         res.status(200).json({
             overview: {
                 ...ov,
                 ctr: ov.impressions > 0 ? (ov.clicks / ov.impressions) * 100 : 0,
                 cpc: ov.clicks > 0 ? ov.spend / ov.clicks : 0,
                 roas: ov.spend > 0 ? (ov.purchase_value || (ov.conversions * 50)) / ov.spend : 0
+            },
+            priorOverview: {
+                ...pov,
+                ctr: pov.impressions > 0 ? (pov.clicks / pov.impressions) * 100 : 0,
+                cpc: pov.clicks > 0 ? pov.spend / pov.clicks : 0,
+                roas: pov.spend > 0 ? (pov.purchase_value || (pov.conversions * 50)) / pov.spend : 0
             },
             timeseries: timeseries.map(d => ({ 
                 date: d._id, 

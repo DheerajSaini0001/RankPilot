@@ -46,6 +46,7 @@ const FacebookAdsPage = () => {
     const [loading, setLoading] = useState(false);
     
     const [overview, setOverview] = useState(null);
+    const [priorOverview, setPriorOverview] = useState(null);
     const [timeseries, setTimeseries] = useState([]);
     const [campaigns, setCampaigns] = useState([]);
     const [adsets, setAdsets] = useState([]);
@@ -66,6 +67,7 @@ const FacebookAdsPage = () => {
             const data = res.data;
 
             setOverview(data.overview);
+            setPriorOverview(data.priorOverview);
             setTimeseries(data.timeseries);
             setCampaigns(data.campaigns);
             setAdsets(data.adsets);
@@ -117,14 +119,14 @@ const FacebookAdsPage = () => {
 
 
     // Derived Values
-    const roas = overview?.roas
+    const roas = (overview && overview.roas !== undefined)
       ? overview.roas.toFixed(2)
       : overview && overview.spend > 0
       ? ((overview.conversions * 50) / overview.spend).toFixed(2)
       : '0.00';
 
     const ctr = overview
-      ? (overview.ctr > 1 ? overview.ctr.toFixed(2) : (overview.ctr * 100).toFixed(2))
+      ? (overview.ctr > 1 ? overview.ctr.toFixed(2) : ((overview.ctr || 0) * 100).toFixed(2))
       : '0.00';
 
     const cpm = overview && overview.impressions > 0
@@ -155,17 +157,27 @@ const FacebookAdsPage = () => {
       spend: d.spend || 0,
     }));
 
+    const calculateGrowth = (curr, prev) => {
+        if (!prev || prev === 0) return curr > 0 ? 100 : 0;
+        return ((curr - prev) / prev) * 100;
+    };
 
-    const comparison = overview ? [
-      { metric: '💰 Total Spend',    current: formatCurrency(overview.spend),                      prior: formatCurrency(overview.spend * 0.876),            change: 14.2,  up: true  },
-      { metric: '👁️ Impressions',   current: formatNumber(overview.impressions),                  prior: formatNumber(Math.round(overview.impressions * 0.815)), change: 22.8, up: true },
-      { metric: '🖱️ Clicks',        current: formatNumber(overview.clicks),                       prior: formatNumber(Math.round(overview.clicks * 0.91)),   change: 9.9,   up: true  },
-      { metric: '📢 Reach',         current: formatNumber(overview.reach || 0),                   prior: formatNumber(Math.round((overview.reach||0)*0.88)),  change: 13.6,  up: true  },
-      { metric: '🎯 CTR',           current: `${ctr}%`,                                            prior: `${(parseFloat(ctr)*0.97).toFixed(2)}%`,            change: 3.1,   up: true  },
-      { metric: '💵 CPC',           current: formatCurrency(overview.cpc),                        prior: formatCurrency(overview.cpc * 1.018),              change: -1.8,  up: true, note:'Lower is better' },
-      { metric: '📊 CPM',           current: `$${cpm}`,                                            prior: `$${(parseFloat(cpm)*1.05).toFixed(2)}`,           change: -4.8,  up: true, note:'Lower is better' },
-      { metric: '✅ Conversions',   current: formatNumber(overview.conversions),                  prior: formatNumber(Math.round(overview.conversions*0.93)), change: 7.5,  up: true  },
-      { metric: '🔁 ROAS',          current: `${roas}x`,                                           prior: `${(parseFloat(roas)*0.94).toFixed(2)}x`,          change: 6.4,   up: true  },
+    const periodComparisonData = (metric, curr, prev, note = '', inverse = false) => {
+        const change = calculateGrowth(curr, prev);
+        const up = inverse ? change < 0 : change > 0;
+        return { metric, current: curr, prior: prev, change: change.toFixed(1), up, note };
+    };
+
+    const comparison = (overview && priorOverview) ? [
+      periodComparisonData('💰 Total Spend', formatCurrency(overview.spend), formatCurrency(priorOverview.spend || 0), 'Lower is better', true),
+      periodComparisonData('👁️ Impressions', formatNumber(overview.impressions), formatNumber(priorOverview.impressions || 0)),
+      periodComparisonData('🖱️ Clicks', formatNumber(overview.clicks), formatNumber(priorOverview.clicks || 0)),
+      periodComparisonData('📢 Reach', formatNumber(overview.reach || 0), formatNumber(priorOverview.reach || 0)),
+      periodComparisonData('🎯 CTR', `${ctr}%`, `${(priorOverview.ctr > 1 ? priorOverview.ctr.toFixed(2) : (priorOverview.ctr * 100).toFixed(2))}%`),
+      periodComparisonData('💵 CPC', formatCurrency(overview.cpc), formatCurrency(priorOverview.cpc || 0), 'Lower is better', true),
+      periodComparisonData('📊 CPM', `$${cpm}`, `$${priorOverview.impressions > 0 ? ((priorOverview.spend / priorOverview.impressions) * 1000).toFixed(2) : '0.00'}`, 'Lower is better', true),
+      periodComparisonData('✅ Conversions', formatNumber(overview.conversions), formatNumber(priorOverview.conversions || 0)),
+      periodComparisonData('🔁 ROAS', `${roas}x`, `${(priorOverview.roas || 0).toFixed(2)}x`),
     ] : [];
 
 

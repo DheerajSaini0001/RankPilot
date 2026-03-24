@@ -762,7 +762,8 @@ Give me a 3-part strategic review:
                           metric: 'Spend',
                           current: (overviewData.facebookAds?.spend || 0),
                           growth: (overviewData.facebookAds?.growth || 0),
-                          isCurrency: true
+                          isCurrency: true,
+                          isSpend: true
                         },
                         {
                           source: '📘 Facebook Ads',
@@ -771,8 +772,9 @@ Give me a 3-part strategic review:
                           growth: (overviewData.facebookAds?.growth || 0)
                         },
                       ].map((row, i) => {
-                        const priorValue = row.growth === -100 ? 0 : row.current / (1 + (row.growth / 100));
-                        const isUp = row.growth >= 0;
+                        const priorValue = (row.growth === -100 || isNaN(row.growth)) ? 0 : row.current / (1 + (row.growth / 100));
+                        const growthStatus = isNaN(row.growth) ? 'neutral' : row.growth > 0 ? (row.isSpend ? 'negative' : 'positive') : (row.isSpend ? 'positive' : 'negative');
+                        const isUp = growthStatus === 'positive'; // Determine 'up' based on growthStatus
 
                         return (
                           <tr key={i} className="border-b border-neutral-50 dark:border-neutral-800/50 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors">

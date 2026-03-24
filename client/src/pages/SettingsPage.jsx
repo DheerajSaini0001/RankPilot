@@ -3,7 +3,7 @@ import DashboardLayout from '../components/ui/DashboardLayout';
 import Button from '../components/ui/Button';
 import { useAuthStore } from '../store/authStore';
 import { useAccountsStore } from '../store/accountsStore';
-import { disconnectFacebook, disconnectGoogle } from '../api/accountApi';
+import { disconnectFacebook, disconnectGoogle, listGoogleAccounts, listFacebookAccounts } from '../api/accountApi';
 import api, { getApiUrl } from '../api';
 import toast from 'react-hot-toast';
 
@@ -11,35 +11,92 @@ const SettingsPage = () => {
     const { user, clearAuth, token } = useAuthStore();
     const { connectedSources, setAccounts } = useAccountsStore();
 
-    const handleGoogleDisconnect = async () => {
-        if (!window.confirm("Disconnect Google data? All reports & API links will be lost.")) return;
+    const [googleAccounts, setGoogleAccounts] = React.useState([]);
+    const [facebookAccounts, setFacebookAccounts] = React.useState([]);
+    const [loadingAccounts, setLoadingAccounts] = React.useState(false);
+
+    React.useEffect(() => {
+        if (connectedSources?.includes('google')) {
+            loadGoogleAccounts();
+        }
+        if (connectedSources?.includes('facebook')) {
+            loadFacebookAccounts();
+        }
+    }, [connectedSources]);
+
+    const loadGoogleAccounts = async () => {
+        setLoadingAccounts(true);
         try {
-            const res = await disconnectGoogle();
-            setAccounts({
-                connectedSources: connectedSources.filter(s => !['ga4', 'gsc', 'google-ads', 'google'].includes(s)),
-                ga4: {},
-                gsc: {},
-                googleAds: {},
-                gscSites: [],
-                activeGscSite: null
-            });
-            if (res.data?.oauthOnly) {
-                toast.success("Google disconnected. Since you used Google to sign in, we've sent a password-setup email to your inbox so you can still log in.", { duration: 8000 });
+            const res = await listGoogleAccounts();
+            setGoogleAccounts(res.data || []);
+        } catch (err) { console.error(err); }
+        finally { setLoadingAccounts(false); }
+    };
+
+    const loadFacebookAccounts = async () => {
+        try {
+            const res = await listFacebookAccounts();
+            setFacebookAccounts(res.data || []);
+        } catch (err) { console.error(err); }
+    };
+
+    const handleGoogleDisconnect = async (tokenId = null) => {
+        const msg = tokenId 
+            ? "Disconnect this specific Google account? Services using this account will stop syncing."
+            : "Disconnect ALL Google data? All reports & API links will be lost.";
+
+        if (!window.confirm(msg)) return;
+        try {
+            const res = await disconnectGoogle(tokenId);
+            
+            if (tokenId) {
+                // Remove from local state
+                const remaining = googleAccounts.filter(a => a._id !== tokenId);
+                setGoogleAccounts(remaining);
+                if (remaining.length === 0) {
+                    setAccounts({ connectedSources: connectedSources.filter(s => s !== 'google') });
+                }
+                toast.success("Account disconnected");
             } else {
-                toast.success("Google disconnected");
+                setAccounts({
+                    connectedSources: connectedSources.filter(s => !['ga4', 'gsc', 'google-ads', 'google'].includes(s)),
+                    ga4: {},
+                    gsc: {},
+                    googleAds: {},
+                    gscSites: [],
+                    activeGscSite: null
+                });
+                if (res.data?.oauthOnly) {
+                    toast.success("Google disconnected. Since you used Google to sign in, we've sent a password-setup email to your inbox so you can still log in.", { duration: 8000 });
+                } else {
+                    toast.success("Google disconnected");
+                }
             }
         } catch { toast.error("Error disconnecting Google"); }
     };
 
-    const handleFacebookDisconnect = async () => {
-        if (!window.confirm("Disconnect Facebook Ads?")) return;
+    const handleFacebookDisconnect = async (tokenId = null) => {
+        const msg = tokenId 
+            ? "Disconnect this Facebook profile? All linked ad accounts will stop syncing."
+            : "Disconnect ALL Facebook data?";
+            
+        if (!window.confirm(msg)) return;
         try {
-            await disconnectFacebook();
-            setAccounts({
-                connectedSources: connectedSources.filter(s => !['facebook', 'facebook-ads'].includes(s)),
-                facebook: {}
-            });
-            toast.success("Facebook disconnected");
+            await disconnectFacebook(tokenId);
+            if (tokenId) {
+                const remaining = facebookAccounts.filter(a => a._id !== tokenId);
+                setFacebookAccounts(remaining);
+                if (remaining.length === 0) {
+                    setAccounts({ connectedSources: connectedSources.filter(s => s !== 'facebook') });
+                }
+                toast.success("Profile disconnected");
+            } else {
+                setAccounts({
+                    connectedSources: connectedSources.filter(s => !['facebook', 'facebook-ads'].includes(s)),
+                    facebook: {}
+                });
+                toast.success("Facebook disconnected");
+            }
         } catch { toast.error("Error disconnecting Facebook"); }
     };
 
@@ -143,18 +200,32 @@ const SettingsPage = () => {
                                 </div>
                             </div>
                             {connectedSources?.includes('google') ? (
-                                <button
-                                    onClick={handleGoogleDisconnect}
-                                    className="w-full mt-auto py-2 px-4 text-xs font-black rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 hover:border-red-300 hover:text-red-600 dark:hover:border-red-700 dark:hover:text-red-400 transition-all"
-                                >
-                                    Disconnect
-                                </button>
+                                <div className="space-y-2 mt-auto">
+                                   {googleAccounts.map(acc => (
+                                       <div key={acc._id} className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800">
+                                            <span className="text-[11px] font-bold text-neutral-500 truncate mr-2">{acc.email}</span>
+                                            <button 
+                                                onClick={() => handleGoogleDisconnect(acc._id)}
+                                                className="text-[10px] font-black text-red-500 hover:text-red-700 uppercase tracking-tighter"
+                                            >
+                                                Unlink
+                                            </button>
+                                       </div>
+                                   ))}
+                                   <Button
+                                      variant="secondary"
+                                      onClick={() => window.location.href = getApiUrl(`/auth/google?token=${encodeURIComponent(token)}`)}
+                                      className="w-full py-1.5 text-[10px] uppercase tracking-widest mt-2"
+                                   >
+                                      + Add Another
+                                   </Button>
+                                </div>
                             ) : (
                                 <Button
                                     onClick={() => window.location.href = getApiUrl(`/auth/google?token=${encodeURIComponent(token)}`)}
                                     className="w-full mt-auto text-xs shadow-sm shadow-brand-500/20"
                                 >
-                                    Connect Google
+                                    Connect Google Account
                                 </Button>
                             )}
                         </div>
@@ -184,18 +255,32 @@ const SettingsPage = () => {
                                 </div>
                             </div>
                             {connectedSources?.includes('facebook') ? (
-                                <button
-                                    onClick={handleFacebookDisconnect}
-                                    className="w-full mt-auto py-2 px-4 text-xs font-black rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 hover:border-red-300 hover:text-red-600 dark:hover:border-red-700 dark:hover:text-red-400 transition-all"
-                                >
-                                    Disconnect
-                                </button>
+                                <div className="space-y-2 mt-auto">
+                                   {facebookAccounts.map(acc => (
+                                       <div key={acc._id} className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800">
+                                            <span className="text-[11px] font-bold text-neutral-500 truncate mr-2">{acc.name}</span>
+                                            <button 
+                                                onClick={() => handleFacebookDisconnect(acc._id)}
+                                                className="text-[10px] font-black text-red-500 hover:text-red-700 uppercase tracking-tighter"
+                                            >
+                                                Unlink
+                                            </button>
+                                       </div>
+                                   ))}
+                                   <Button
+                                      variant="secondary"
+                                      onClick={() => window.location.href = getApiUrl(`/auth/facebook?token=${encodeURIComponent(token)}`)}
+                                      className="w-full py-1.5 text-[10px] uppercase tracking-widest mt-2"
+                                   >
+                                      + Add Another
+                                   </Button>
+                                </div>
                             ) : (
                                 <Button
                                     onClick={() => window.location.href = getApiUrl(`/auth/facebook?token=${encodeURIComponent(token)}`)}
                                     className="w-full mt-auto text-xs shadow-sm"
                                 >
-                                    Connect Meta
+                                    Connect Meta Business
                                 </Button>
                             )}
                         </div>

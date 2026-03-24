@@ -1,9 +1,10 @@
 import DailyMetric from '../models/DailyMetric.js';
+import { buildMatchFilter } from './analyticsController.js';
 
 export const getOverview = async (req, res) => {
-    const { startDate, endDate } = req.query;
+    const filter = await buildMatchFilter(req.user._id, 'google-ads', req.query);
     const results = await DailyMetric.aggregate([
-        { $match: { userId: req.user._id, source: { $in: ['google-ads', 'facebook-ads'] }, date: { $gte: startDate, $lte: endDate } } },
+        { $match: filter },
         { $group: {
             _id: "$source",
             spend: { $sum: "$metrics.spend" },
@@ -19,9 +20,9 @@ export const getOverview = async (req, res) => {
 };
 
 export const getCampaigns = async (req, res) => {
-    const { startDate, endDate } = req.query;
+    const filter = await buildMatchFilter(req.user._id, 'google-ads', req.query);
     const data = await DailyMetric.aggregate([
-        { $match: { userId: req.user._id, source: 'google-ads', date: { $gte: startDate, $lte: endDate } } },
+        { $match: filter },
         { $group: {
             _id: "$dimensions.campaign",
             spend: { $sum: "$metrics.spend" },
@@ -46,9 +47,9 @@ export const getKeywords = async (req, res) => {
 };
 
 export const getTimeseries = async (req, res) => {
-    const { startDate, endDate } = req.query;
+    const filter = await buildMatchFilter(req.user._id, 'google-ads', req.query);
     const data = await DailyMetric.aggregate([
-        { $match: { userId: req.user._id, source: 'google-ads', date: { $gte: startDate, $lte: endDate } } },
+        { $match: filter },
         { $group: {
             _id: "$date",
             spend: { $sum: "$metrics.spend" },

@@ -3,8 +3,13 @@ import FacebookToken from '../models/FacebookToken.js';
 import configService from './configService.js';
 import { encrypt, decrypt } from '../utils/encrypt.js';
 
-export const getValidFacebookToken = async (userId) => {
-    const tokenDoc = await FacebookToken.findOne({ userId });
+export const getValidFacebookToken = async (userId, tokenId = null) => {
+    let tokenDoc;
+    if (tokenId) {
+        tokenDoc = await FacebookToken.findOne({ _id: tokenId, userId });
+    } else {
+        tokenDoc = await FacebookToken.findOne({ userId }).sort({ updatedAt: -1 });
+    }
     if (!tokenDoc) throw new Error('FACEBOOK_AUTH_MISSING');
 
     if (tokenDoc.expiresAt && tokenDoc.expiresAt.getTime() < Date.now()) {
