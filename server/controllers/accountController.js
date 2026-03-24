@@ -88,7 +88,12 @@ export const selectAccounts = async (req, res) => {
 
     fields.forEach(field => {
         if (req.body[field] !== undefined) {
-            updates[field] = req.body[field];
+            let value = req.body[field];
+            // Fix: Mongoose fails to cast empty string to ObjectId. Convert to null instead.
+            if (['ga4TokenId', 'gscTokenId', 'googleAdsTokenId', 'facebookTokenId'].includes(field) && value === "") {
+                value = null;
+            }
+            updates[field] = value;
         }
     });
 
