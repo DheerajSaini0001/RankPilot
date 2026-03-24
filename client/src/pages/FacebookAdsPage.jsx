@@ -7,6 +7,7 @@ import DataTable from '../components/dashboard/DataTable';
 import { useDateRangeStore } from '../store/dateRangeStore';
 import { useAccountsStore } from '../store/accountsStore';
 import api from '../api';
+import { getActiveAccounts } from '../api/accountApi';
 import {
     CurrencyDollarIcon,
     CursorArrowRaysIcon,
@@ -39,7 +40,7 @@ const EmptyState = ({ message = 'No data for this period', sub = 'Try selecting 
 const FacebookAdsPage = () => {
     const { startDate, endDate } = useDateRangeStore();
     const { device, campaign, searchQuery } = useFilterStore();
-    const { connectedSources, activeFacebookAdAccountId, activeSiteId, syncMetadata } = useAccountsStore();
+    const { connectedSources, activeFacebookAdAccountId, activeSiteId, syncMetadata, setAccounts } = useAccountsStore();
     const isConnected = connectedSources.includes('facebook-ads');
     const hasAccount = !!activeFacebookAdAccountId;
     const navigate = useNavigate();
@@ -82,11 +83,38 @@ const FacebookAdsPage = () => {
     const handleManualRefresh = async () => {
         if (!activeSiteId) return;
         setLoading(true);
+        // 1. Set status to syncing in store
+        setAccounts({ syncStatus: 'syncing' });
+
         try {
+            // 2. Perform sync
             await api.post('/analytics/sync', { siteId: activeSiteId });
+
+            // 3. Update store with latest metadata (time, status)
+            const res = await getActiveAccounts(activeSiteId);
+            const data = res.data || {};
+            setAccounts({
+                syncMetadata: {
+                    isHistoricalSyncComplete: data.isHistoricalSyncComplete || false,
+                    lastDailySyncAt: data.lastDailySyncAt || null,
+                    syncStatus: data.syncStatus || 'idle'
+                }
+            });
+
+            // 4. Load the dashboard data
             await loadData();
         } catch (err) {
             console.error('Manual sync failed:', err);
+            // Even on error, update metadata to clear syncing status
+            const res = await getActiveAccounts(activeSiteId).catch(() => ({ data: {} }));
+            const data = res.data || {};
+            setAccounts({
+                syncMetadata: {
+                    isHistoricalSyncComplete: data.isHistoricalSyncComplete || false,
+                    lastDailySyncAt: data.lastDailySyncAt || null,
+                    syncStatus: data.syncStatus || 'error'
+                }
+            });
             await loadData();
         } finally {
             setLoading(false);

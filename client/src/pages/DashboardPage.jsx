@@ -24,6 +24,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import api from '../api';
+import { getActiveAccounts } from '../api/accountApi';
 import FilterBar from '../components/dashboard/FilterBar';
 import { useFilterStore } from '../store/filterStore';
 import { useAuthStore } from '../store/authStore';
@@ -53,7 +54,8 @@ const DashboardPage = () => {
     activeGoogleAdsCustomerId,
     activeFacebookAdAccountId,
     activeSiteId,
-    syncMetadata
+    syncMetadata,
+    setAccounts
   } = useAccountsStore();
 
   const [loading, setLoading] = useState(true);
@@ -108,11 +110,38 @@ const DashboardPage = () => {
   const handleManualRefresh = async () => {
     if (!activeSiteId) return;
     setLoading(true);
+    // 1. Set status to syncing in store
+    setAccounts({ syncStatus: 'syncing' });
+    
     try {
+      // 2. Perform sync
       await api.post('/analytics/sync', { siteId: activeSiteId });
+      
+      // 3. Update store with latest metadata (time, status)
+      const res = await getActiveAccounts(activeSiteId);
+      const data = res.data || {};
+      setAccounts({
+        syncMetadata: {
+          isHistoricalSyncComplete: data.isHistoricalSyncComplete || false,
+          lastDailySyncAt: data.lastDailySyncAt || null,
+          syncStatus: data.syncStatus || 'idle'
+        }
+      });
+
+      // 4. Load the dashboard data
       await loadDashboardData();
     } catch (err) {
       console.error('Manual sync failed:', err);
+      // Even on error, update metadata to clear syncing status
+      const res = await getActiveAccounts(activeSiteId).catch(() => ({ data: {} }));
+      const data = res.data || {};
+      setAccounts({
+        syncMetadata: {
+          isHistoricalSyncComplete: data.isHistoricalSyncComplete || false,
+          lastDailySyncAt: data.lastDailySyncAt || null,
+          syncStatus: data.syncStatus || 'error'
+        }
+      });
       await loadDashboardData();
     } finally {
       setLoading(false);
