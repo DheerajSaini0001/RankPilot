@@ -44,6 +44,12 @@ const ConnectAccountsPage = () => {
     const [siteName, setSiteName] = useState('My Website');
     const [initialValues, setInitialValues] = useState({});
 
+    // Modification state (to unlock fields in 'view' mode)
+    const [modifyingGa4, setModifyingGa4] = useState(false);
+    const [modifyingGsc, setModifyingGsc] = useState(false);
+    const [modifyingGAds, setModifyingGAds] = useState(false);
+    const [modifyingFbAds, setModifyingFbAds] = useState(false);
+
     // Connection Status Helpers
     const isGa4Connected = !!initialValues.ga4 && !!initialValues.ga4TokenId;
     const isGscConnected = !!initialValues.gsc && !!initialValues.gscTokenId;
@@ -316,17 +322,31 @@ const ConnectAccountsPage = () => {
                               </div>
                               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                  {/* GA4 */}
-                                 <div className="space-y-3 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800">
+                                 <div className="space-y-3 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800 relative">
+                                   {isGa4Connected && !modifyingGa4 && (
+                                     <div className="absolute top-3 right-3 z-10">
+                                       <button 
+                                         onClick={() => {
+                                           setModifyingGa4(true);
+                                           setGa4TokenId('');
+                                           setSelectedGa4('');
+                                         }}
+                                         className="text-[10px] font-black uppercase text-brand-600 dark:text-brand-400 bg-white dark:bg-neutral-900 border border-brand-200 dark:border-brand-800 px-2 py-1 rounded-lg shadow-sm hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all"
+                                       >
+                                         Change
+                                       </button>
+                                     </div>
+                                   )}
                                    <div className="space-y-1">
                                        <label className="text-[11px] font-black uppercase tracking-wider text-brand-600 dark:text-brand-400 flex items-center gap-1.5">
-                                         {isGa4Connected && <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"></path></svg>}
-                                         {isGa4Connected ? 'Linked Account (GA4)' : 'Step 1: Select Account (GA4)'}
+                                         {isGa4Connected && !modifyingGa4 && <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"></path></svg>}
+                                         {isGa4Connected && !modifyingGa4 ? 'Linked Account (GA4)' : 'Step 1: Select Account (GA4)'}
                                        </label>
                                        <select
                                          value={ga4TokenId}
                                          onChange={e => setGa4TokenId(e.target.value)}
-                                         disabled={isGa4Connected}
-                                         className={`w-full text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2 px-3 outline-none focus:ring-2 focus:ring-brand-500 transition-all shadow-sm ${isGa4Connected ? 'opacity-70 cursor-not-allowed bg-neutral-50' : ''}`}
+                                         disabled={isGa4Connected && !modifyingGa4}
+                                         className={`w-full text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2 px-3 outline-none focus:ring-2 focus:ring-brand-500 transition-all shadow-sm ${isGa4Connected && !modifyingGa4 ? 'opacity-70 cursor-not-allowed bg-neutral-50' : ''}`}
                                        >
                                          <option value="">Select Account...</option>
                                          {googleAccounts.map(acc => <option key={acc._id} value={acc._id}>{acc.email}</option>)}
@@ -335,14 +355,14 @@ const ConnectAccountsPage = () => {
 
                                    <div className="space-y-1">
                                        <label className="text-[11px] font-black uppercase tracking-wider text-brand-600 dark:text-brand-400 flex items-center gap-1.5">
-                                         {isGa4Connected && <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"></path></svg>}
-                                         {isGa4Connected ? 'Linked Property (GA4)' : 'Step 2: Property (GA4)'}
+                                         {isGa4Connected && !modifyingGa4 && <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"></path></svg>}
+                                         {isGa4Connected && !modifyingGa4 ? 'Linked Property (GA4)' : 'Step 2: Property (GA4)'}
                                        </label>
                                        <select
                                          value={selectedGa4}
                                          onChange={e => setSelectedGa4(e.target.value)}
-                                         disabled={!ga4TokenId || isGa4Connected}
-                                         className={`w-full text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2 px-3 outline-none focus:ring-2 focus:ring-brand-500 transition-all shadow-sm ${(!ga4TokenId || isGa4Connected) ? 'opacity-70 cursor-not-allowed bg-neutral-50' : ''}`}
+                                         disabled={!ga4TokenId || (isGa4Connected && !modifyingGa4)}
+                                         className={`w-full text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2 px-3 outline-none focus:ring-2 focus:ring-brand-500 transition-all shadow-sm ${(!ga4TokenId || (isGa4Connected && !modifyingGa4)) ? 'opacity-70 cursor-not-allowed bg-neutral-50' : ''}`}
                                        >
                                          <option value="">Select Property...</option>
                                          {ga4Props.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -351,32 +371,46 @@ const ConnectAccountsPage = () => {
                                  </div>
 
                                  {/* GSC */}
-                                 <div className="space-y-3 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800">
+                                 <div className="space-y-3 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800 relative">
+                                   {isGscConnected && !modifyingGsc && (
+                                     <div className="absolute top-3 right-3 z-10">
+                                       <button 
+                                         onClick={() => {
+                                           setModifyingGsc(true);
+                                           setGscTokenId('');
+                                           setSelectedGsc('');
+                                         }}
+                                         className="text-[10px] font-black uppercase text-brand-600 dark:text-brand-400 bg-white dark:bg-neutral-900 border border-brand-200 dark:border-brand-800 px-2 py-1 rounded-lg shadow-sm hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all"
+                                       >
+                                         Change
+                                       </button>
+                                     </div>
+                                   )}
                                    <div className="space-y-1">
                                       <label className="text-[11px] font-black uppercase tracking-wider text-brand-600 dark:text-brand-400 flex items-center gap-1.5">
-                                         {isGscConnected && <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"></path></svg>}
-                                         {isGscConnected ? 'Linked Account (GSC)' : 'Step 1: Select Account (GSC)'}
+                                         {isGscConnected && !modifyingGsc && <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"></path></svg>}
+                                         {isGscConnected && !modifyingGsc ? 'Linked Account (GSC)' : 'Step 1: Select Account (GSC)'}
                                        </label>
                                        <select
                                          value={gscTokenId}
                                          onChange={e => setGscTokenId(e.target.value)}
-                                         disabled={isGscConnected}
-                                         className={`w-full text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2 px-3 outline-none focus:ring-2 focus:ring-brand-500 transition-all shadow-sm ${isGscConnected ? 'opacity-70 cursor-not-allowed bg-neutral-50' : ''}`}
+                                         disabled={isGscConnected && !modifyingGsc}
+                                         className={`w-full text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2 px-3 outline-none focus:ring-2 focus:ring-brand-500 transition-all shadow-sm ${isGscConnected && !modifyingGsc ? 'opacity-70 cursor-not-allowed bg-neutral-50' : ''}`}
                                        >
-                                        <option value="">Select Account...</option>
-                                        {googleAccounts.map(acc => <option key={acc._id} value={acc._id}>{acc.email}</option>)}
-                                      </select>
+                                         <option value="">Select Account...</option>
+                                         {googleAccounts.map(acc => <option key={acc._id} value={acc._id}>{acc.email}</option>)}
+                                       </select>
                                    </div>
                                    <div className="space-y-1">
                                        <label className="text-[11px] font-black uppercase tracking-wider text-brand-600 dark:text-brand-400 flex items-center gap-1.5">
-                                         {isGscConnected && <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"></path></svg>}
-                                         {isGscConnected ? 'Linked Site (GSC)' : 'Step 2: Target Site (GSC)'}
+                                         {isGscConnected && !modifyingGsc && <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"></path></svg>}
+                                         {isGscConnected && !modifyingGsc ? 'Linked Site (GSC)' : 'Step 2: Target Site (GSC)'}
                                        </label>
                                        <select
                                          value={selectedGsc}
                                          onChange={e => setSelectedGsc(e.target.value)}
-                                         disabled={!gscTokenId || isGscConnected}
-                                         className={`w-full text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2 px-3 outline-none focus:ring-2 focus:ring-brand-500 transition-all shadow-sm ${(!gscTokenId || isGscConnected) ? 'opacity-70 cursor-not-allowed bg-neutral-50' : ''}`}
+                                         disabled={!gscTokenId || (isGscConnected && !modifyingGsc)}
+                                         className={`w-full text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2 px-3 outline-none focus:ring-2 focus:ring-brand-500 transition-all shadow-sm ${(!gscTokenId || (isGscConnected && !modifyingGsc)) ? 'opacity-70 cursor-not-allowed bg-neutral-50' : ''}`}
                                        >
                                          <option value="">Select Site...</option>
                                          {gscSites.map(s => <option key={s.siteUrl} value={s.siteUrl}>{s.siteUrl}</option>)}
@@ -385,18 +419,32 @@ const ConnectAccountsPage = () => {
                                  </div>
 
                                  {/* Google Ads */}
-                                 <div className="lg:col-span-2 space-y-3 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800">
+                                 <div className="lg:col-span-2 space-y-3 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800 relative">
+                                   {isGAdsConnected && !modifyingGAds && (
+                                     <div className="absolute top-3 right-3 z-10">
+                                       <button 
+                                         onClick={() => {
+                                           setModifyingGAds(true);
+                                           setGoogleAdsTokenId('');
+                                           setSelectedGAds('');
+                                         }}
+                                         className="text-[10px] font-black uppercase text-brand-600 dark:text-brand-400 bg-white dark:bg-neutral-900 border border-brand-200 dark:border-brand-800 px-2 py-1 rounded-lg shadow-sm hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all"
+                                       >
+                                         Change
+                                       </button>
+                                     </div>
+                                   )}
                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                       <div className="space-y-1">
                                         <label className="text-[11px] font-black uppercase tracking-wider text-brand-600 dark:text-brand-400 flex items-center gap-1.5">
-                                         {isGAdsConnected && <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"></path></svg>}
-                                         {isGAdsConnected ? 'Linked Account (Ads)' : 'Step 1: Select Account (Ads)'}
+                                         {isGAdsConnected && !modifyingGAds && <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"></path></svg>}
+                                         {isGAdsConnected && !modifyingGAds ? 'Linked Account (Ads)' : 'Step 1: Select Account (Ads)'}
                                        </label>
                                        <select
                                          value={googleAdsTokenId}
                                          onChange={e => setGoogleAdsTokenId(e.target.value)}
-                                         disabled={isGAdsConnected}
-                                         className={`w-full text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2 px-3 outline-none focus:ring-2 focus:ring-brand-500 transition-all shadow-sm ${isGAdsConnected ? 'opacity-70 cursor-not-allowed bg-neutral-50' : ''}`}
+                                         disabled={isGAdsConnected && !modifyingGAds}
+                                         className={`w-full text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2 px-3 outline-none focus:ring-2 focus:ring-brand-500 transition-all shadow-sm ${isGAdsConnected && !modifyingGAds ? 'opacity-70 cursor-not-allowed bg-neutral-50' : ''}`}
                                        >
                                           <option value="">Select Account...</option>
                                           {googleAccounts.map(acc => <option key={acc._id} value={acc._id}>{acc.email}</option>)}
@@ -404,14 +452,14 @@ const ConnectAccountsPage = () => {
                                       </div>
                                       <div className="space-y-1">
                                          <label className="text-[11px] font-black uppercase tracking-wider text-brand-600 dark:text-brand-400 flex items-center gap-1.5">
-                                           {isGAdsConnected && <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"></path></svg>}
-                                           {isGAdsConnected ? 'Linked Customer ID' : 'Step 2: Ads Customer ID'}
+                                           {isGAdsConnected && !modifyingGAds && <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"></path></svg>}
+                                           {isGAdsConnected && !modifyingGAds ? 'Linked Customer ID' : 'Step 2: Ads Customer ID'}
                                          </label>
                                          <select
                                            value={selectedGAds}
                                            onChange={e => setSelectedGAds(e.target.value)}
-                                           disabled={!googleAdsTokenId || isGAdsConnected}
-                                           className={`w-full text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2 px-3 outline-none focus:ring-2 focus:ring-brand-500 transition-all shadow-sm ${(!googleAdsTokenId || isGAdsConnected) ? 'opacity-70 cursor-not-allowed bg-neutral-50' : ''}`}
+                                           disabled={!googleAdsTokenId || (isGAdsConnected && !modifyingGAds)}
+                                           className={`w-full text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2 px-3 outline-none focus:ring-2 focus:ring-brand-500 transition-all shadow-sm ${(!googleAdsTokenId || (isGAdsConnected && !modifyingGAds)) ? 'opacity-70 cursor-not-allowed bg-neutral-50' : ''}`}
                                          >
                                            <option value="">Select Ads ID...</option>
                                            {gAdsAccounts.map(g => <option key={g} value={g}>{g}</option>)}
@@ -475,17 +523,31 @@ const ConnectAccountsPage = () => {
                                   + Link Another Profile
                                 </Button>
                               </div>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800">
+                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 relative">
+                                {isFbAdsConnected && !modifyingFbAds && (
+                                   <div className="absolute top-3 right-3 z-10">
+                                     <button 
+                                       onClick={() => {
+                                         setModifyingFbAds(true);
+                                         setFacebookTokenId('');
+                                         setSelectedFbAds('');
+                                       }}
+                                       className="text-[10px] font-black uppercase text-[#1877F2] bg-white dark:bg-neutral-900 border border-blue-200 dark:border-blue-900 px-2 py-1 rounded-lg shadow-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"
+                                     >
+                                       Change
+                                     </button>
+                                   </div>
+                                 )}
                                 <div className="space-y-1">
                                    <label className="text-[11px] font-black uppercase tracking-wider text-[#1877F2] flex items-center gap-1.5">
-                                     {isFbAdsConnected && <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"></path></svg>}
-                                     {isFbAdsConnected ? 'Linked Profile' : 'Step 1: Select Profile'}
+                                     {isFbAdsConnected && !modifyingFbAds && <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"></path></svg>}
+                                     {isFbAdsConnected && !modifyingFbAds ? 'Linked Profile' : 'Step 1: Select Profile'}
                                    </label>
                                    <select
                                      value={facebookTokenId}
                                      onChange={e => setFacebookTokenId(e.target.value)}
-                                     disabled={isFbAdsConnected}
-                                     className={`w-full text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2 px-3 outline-none focus:ring-2 focus:ring-[#1877F2] transition-all ${isFbAdsConnected ? 'opacity-70 cursor-not-allowed bg-neutral-50' : ''}`}
+                                     disabled={isFbAdsConnected && !modifyingFbAds}
+                                     className={`w-full text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2 px-3 outline-none focus:ring-2 focus:ring-[#1877F2] transition-all ${isFbAdsConnected && !modifyingFbAds ? 'opacity-70 cursor-not-allowed bg-neutral-50' : ''}`}
                                    >
                                      <option value="">Select Profile...</option>
                                      {facebookAccounts.map(f => <option key={f._id} value={f._id}>{f.name}</option>)}
@@ -493,14 +555,14 @@ const ConnectAccountsPage = () => {
                                 </div>
                                 <div className="space-y-1">
                                    <label className="text-[11px] font-black uppercase tracking-wider text-[#1877F2] flex items-center gap-1.5">
-                                     {isFbAdsConnected && <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"></path></svg>}
-                                     {isFbAdsConnected ? 'Linked Ad Account' : 'Step 2: Ad Account'}
+                                     {isFbAdsConnected && !modifyingFbAds && <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"></path></svg>}
+                                     {isFbAdsConnected && !modifyingFbAds ? 'Linked Ad Account' : 'Step 2: Ad Account'}
                                    </label>
                                    <select
                                      value={selectedFbAds}
                                      onChange={e => setSelectedFbAds(e.target.value)}
-                                     disabled={!facebookTokenId || isFbAdsConnected}
-                                     className={`w-full text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2 px-3 outline-none focus:ring-2 focus:ring-[#1877F2] transition-all ${(!facebookTokenId || isFbAdsConnected) ? 'opacity-70 cursor-not-allowed bg-neutral-50' : ''}`}
+                                     disabled={!facebookTokenId || (isFbAdsConnected && !modifyingFbAds)}
+                                     className={`w-full text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2 px-3 outline-none focus:ring-2 focus:ring-[#1877F2] transition-all ${(!facebookTokenId || (isFbAdsConnected && !modifyingFbAds)) ? 'opacity-70 cursor-not-allowed bg-neutral-50' : ''}`}
                                    >
                                      <option value="">Select Account...</option>
                                      {fbAdAccounts.map(f => <option key={f.id} value={f.id}>{f.name} ({f.id})</option>)}
