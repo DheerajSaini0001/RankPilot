@@ -16,6 +16,7 @@ import googleAdsRoutes from './routes/googleAdsRoutes.js';
 import facebookAdsRoutes from './routes/facebookAdsRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 
 const app = express();
 
@@ -53,6 +54,7 @@ app.use('/api/google-ads', googleAdsRoutes);
 app.use('/api/facebook-ads', facebookAdsRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.use(errorHandler);
 

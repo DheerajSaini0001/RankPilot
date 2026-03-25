@@ -41,10 +41,21 @@ const DashboardLayout = ({ children }) => {
         deleteNotification,
         clearAll,
         clearRead,
-        seedDefaults
+        fetchNotifications
     } = useNotificationStore();
     const navigate = useNavigate();
     const isAdmin = user?.email === import.meta.env.VITE_SUPER_ADMIN_EMAIL;
+
+    // Fetch notifications on mount and periodically
+    useEffect(() => {
+        if (user) {
+            fetchNotifications();
+            const interval = setInterval(() => {
+                fetchNotifications();
+            }, 120000); // Poll every 2 minutes
+            return () => clearInterval(interval);
+        }
+    }, [user, fetchNotifications]);
 
     // Polling for syncStatus
     useEffect(() => {
@@ -109,11 +120,6 @@ const DashboardLayout = ({ children }) => {
             setAccounts({ activeSiteId: id });
         }
     };
-
-    // Seed defaults on first load
-    useEffect(() => {
-        seedDefaults();
-    }, []);
 
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [isNotifOpen, setIsNotifOpen] = useState(false);

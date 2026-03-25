@@ -4,6 +4,8 @@ import { runReport as runGa4Report } from './ga4Service.js';
 import { runQuery as runGscQuery } from './gscService.js';
 import { runQuery as runGAdsQuery } from './googleAdsService.js';
 import { getInsights as getFbInsights } from './facebookAdsService.js';
+import { createNotification } from '../utils/notification.js';
+
 
 let isGscCronRunning = false;
 let isGa4CronRunning = false;
@@ -124,6 +126,17 @@ export const syncHistoricalData = async (accountId, source) => {
         const updatedAcc = await UserAccounts.findByIdAndUpdate(accountId, { $set: updateFields }, { new: true });
         await updateGlobalSyncStatus(updatedAcc);
 
+        // Notify user about historical sync completion
+        const prettyName = { 'ga4': 'GA4', 'gsc': 'Search Console', 'google-ads': 'Google Ads', 'facebook-ads': 'Facebook Ads' }[source] || source;
+        await createNotification(acc.userId, {
+            type: 'success',
+            title: `${prettyName} Historical Sync Ready`,
+            message: `Last 3 years of ${prettyName} data for "${acc.siteName}" has been successfully synced.`,
+            source: source,
+            actionLabel: 'View Dashboard',
+            actionPath: '/dashboard'
+        });
+
         console.log(`[Historical Sync] Success for ${acc.siteName} (${source})`);
     } catch (err) {
         console.error(`[Historical Sync] ERROR for ${source}:`, err.message);
@@ -131,7 +144,19 @@ export const syncHistoricalData = async (accountId, source) => {
             [statusField]: 'error' 
         }, { new: true });
         await updateGlobalSyncStatus(updatedAcc);
+
+        // Notify user about failure
+        const prettyName = { 'ga4': 'GA4', 'gsc': 'Search Console', 'google-ads': 'Google Ads', 'facebook-ads': 'Facebook Ads' }[source] || source;
+        await createNotification(acc.userId, {
+            type: 'error',
+            title: `${prettyName} Sync Failed`,
+            message: `An error occurred while syncing ${prettyName} data for "${acc.siteName}". Please try reconnecting the source.`,
+            source: source,
+            actionLabel: 'Check Settings',
+            actionPath: '/connect-accounts'
+        });
     } finally {
+
         await checkNextPendingSync(accountId);
     }
 };

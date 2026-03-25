@@ -2,6 +2,8 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import User from '../models/User.js';
+import { createNotification } from '../utils/notification.js';
+
 import GoogleToken from '../models/GoogleToken.js';
 import FacebookToken from '../models/FacebookToken.js';
 import UserAccounts from '../models/UserAccounts.js';
@@ -26,11 +28,22 @@ export const register = async (req, res) => {
 
     const user = await User.create({
         displayName: name,
-        email,
+        email: email.toLowerCase(),
         passwordHash,
         emailVerifyToken,
         emailVerified: false
     });
+
+    // Create a Welcome Notification
+    await createNotification(user._id, {
+        type: 'info',
+        title: 'Welcome to RankPilot! 🚀',
+        message: 'We are excited to help you grow your analytics. Start by connecting your Google or Meta accounts to see your data in action.',
+        source: 'system',
+        actionLabel: 'Connect Accounts',
+        actionPath: '/connect-accounts'
+    });
+
 
     try {
         await sendVerificationEmail(email, emailVerifyToken);

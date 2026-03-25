@@ -1,7 +1,43 @@
 import cron from 'node-cron';
 import { syncAllGsc, syncAllGa4, syncAllGoogleAds, syncAllFacebookAds } from './syncService.js';
+import { 
+    checkExpiringTokens, 
+    checkPerformanceDrops, 
+    checkInactiveSources, 
+    checkMonthlyGrowth, 
+    checkAdSpendSpikes 
+} from './notificationMonitoringService.js';
+
 
 export const initCronJobs = () => {
+
+    // Daily at 00:00 - Check for expiring tokens
+    cron.schedule('0 0 * * *', async () => {
+        await checkExpiringTokens();
+    }, { timezone: "Asia/Kolkata" });
+
+    // Weekly at 01:00 on Monday - Check for performance drops
+    cron.schedule('0 1 * * 1', async () => {
+        await checkPerformanceDrops();
+    }, { timezone: "Asia/Kolkata" });
+
+    // Daily at 01:10 - Check for inactive (zero data) sources
+    cron.schedule('10 1 * * *', async () => {
+        await checkInactiveSources();
+    }, { timezone: "Asia/Kolkata" });
+
+    // Daily at 02:00 - Check for sudden Ad spend spikes
+    cron.schedule('0 2 * * *', async () => {
+        await checkAdSpendSpikes();
+    }, { timezone: "Asia/Kolkata" });
+
+    // Monthly at 03:00 on 1st - Send growth summary
+    cron.schedule('0 3 1 * *', async () => {
+        await checkMonthlyGrowth();
+    }, { timezone: "Asia/Kolkata" });
+
+
+
 
     cron.schedule('*/30 * * * *', async () => {
         await syncAllFacebookAds();

@@ -1,4 +1,6 @@
 import { callGemini, callGeminiStream } from '../services/geminiService.js';
+import { createNotification } from '../utils/notification.js';
+
 import promptBuilder from '../services/promptBuilder.js';
 import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
@@ -337,6 +339,7 @@ export const refreshWeeklyInsight = async (req, res) => {
         const discoveredSources = Object.keys(data).filter(k => sourceMap[k]).map(k => sourceMap[k]);
 
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
         const insight = await WeeklyInsight.findOneAndUpdate(
             { userId: req.user._id, siteId: siteId || null },
             { 
@@ -347,7 +350,18 @@ export const refreshWeeklyInsight = async (req, res) => {
             { upsert: true, returnDocument: 'after' }
         );
 
+        // Notify user about new AI Insight
+        await createNotification(req.user._id, {
+            type: 'info',
+            title: 'Weekly AI Insight Ready',
+            message: 'Your weekly performance analysis is ready. See what changed and what to optimize next.',
+            source: 'ai',
+            actionLabel: 'View Insight',
+            actionPath: '/dashboard/ai-chat'
+        });
+
         res.status(200).json(insight);
+
     } catch (err) {
         // Return 503 so frontend knows to show "Try again later"
         res.status(err.statusCode || 503).json({ message: err.message });
