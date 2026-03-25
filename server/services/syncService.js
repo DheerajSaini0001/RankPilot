@@ -57,11 +57,30 @@ export const syncHistoricalData = async (accountId, source) => {
         'facebook-ads': 'facebookAds'
     };
 
+    const sourceToConfigField = {
+        'ga4': 'ga4PropertyId',
+        'gsc': 'gscSiteUrl',
+        'google-ads': 'googleAdsCustomerId',
+        'facebook-ads': 'facebookAdAccountId'
+    };
+
     const prefix = sourceMap[source] || source;
+    const configField = sourceToConfigField[source];
     const statusField = `${prefix}SyncStatus`;
     const progressField = `${prefix}SyncProgress`;
     const completeField = `${prefix}HistoricalComplete`;
     const indexField = `${prefix}HistoricalMonthIndex`;
+
+    // 1. Guard: If source is not configured, skip it and clear status
+    if (!acc[configField]) {
+        console.log(`[Historical Sync] Skipping ${source} for ${acc.siteName} (not configured).`);
+        if (acc[statusField] !== 'idle') {
+            const updatedAcc = await UserAccounts.findByIdAndUpdate(accountId, { [statusField]: 'idle' }, { new: true });
+            await updateGlobalSyncStatus(updatedAcc);
+        }
+        await checkNextPendingSync(accountId);
+        return;
+    }
 
     // Check if another source is already syncing for this account
     const syncStatusFields = ['ga4SyncStatus', 'gscSyncStatus', 'googleAdsSyncStatus', 'facebookAdsSyncStatus'];
@@ -166,20 +185,27 @@ const checkNextPendingSync = async (accountId) => {
     if (!acc) return;
 
     const platforms = [
-        { key: 'ga4', status: 'ga4SyncStatus' },
-        { key: 'gsc', status: 'gscSyncStatus' },
-        { key: 'google-ads', status: 'googleAdsSyncStatus' },
-        { key: 'facebook-ads', status: 'facebookAdsSyncStatus' }
+        { key: 'ga4', status: 'ga4SyncStatus', config: 'ga4PropertyId' },
+        { key: 'gsc', status: 'gscSyncStatus', config: 'gscSiteUrl' },
+        { key: 'google-ads', status: 'googleAdsSyncStatus', config: 'googleAdsCustomerId' },
+        { key: 'facebook-ads', status: 'facebookAdsSyncStatus', config: 'facebookAdAccountId' }
     ];
 
     const next = platforms.find(p => acc[p.status] === 'pending');
     if (next) {
+        // Extra guard: check if configured
+        if (!acc[next.config]) {
+            console.log(`[Historical Sync] Clearing pending status for ${next.key} (not configured).`);
+            const updatedAcc = await UserAccounts.findByIdAndUpdate(accountId, { [next.status]: 'idle' }, { new: true });
+            await updateGlobalSyncStatus(updatedAcc);
+            return checkNextPendingSync(accountId); // check next
+        }
         console.log(`[Historical Sync] Queue: Triggering next pending source: ${next.key} for ${acc.siteName}`);
         await addSyncJob('historical-sync', { accountId, source: next.key });
     }
 };
 
-const updateGlobalSyncStatus = async (acc) => {
+async function updateGlobalSyncStatus(acc) {
     const statuses = ['ga4SyncStatus', 'gscSyncStatus', 'googleAdsSyncStatus', 'facebookAdsSyncStatus'];
     const currentStates = statuses.map(s => acc[s]);
 
@@ -191,7 +217,7 @@ const updateGlobalSyncStatus = async (acc) => {
     }
 
     await UserAccounts.findByIdAndUpdate(acc._id, { syncStatus: finalStatus });
-};
+}
 
 export const syncGa4 = async (acc, startDate, endDate) => {
     if (!acc || !acc.ga4PropertyId) return;
@@ -395,7 +421,7 @@ export const syncAllGsc = async () => {
     isGscCronRunning = true;
     console.log('[Cron] Starting GSC Sync...');
     try {
-        const users = await UserAccounts.find({ gscSiteUrl: { $exists: true, $ne: null } });
+        const users = await UserAccounts.find({ gscSiteUrl: { $exists: true, $ne: null, $gt: '' } });
         for (const acc of users) {
             try {
                 const { startDate, endDate } = getSyncRange(acc.lastDailySyncAt);
@@ -416,7 +442,7 @@ export const syncAllGa4 = async () => {
     isGa4CronRunning = true;
     console.log('[Cron] Starting GA4 Sync...');
     try {
-        const users = await UserAccounts.find({ ga4PropertyId: { $exists: true, $ne: null } });
+        const users = await UserAccounts.find({ ga4PropertyId: { $exists: true, $ne: null, $gt: '' } });
         for (const acc of users) {
             try {
                 const { startDate, endDate } = getSyncRange(acc.lastDailySyncAt);
@@ -437,7 +463,7 @@ export const syncAllGoogleAds = async () => {
     isGAdsCronRunning = true;
     console.log('[Cron] Starting Google Ads Sync...');
     try {
-        const users = await UserAccounts.find({ googleAdsCustomerId: { $exists: true, $ne: null } });
+        const users = await UserAccounts.find({ googleAdsCustomerId: { $exists: true, $ne: null, $gt: '' } });
         for (const acc of users) {
             try {
                 const { startDate, endDate } = getSyncRange(acc.lastDailySyncAt);
@@ -458,7 +484,7 @@ export const syncAllFacebookAds = async () => {
     isFbCronRunning = true;
     console.log('[Cron] Starting Facebook Ads Sync...');
     try {
-        const users = await UserAccounts.find({ facebookAdAccountId: { $exists: true, $ne: null } });
+        const users = await UserAccounts.find({ facebookAdAccountId: { $exists: true, $ne: null, $gt: '' } });
         for (const acc of users) {
             try {
                 const { startDate, endDate } = getSyncRange(acc.lastDailySyncAt);

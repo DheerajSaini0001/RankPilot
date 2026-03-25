@@ -57,10 +57,11 @@ export const initWorker = () => {
 
             // Update status to idle and update sync time
             if (targetAccId) {
-                await UserAccounts.findByIdAndUpdate(targetAccId, { 
-                    syncStatus: 'idle', 
-                    lastDailySyncAt: new Date() 
-                });
+                const updateData = { lastDailySyncAt: new Date() };
+                if (job.name !== 'historical-sync') {
+                    updateData.syncStatus = 'idle';
+                }
+                await UserAccounts.findByIdAndUpdate(targetAccId, { $set: updateData });
             }
 
             console.log(`[Worker] Job ${job.id} completed successfully!`);
