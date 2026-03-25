@@ -12,6 +12,7 @@ import { listSites as fetchGscSites } from '../services/gscService.js';
 import { listAccounts } from '../services/googleAdsService.js';
 import { listAdAccounts } from '../services/facebookAdsService.js';
 import { syncHistoricalData } from '../services/syncService.js';
+import { addSyncJob } from '../services/queueService.js';
 import { sendPasswordResetEmail } from '../utils/emailService.js';
 import crypto from 'crypto';
 
@@ -143,19 +144,19 @@ export const selectAccounts = async (req, res) => {
 
     if (shouldSync('ga4PropertyId', existingAccount?.ga4PropertyId)) {
         if (existingAccount?.ga4PropertyId) cleanupMetrics(req.user._id, existingAccount.ga4PropertyId);
-        syncHistoricalData(account._id, 'ga4').catch(e => console.error('Initial GA4 Sync Fail:', e));
+        addSyncJob('historical-sync', { accountId: account._id, source: 'ga4' }).catch(e => console.error('Queue GA4 Fail:', e));
     }
     if (shouldSync('gscSiteUrl', existingAccount?.gscSiteUrl)) {
         if (existingAccount?.gscSiteUrl) cleanupMetrics(req.user._id, existingAccount.gscSiteUrl);
-        syncHistoricalData(account._id, 'gsc').catch(e => console.error('Initial GSC Sync Fail:', e));
+        addSyncJob('historical-sync', { accountId: account._id, source: 'gsc' }).catch(e => console.error('Queue GSC Fail:', e));
     }
     if (shouldSync('googleAdsCustomerId', existingAccount?.googleAdsCustomerId)) {
         if (existingAccount?.googleAdsCustomerId) cleanupMetrics(req.user._id, existingAccount.googleAdsCustomerId);
-        syncHistoricalData(account._id, 'google-ads').catch(e => console.error('Initial Google Ads Sync Fail:', e));
+        addSyncJob('historical-sync', { accountId: account._id, source: 'google-ads' }).catch(e => console.error('Queue Google Ads Fail:', e));
     }
     if (shouldSync('facebookAdAccountId', existingAccount?.facebookAdAccountId)) {
         if (existingAccount?.facebookAdAccountId) cleanupMetrics(req.user._id, existingAccount.facebookAdAccountId);
-        syncHistoricalData(account._id, 'facebook-ads').catch(e => console.error('Initial Facebook Ads Sync Fail:', e));
+        addSyncJob('historical-sync', { accountId: account._id, source: 'facebook-ads' }).catch(e => console.error('Queue Facebook Ads Fail:', e));
     }
 
     res.status(200).json({ message: 'Accounts selected', accounts: account });

@@ -5,6 +5,7 @@ import { runQuery as runGscQuery } from './gscService.js';
 import { runQuery as runGAdsQuery } from './googleAdsService.js';
 import { getInsights as getFbInsights } from './facebookAdsService.js';
 import { createNotification } from '../utils/notification.js';
+import { addSyncJob } from './queueService.js';
 
 
 let isGscCronRunning = false;
@@ -156,7 +157,6 @@ export const syncHistoricalData = async (accountId, source) => {
             actionPath: '/connect-accounts'
         });
     } finally {
-
         await checkNextPendingSync(accountId);
     }
 };
@@ -174,8 +174,8 @@ const checkNextPendingSync = async (accountId) => {
 
     const next = platforms.find(p => acc[p.status] === 'pending');
     if (next) {
-        console.log(`[Historical Sync] Triggering next pending source: ${next.key} for ${acc.siteName}`);
-        setTimeout(() => syncHistoricalData(accountId, next.key), 1000);
+        console.log(`[Historical Sync] Queue: Triggering next pending source: ${next.key} for ${acc.siteName}`);
+        await addSyncJob('historical-sync', { accountId, source: next.key });
     }
 };
 
@@ -400,11 +400,13 @@ export const syncAllGsc = async () => {
             try {
                 const { startDate, endDate } = getSyncRange(acc.lastDailySyncAt);
                 if (acc.syncStatus === 'syncing') continue;
-                await UserAccounts.findByIdAndUpdate(acc._id, { syncStatus: 'syncing' });
-                await syncGsc(acc, startDate, endDate);
-                await UserAccounts.findByIdAndUpdate(acc._id, { syncStatus: 'idle', lastDailySyncAt: new Date() });
-                if (!acc.gscHistoricalComplete) syncHistoricalData(acc._id, 'gsc');
-            } catch (e) { console.error(`GSC Fail: ${acc._id}`, e.message); }
+                
+                await addSyncJob('daily-sync-gsc', { acc, startDate, endDate });
+
+                if (!acc.gscHistoricalComplete) {
+                    await addSyncJob('historical-sync', { accountId: acc._id, source: 'gsc' });
+                }
+            } catch (e) { console.error(`GSC Queue Fail: ${acc._id}`, e.message); }
         }
     } finally { isGscCronRunning = false; console.log('[Cron] GSC Sync Completed.'); }
 };
@@ -419,11 +421,13 @@ export const syncAllGa4 = async () => {
             try {
                 const { startDate, endDate } = getSyncRange(acc.lastDailySyncAt);
                 if (acc.syncStatus === 'syncing') continue;
-                await UserAccounts.findByIdAndUpdate(acc._id, { syncStatus: 'syncing' });
-                await syncGa4(acc, startDate, endDate);
-                await UserAccounts.findByIdAndUpdate(acc._id, { syncStatus: 'idle', lastDailySyncAt: new Date() });
-                if (!acc.ga4HistoricalComplete) syncHistoricalData(acc._id, 'ga4');
-            } catch (e) { console.error(`GA4 Fail: ${acc._id}`, e.message); }
+                
+                await addSyncJob('daily-sync-ga4', { acc, startDate, endDate });
+
+                if (!acc.ga4HistoricalComplete) {
+                    await addSyncJob('historical-sync', { accountId: acc._id, source: 'ga4' });
+                }
+            } catch (e) { console.error(`GA4 Queue Fail: ${acc._id}`, e.message); }
         }
     } finally { isGa4CronRunning = false; console.log('[Cron] GA4 Sync Completed.'); }
 };
@@ -438,11 +442,13 @@ export const syncAllGoogleAds = async () => {
             try {
                 const { startDate, endDate } = getSyncRange(acc.lastDailySyncAt);
                 if (acc.syncStatus === 'syncing') continue;
-                await UserAccounts.findByIdAndUpdate(acc._id, { syncStatus: 'syncing' });
-                await syncGoogleAds(acc, startDate, endDate);
-                await UserAccounts.findByIdAndUpdate(acc._id, { syncStatus: 'idle', lastDailySyncAt: new Date() });
-                if (!acc.googleAdsHistoricalComplete) syncHistoricalData(acc._id, 'google-ads');
-            } catch (e) { console.error(`GAds Fail: ${acc._id}`, e.message); }
+                
+                await addSyncJob('daily-sync-google-ads', { acc, startDate, endDate });
+
+                if (!acc.googleAdsHistoricalComplete) {
+                    await addSyncJob('historical-sync', { accountId: acc._id, source: 'google-ads' });
+                }
+            } catch (e) { console.error(`GAds Queue Fail: ${acc._id}`, e.message); }
         }
     } finally { isGAdsCronRunning = false; console.log('[Cron] Google Ads Sync Completed.'); }
 };
@@ -457,11 +463,13 @@ export const syncAllFacebookAds = async () => {
             try {
                 const { startDate, endDate } = getSyncRange(acc.lastDailySyncAt);
                 if (acc.syncStatus === 'syncing') continue;
-                await UserAccounts.findByIdAndUpdate(acc._id, { syncStatus: 'syncing' });
-                await syncFacebookAds(acc, startDate, endDate);
-                await UserAccounts.findByIdAndUpdate(acc._id, { syncStatus: 'idle', lastDailySyncAt: new Date() });
-                if (!acc.facebookAdsHistoricalComplete) syncHistoricalData(acc._id, 'facebook-ads');
-            } catch (e) { console.error(`FB Fail: ${acc._id}`, e.message); }
+                
+                await addSyncJob('daily-sync-facebook-ads', { acc, startDate, endDate });
+
+                if (!acc.facebookAdsHistoricalComplete) {
+                    await addSyncJob('historical-sync', { accountId: acc._id, source: 'facebook-ads' });
+                }
+            } catch (e) { console.error(`FB Queue Fail: ${acc._id}`, e.message); }
         }
     } finally { isFbCronRunning = false; console.log('[Cron] Facebook Ads Sync Completed.'); }
 };
