@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { syncAllGsc, syncAllGa4, syncAllGoogleAds, syncAllFacebookAds } from './syncService.js';
+import { syncAllGsc, syncAllGa4, syncAllGoogleAds, syncAllFacebookAds, syncDailyForAllUsers } from './syncService.js';
 import { 
     checkExpiringTokens, 
     checkPerformanceDrops, 
@@ -11,9 +11,10 @@ import {
 
 export const initCronJobs = () => {
 
-    // Daily at 00:00 - Check for expiring tokens
+    // Daily at 00:00 - Check for expiring tokens & Full Sync
     cron.schedule('0 0 * * *', async () => {
         await checkExpiringTokens();
+        await syncDailyForAllUsers();
     }, { timezone: "Asia/Kolkata" });
 
     // Weekly at 01:00 on Monday - Check for performance drops
