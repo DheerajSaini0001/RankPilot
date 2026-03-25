@@ -32,10 +32,10 @@ import { useFilterStore } from '../store/filterStore';
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
 
 const EmptyState = ({ message='No data for this period', sub='Try selecting a wider date range' }) => (
-  <div className="flex flex-col items-center justify-center py-12 text-neutral-400">
-    <div className="text-4xl mb-3">📭</div>
-    <p className="text-sm font-semibold">{message}</p>
-    <p className="text-xs mt-1">{sub}</p>
+  <div className="flex flex-col items-center justify-center py-12 text-neutral-400 dark:text-neutral-500">
+    <div className="text-4xl mb-3 opacity-50">📭</div>
+    <p className="text-sm font-bold text-neutral-600 dark:text-neutral-300">{message}</p>
+    <p className="text-xs mt-1 font-medium">{sub}</p>
   </div>
 );
 
@@ -402,8 +402,9 @@ Please provide:
                                             borderRadius: '16px', 
                                             border: 'none', 
                                             boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
-                                            background: 'rgba(255, 255, 255, 0.95)',
-                                            padding: '12px'
+                                            background: document.documentElement.classList.contains('dark') ? '#111827' : 'rgba(255, 255, 255, 0.95)',
+                                            padding: '12px',
+                                            color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
                                         }} 
                                         itemStyle={{ fontWeight: '900', fontSize: '12px' }} 
                                     />
@@ -453,7 +454,16 @@ Please provide:
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F0F0F0" className="dark:stroke-neutral-800/20"/>
                                     <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize:10, fill:'#9CA3AF'}}/>
                                     <YAxis axisLine={false} tickLine={false} tick={{fontSize:10, fill:'#9CA3AF'}} tickFormatter={v=>`${v}%`}/>
-                                    <Tooltip formatter={v=>[`${v}%`, 'CTR']} contentStyle={{borderRadius:'12px', border:'none', fontSize:'12px'}}/>
+                                    <Tooltip 
+                                        formatter={v=>[`${v}%`, 'CTR']} 
+                                        contentStyle={{
+                                            borderRadius:'12px', 
+                                            border:'none', 
+                                            fontSize:'12px',
+                                            background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+                                            color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+                                        }}
+                                    />
                                     <Area type="monotone" dataKey="ctr" stroke="#8B5CF6" strokeWidth={2.5} fill="url(#ctrGrad)" name="CTR %" dot={false}/>
                                 </AreaChart>
                             </ResponsiveContainer>
@@ -484,7 +494,16 @@ Please provide:
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F0F0F0" className="dark:stroke-neutral-800/20"/>
                                     <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize:10, fill:'#9CA3AF'}}/>
                                     <YAxis axisLine={false} tickLine={false} tick={{fontSize:10, fill:'#9CA3AF'}} reversed={true} domain={[1, 'auto']}/>
-                                    <Tooltip formatter={v=>[`#${v}`, 'Position']} contentStyle={{borderRadius:'12px', border:'none', fontSize:'12px'}}/>
+                                    <Tooltip 
+                                        formatter={v=>[`#${v}`, 'Position']} 
+                                        contentStyle={{
+                                            borderRadius:'12px', 
+                                            border:'none', 
+                                            fontSize:'12px',
+                                            background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+                                            color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+                                        }}
+                                    />
                                     <Line type="monotone" dataKey="position" stroke="#F59E0B" strokeWidth={2.5} dot={false} name="Avg Position"/>
                                 </LineChart>
                             </ResponsiveContainer>
@@ -626,7 +645,16 @@ Please provide:
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" className="dark:stroke-neutral-800" opacity={0.5} />
                                     <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize:10, fill:'#9CA3AF', fontWeight:'bold'}} />
                                     <YAxis axisLine={false} tickLine={false} tick={{fontSize:10, fill:'#9CA3AF', fontWeight:'bold'}} tickFormatter={v=>v>=1000?`${(v/1000).toFixed(0)}k`:v} />
-                                    <Tooltip cursor={{fill: 'rgba(59, 130, 246, 0.05)'}} contentStyle={{borderRadius:'15px', border:'none', boxShadow:'0 10px 15px -3px rgb(0 0 0 / 0.1)'}} />
+                                    <Tooltip 
+                                        cursor={{fill: 'rgba(59, 130, 246, 0.05)'}} 
+                                        contentStyle={{
+                                            borderRadius:'15px', 
+                                            border:'none', 
+                                            boxShadow:'0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                                            background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+                                            color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+                                        }} 
+                                    />
                                     <Bar dataKey="impressions" fill="#3B82F6" radius={[6,6,0,0]} name="Impressions" fillOpacity={0.8} />
                                 </BarChart>
                             </ResponsiveContainer>
@@ -667,7 +695,13 @@ Please provide:
                                                 ))}
                                             </Pie>
                                             <Tooltip 
-                                                contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                                contentStyle={{ 
+                                                    borderRadius: '15px', 
+                                                    border: 'none', 
+                                                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                                                    background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+                                                    color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+                                                }}
                                                 itemStyle={{ fontWeight: 'bold', fontSize: '10px' }}
                                             />
                                         </PieChart>

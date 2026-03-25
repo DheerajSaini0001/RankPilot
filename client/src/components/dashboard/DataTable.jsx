@@ -25,9 +25,9 @@ const DataTable = ({ columns, data, loading = false, className = '', initialLimi
                     <tbody>
                         {displayData && displayData.length > 0 ? (
                             displayData.map((row, idx) => (
-                                <tr key={idx} className={`transition-colors border-b border-neutral-100 dark:border-neutral-700 ${idx % 2 === 0
-                                        ? 'bg-white hover:bg-brand-50 dark:bg-dark-card dark:hover:bg-dark-surface'
-                                        : 'bg-neutral-50 hover:bg-brand-50 dark:bg-dark-surface dark:hover:bg-neutral-700'
+                                <tr key={idx} className={`transition-all border-b border-neutral-100/50 dark:border-neutral-800/50 ${idx % 2 === 0
+                                        ? 'bg-white hover:bg-neutral-50 dark:bg-dark-card dark:hover:bg-neutral-800/50'
+                                        : 'bg-neutral-50/50 hover:bg-neutral-50 dark:bg-dark-surface dark:hover:bg-neutral-800/50'
                                     }`}>
                                     {columns.map((col, colIdx) => (
                                         <td key={colIdx} className="px-4 py-3 text-neutral-800 dark:text-neutral-200">

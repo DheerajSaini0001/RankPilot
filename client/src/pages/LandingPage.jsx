@@ -39,6 +39,9 @@ const LandingPage = () => {
                                 {link}
                             </a>
                         ))}
+                        <NavLink to="/about" className="text-sm font-semibold text-neutral-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-white transition-colors">
+                            About
+                        </NavLink>
                     </div>
 
                     {/* CTA buttons */}
@@ -102,7 +105,7 @@ const LandingPage = () => {
                             <ArrowRightIcon className="w-4 h-4 group-hover:translate-x-1 transition-transform"/>
                         </NavLink>
                         <NavLink to="/login"
-                            className="flex items-center gap-2 px-8 py-4 bg-white/5 hover:bg-white/10 text-white font-bold rounded-2xl border border-white/10 transition-all text-base">
+                            className="flex items-center gap-2 px-8 py-4 bg-neutral-100 dark:bg-white/5 hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-900 dark:text-white font-bold rounded-2xl border border-neutral-200 dark:border-white/10 transition-all text-base shadow-sm dark:shadow-none">
                             Sign In
                         </NavLink>
                     </div>
@@ -278,9 +281,9 @@ const LandingPage = () => {
                         <div>
                             <h5 className="text-xs font-black text-neutral-900 dark:text-white uppercase tracking-widest mb-4">Company</h5>
                             <ul className="space-y-3">
-                                {['About','Privacy','Terms'].map(l => (
-                                    <li key={l}><a href="#" className="text-xs font-semibold text-neutral-400 dark:text-slate-500 hover:text-brand-600 dark:hover:text-white transition-colors">{l}</a></li>
-                                ))}
+                                <li><NavLink to="/about"   className="text-xs font-semibold text-neutral-400 dark:text-slate-500 hover:text-brand-600 dark:hover:text-white transition-colors">About</NavLink></li>
+                                <li><a href="#" className="text-xs font-semibold text-neutral-400 dark:text-slate-500 hover:text-brand-600 dark:hover:text-white transition-colors">Privacy</a></li>
+                                <li><a href="#" className="text-xs font-semibold text-neutral-400 dark:text-slate-500 hover:text-brand-600 dark:hover:text-white transition-colors">Terms</a></li>
                             </ul>
                         </div>
                     </div>

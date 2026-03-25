@@ -395,7 +395,8 @@ Please provide:
                                                 borderRadius: '20px', 
                                                 border: 'none', 
                                                 boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
-                                                background: 'rgba(255, 255, 255, 0.95)',
+                                                background: document.documentElement.classList.contains('dark') ? '#111827' : 'rgba(255, 255, 255, 0.95)',
+                                                color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827',
                                                 padding: '12px'
                                             }} 
                                             itemStyle={{ fontWeight: '900', fontSize: '12px' }}
@@ -432,7 +433,15 @@ Please provide:
                                           <Cell fill="#3B82F6" />
                                           <Cell fill="#10B981" />
                                         </Pie>
-                                        <Tooltip contentStyle={{borderRadius:'12px', border:'none', fontSize:'12px'}}/>
+                                        <Tooltip 
+                                            contentStyle={{
+                                                borderRadius:'12px', 
+                                                border:'none', 
+                                                fontSize:'12px',
+                                                background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+                                                color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+                                            }}
+                                        />
                                     </PieChart>
                                 </ResponsiveContainer>
                             )}
@@ -527,7 +536,15 @@ Please provide:
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" className="dark:stroke-neutral-800" opacity={0.5}/>
                                 <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize:10, fill:'#9CA3AF', fontWeight: 'bold'}}/>
                                 <YAxis axisLine={false} tickLine={false} tick={{fontSize:10, fill:'#9CA3AF', fontWeight: 'bold'}} tickFormatter={v=>`${v}%`}/>
-                                <Tooltip contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                                <Tooltip 
+                                  contentStyle={{ 
+                                    borderRadius: '15px', 
+                                    border: 'none', 
+                                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                                    background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+                                    color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+                                  }} 
+                                />
                                 <Area type="monotone" dataKey="bounceRate" stroke="#F97316" strokeWidth={2.5} fill="url(#bounceGrad)" name="Bounce Rate %" dot={false}/>
                               </AreaChart>
                             </ResponsiveContainer>
@@ -553,7 +570,15 @@ Please provide:
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" className="dark:stroke-neutral-800" opacity={0.5}/>
                                 <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize:10, fill:'#9CA3AF', fontWeight: 'bold'}}/>
                                 <YAxis axisLine={false} tickLine={false} tick={{fontSize:10, fill:'#9CA3AF', fontWeight: 'bold'}} tickFormatter={v=>v>=1000?`${(v/1000).toFixed(0)}k`:v}/>
-                                <Tooltip contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                                <Tooltip 
+                                  contentStyle={{ 
+                                    borderRadius: '15px', 
+                                    border: 'none', 
+                                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                                    background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+                                    color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+                                  }} 
+                                />
                                 <Bar dataKey="pageViews" fill="#3B82F6" radius={[4,4,0,0]} name="Page Views" fillOpacity={0.85}/>
                               </BarChart>
                             </ResponsiveContainer>
@@ -626,7 +651,13 @@ Please provide:
                                                 ))}
                                             </Pie>
                                             <Tooltip 
-                                                contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                                contentStyle={{ 
+                                                    borderRadius: '15px', 
+                                                    border: 'none', 
+                                                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                                                    background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+                                                    color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+                                                }}
                                                 itemStyle={{ fontWeight: 'bold', fontSize: '10px' }}
                                             />
                                         </PieChart>

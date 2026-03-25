@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
 import LoginPage from './pages/LoginPage';
@@ -19,11 +19,20 @@ import Ga4Page from './pages/Ga4Page';
 import GoogleAdsPage from './pages/GoogleAdsPage';
 import FacebookAdsPage from './pages/FacebookAdsPage';
 import SitesPage from './pages/SitesPage';
+import AboutPage from './pages/AboutPage';
 import { ProtectedRoute, AuthRoute, AdminRoute } from './components/ui/RouteWrappers';
 import { getMe } from './api/authApi';
 import { useAuthStore } from './store/authStore';
 import { useAccountsStore } from './store/accountsStore';
 import { useThemeStore } from './store/themeStore';
+
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+};
 
 
 const App = () => {
@@ -39,6 +48,7 @@ const App = () => {
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Toaster 
         position="top-right" 
         toastOptions={{ 
@@ -93,6 +103,9 @@ const App = () => {
 
         {/* Email Verification - public, no auth wrapping needed */}
         <Route path="/verify-email" element={<VerifyEmailPage />} />
+        
+        {/* About Page - public */}
+        <Route path="/about" element={<AboutPage />} />
 
         {/* Protected Routes */}
         <Route path="/connect-accounts" element={

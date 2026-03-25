@@ -31,10 +31,10 @@ const formatNumber = (num) => Number(num || 0).toLocaleString('en-US', { maximum
 const formatCurrency = (num) => `$${Number(num || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const EmptyState = ({ message = 'No data for this period', sub = 'Try selecting a wider date range' }) => (
-  <div className="flex flex-col items-center justify-center py-12 text-neutral-400">
-    <div className="text-4xl mb-3">📭</div>
-    <p className="text-sm font-semibold">{message}</p>
-    <p className="text-xs mt-1">{sub}</p>
+  <div className="flex flex-col items-center justify-center py-12 text-neutral-400 dark:text-neutral-500">
+    <div className="text-4xl mb-3 opacity-50">📭</div>
+    <p className="text-sm font-bold text-neutral-600 dark:text-neutral-300">{message}</p>
+    <p className="text-xs mt-1 font-medium">{sub}</p>
   </div>
 );
 
@@ -494,7 +494,8 @@ Please provide:
                                               borderRadius: '20px', 
                                               border: 'none', 
                                               boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
-                                              background: 'rgba(255, 255, 255, 0.95)',
+                                              background: document.documentElement.classList.contains('dark') ? '#111827' : 'rgba(255, 255, 255, 0.95)',
+                                              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827',
                                               padding: '12px'
                                           }} 
                                           itemStyle={{ fontWeight: '900', fontSize: '12px' }}
@@ -537,7 +538,15 @@ Please provide:
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F0F0F0" className="dark:stroke-neutral-800"/>
                           <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize:10, fill:'#9CA3AF'}}/>
                           <YAxis axisLine={false} tickLine={false} tick={{fontSize:10, fill:'#9CA3AF'}}/>
-                          <Tooltip contentStyle={{borderRadius:'12px', border:'none', fontSize:'12px', background:'white'}}/>
+                          <Tooltip 
+                            contentStyle={{
+                              borderRadius:'12px', 
+                              border:'none', 
+                              fontSize:'12px', 
+                              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+                              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+                            }}
+                          />
                           <Area type="monotone" dataKey="conversions" stroke="#10B981" strokeWidth={2.5} fill="url(#convGrad)" name="Conversions" dot={false}/>
                         </AreaChart>
                       </ResponsiveContainer>
@@ -566,7 +575,16 @@ Please provide:
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F0F0F0" className="dark:stroke-neutral-800"/>
                           <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize:9, fill:'#9CA3AF'}}/>
                           <YAxis axisLine={false} tickLine={false} tick={{fontSize:10, fill:'#9CA3AF'}} tickFormatter={v=>`$${v}`}/>
-                          <Tooltip contentStyle={{borderRadius:'12px', border:'none', fontSize:'12px', background:'white'}} formatter={v=>[`$${Number(v).toFixed(2)}`, 'Spend']}/>
+                          <Tooltip 
+                            contentStyle={{
+                              borderRadius:'12px', 
+                              border:'none', 
+                              fontSize:'12px', 
+                              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+                              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+                            }} 
+                            formatter={v=>[`$${Number(v).toFixed(2)}`, 'Spend']}
+                          />
                           <Bar dataKey="cost" fill="#F59E0B" radius={[6,6,0,0]} name="Spend" fillOpacity={0.85}/>
                         </BarChart>
                       </ResponsiveContainer>
@@ -698,7 +716,13 @@ Please provide:
                                         ))}
                                     </Pie>
                                     <Tooltip 
-                                        contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                        contentStyle={{ 
+                                            borderRadius: '15px', 
+                                            border: 'none', 
+                                            boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                                            background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+                                            color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+                                        }}
                                         itemStyle={{ fontWeight: 'bold', fontSize: '10px' }}
                                     />
                                 </PieChart>

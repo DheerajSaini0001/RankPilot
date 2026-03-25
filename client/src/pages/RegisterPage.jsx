@@ -148,9 +148,9 @@ const RegisterPage = () => {
                         {/* Terms note */}
                         <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
                             By creating an account you agree to our{' '}
-                            <a href="#" className="text-slate-400 hover:text-white transition-colors">Terms of Service</a>
+                            <a href="#" className="text-slate-400 hover:text-neutral-900 dark:hover:text-white transition-colors underline underline-offset-2">Terms of Service</a>
                             {' '}and{' '}
-                            <a href="#" className="text-slate-400 hover:text-white transition-colors">Privacy Policy</a>.
+                            <a href="#" className="text-slate-400 hover:text-neutral-900 dark:hover:text-white transition-colors underline underline-offset-2">Privacy Policy</a>.
                         </p>
 
                         <Button

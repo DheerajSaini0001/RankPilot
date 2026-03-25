@@ -36,10 +36,10 @@ const formatPct = (val, d = 1) => `${Number(val || 0).toFixed(d)}%`;
 const formatTime = (secs) => { const s = Math.floor(secs || 0); return `${Math.floor(s / 60)}m ${s % 60}s`; };
 
 const EmptyState = ({ message = 'No data', sub = 'Try a wider date range' }) => (
-  <div className="flex flex-col items-center justify-center py-10 text-neutral-400">
-    <div className="text-3xl mb-2">📭</div>
-    <p className="text-sm font-semibold">{message}</p>
-    <p className="text-xs mt-1">{sub}</p>
+  <div className="flex flex-col items-center justify-center py-10 text-neutral-400 dark:text-neutral-500">
+    <div className="text-3xl mb-2 opacity-50">📭</div>
+    <p className="text-sm font-bold text-neutral-600 dark:text-neutral-300">{message}</p>
+    <p className="text-xs mt-1 font-medium">{sub}</p>
   </div>
 );
 
@@ -711,7 +711,15 @@ Give me a 3-part strategic review:
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" className="dark:stroke-neutral-800/30" />
                       <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} tickFormatter={(str) => { const d = new Date(str); return isNaN(d) ? str : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }} />
                       <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} />
-                      <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }} />
+                      <Tooltip 
+                        contentStyle={{ 
+                          borderRadius: '16px', 
+                          border: 'none', 
+                          boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
+                          background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+                          color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+                        }} 
+                      />
                       <Area type="monotone" dataKey={selectedMetric} stroke={metricColor} strokeWidth={3} fill="url(#colorMetric)" />
                     </AreaChart>
                   </ResponsiveContainer>

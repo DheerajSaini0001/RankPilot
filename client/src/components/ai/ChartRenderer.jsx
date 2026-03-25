@@ -57,7 +57,7 @@ const ChartRenderer = ({ type, data }) => {
     if (typeLower === 'line') {
       return (
         <LineChart {...commonProps}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'} />
           <XAxis 
             dataKey="name" 
             axisLine={false} 
@@ -70,9 +70,16 @@ const ChartRenderer = ({ type, data }) => {
             tickLine={false} 
             tick={{ fontSize: 10, fill: '#9ca3af' }}
           />
-          <Tooltip 
-            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px' }}
-          />
+           <Tooltip 
+             contentStyle={{ 
+               borderRadius: '12px', 
+               border: 'none', 
+               boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', 
+               fontSize: '12px',
+               background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+               color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+             }}
+           />
           <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '20px' }} />
           {data.datasets.map((ds, i) => (
             <Line 
@@ -106,7 +113,14 @@ const ChartRenderer = ({ type, data }) => {
             tick={{ fontSize: 10, fill: '#9ca3af' }}
           />
           <Tooltip 
-            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px' }}
+            contentStyle={{ 
+              borderRadius: '12px', 
+              border: 'none', 
+              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', 
+              fontSize: '12px',
+              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+            }}
           />
           <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '20px' }} />
           {data.datasets.map((ds, i) => (
@@ -146,7 +160,14 @@ const ChartRenderer = ({ type, data }) => {
             tick={{ fontSize: 10, fill: '#9ca3af' }}
           />
           <Tooltip 
-            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px' }}
+            contentStyle={{ 
+              borderRadius: '12px', 
+              border: 'none', 
+              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', 
+              fontSize: '12px',
+              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+            }}
           />
           <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '20px' }} />
           {data.datasets.map((ds, i) => (
@@ -189,7 +210,14 @@ const ChartRenderer = ({ type, data }) => {
             ))}
           </Pie>
           <Tooltip 
-            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px' }}
+            contentStyle={{ 
+              borderRadius: '12px', 
+              border: 'none', 
+              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', 
+              fontSize: '12px',
+              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+            }}
           />
           <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '20px' }} />
         </PieChart>
@@ -199,9 +227,9 @@ const ChartRenderer = ({ type, data }) => {
     if (typeLower === 'radar') {
       return (
         <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
-          <PolarGrid stroke="#e5e7eb" />
-          <PolarAngleAxis dataKey="name" tick={{ fontSize: 10, fill: '#9ca3af' }} />
-          <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={{ fontSize: 10, fill: '#9ca3af' }} />
+          <PolarGrid stroke={document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'} />
+          <PolarAngleAxis dataKey="name" tick={{ fontSize: 10, fill: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280' }} />
+          <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={{ fontSize: 10, fill: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280' }} />
           {data.datasets.map((ds, i) => (
             <Radar
               key={ds.label}
@@ -212,7 +240,15 @@ const ChartRenderer = ({ type, data }) => {
               fillOpacity={0.6}
             />
           ))}
-          <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', fontSize: '12px' }} />
+          <Tooltip 
+            contentStyle={{ 
+              borderRadius: '12px', 
+              border: 'none', 
+              fontSize: '12px',
+              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+            }} 
+          />
           <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '20px' }} />
         </RadarChart>
       );
@@ -237,7 +273,16 @@ const ChartRenderer = ({ type, data }) => {
             tick={{ fontSize: 10, fill: '#9ca3af' }}
           />
           <ZAxis type="number" range={[60, 400]} />
-          <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ borderRadius: '12px', border: 'none', fontSize: '12px' }} />
+          <Tooltip 
+            cursor={{ strokeDasharray: '3 3' }} 
+            contentStyle={{ 
+              borderRadius: '12px', 
+              border: 'none', 
+              fontSize: '12px',
+              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+            }} 
+          />
           <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '20px' }} />
           {data.datasets.map((ds, i) => (
             <Scatter 
@@ -269,7 +314,14 @@ const ChartRenderer = ({ type, data }) => {
             tick={{ fontSize: 10, fill: '#9ca3af' }}
           />
           <Tooltip 
-            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px' }}
+            contentStyle={{ 
+              borderRadius: '12px', 
+              border: 'none', 
+              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', 
+              fontSize: '12px',
+              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+            }}
           />
           <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '20px' }} />
           {data.datasets.map((ds, i) => {
