@@ -1,28 +1,35 @@
 import mongoose from 'mongoose';
 
 const dailyMetricSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    source: { type: String, required: true, enum: ['ga4', 'gsc', 'google-ads', 'facebook-ads'] },
-    platformAccountId: { type: String, required: true },
-    date: { type: String, required: true }, // Format: YYYY-MM-DD
+    // metadata: { userId, source, platformAccountId, dimensions }
+    metadata: {
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+        source: { type: String, required: true, enum: ['ga4', 'gsc', 'google-ads', 'facebook-ads'] },
+        platformAccountId: { type: String, required: true },
+        dimensions: { type: mongoose.Schema.Types.Mixed, default: {} }
+    },
+    // timeField: date (Date Object required for Timeseries)
+    date: { type: Date, required: true },
+    // data: metrics
     metrics: { type: mongoose.Schema.Types.Mixed, default: {} },
-    dimensions: { type: mongoose.Schema.Types.Mixed, default: {} },
     syncedAt: { type: Date, default: Date.now }
 }, {
-    timestamps: true
+    timestamps: true,
+    // Enable Timeseries (Requires MongoDB 5.0+)
+    timeseries: {
+        timeField: 'date',
+        metaField: 'metadata',
+        granularity: 'days'
+    }
 });
 
-// Index for fast lookups by user, source, date and dimensions for filtering
-dailyMetricSchema.index({ userId: 1, source: 1, date: 1 });
-dailyMetricSchema.index({ platformAccountId: 1 });
-dailyMetricSchema.index({ date: 1 });
-dailyMetricSchema.index({ 'dimensions.campaign': 1 }); // Important for Ads
-dailyMetricSchema.index({ 'dimensions.query': 1 });    // Important for GSC
-dailyMetricSchema.index({ 'dimensions.device': 1 });   // Universal detailed filtering
-dailyMetricSchema.index({ 'dimensions.country': 1 });
-dailyMetricSchema.index({ 'dimensions.region': 1 });
-dailyMetricSchema.index({ 'dimensions.landingPage': 1 });
-dailyMetricSchema.index({ 'dimensions.network': 1 });
-dailyMetricSchema.index({ 'dimensions.publisher': 1 }); // Facebook Placements
+// Compound Index for fast lookups (Timeseries handles basic time indexing)
+dailyMetricSchema.index({ 'metadata.userId': 1, 'metadata.source': 1, date: 1 });
+dailyMetricSchema.index({ 'metadata.platformAccountId': 1 });
+
+// Helper indexes for common dimension filters within metadata
+dailyMetricSchema.index({ 'metadata.dimensions.campaign': 1 }, { sparse: true });
+dailyMetricSchema.index({ 'metadata.dimensions.query': 1 }, { sparse: true });
+dailyMetricSchema.index({ 'metadata.dimensions.landingPage': 1 }, { sparse: true });
 
 export default mongoose.model('DailyMetric', dailyMetricSchema);

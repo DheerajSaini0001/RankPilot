@@ -32,7 +32,8 @@ export const runReport = async (userId, propertyId, reportType, startDate, endDa
         requestBody: {
             dateRanges: [{ startDate, endDate }],
             dimensions: dimensions.map(d => ({ name: d })),
-            metrics: metrics.map(m => ({ name: m }))
+            metrics: metrics.map(m => ({ name: m })),
+            limit: 100000
         }
     });
 

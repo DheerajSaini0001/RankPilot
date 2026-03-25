@@ -6,7 +6,7 @@ export const getOverview = async (req, res) => {
     const results = await DailyMetric.aggregate([
         { $match: filter },
         { $group: {
-            _id: "$source",
+            _id: "$metadata.source",
             spend: { $sum: "$metrics.spend" },
             impressions: { $sum: "$metrics.impressions" },
             clicks: { $sum: "$metrics.clicks" },
@@ -24,7 +24,7 @@ export const getCampaigns = async (req, res) => {
     const data = await DailyMetric.aggregate([
         { $match: filter },
         { $group: {
-            _id: "$dimensions.campaign",
+            _id: "$metadata.dimensions.campaign",
             spend: { $sum: "$metrics.spend" },
             clicks: { $sum: "$metrics.clicks" },
             impressions: { $sum: "$metrics.impressions" },
@@ -51,7 +51,7 @@ export const getTimeseries = async (req, res) => {
     const data = await DailyMetric.aggregate([
         { $match: filter },
         { $group: {
-            _id: "$date",
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
             spend: { $sum: "$metrics.spend" },
             clicks: { $sum: "$metrics.clicks" }
         }},

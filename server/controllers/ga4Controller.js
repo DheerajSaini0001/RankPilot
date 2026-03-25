@@ -10,7 +10,7 @@ export const getOverview = async (req, res) => {
             _id: null,
             activeUsers: { $sum: "$metrics.users" },
             sessions: { $sum: "$metrics.sessions" },
-            screenPageViews: { $sum: "$metrics.screenPageViews" },
+            screenPageViews: { $sum: "$metrics.pageViews" },
             avgBounceRate: { $avg: "$metrics.bounceRate" }
         }}
     ]);
@@ -38,7 +38,7 @@ export const getTimeseries = async (req, res) => {
     const data = await DailyMetric.aggregate([
         { $match: filter },
         { $group: {
-            _id: "$date",
+            _id: { $dateToString: { format: "%Y%m%d", date: "$date" } },
             value: { $sum: `$metrics.${mKey}` }
         }},
         { $sort: { _id: 1 } }
@@ -57,7 +57,7 @@ export const getTraffic = async (req, res) => {
     const data = await DailyMetric.aggregate([
         { $match: filter },
         { $group: {
-            _id: "$dimensions.source",
+            _id: "$metadata.dimensions.source",
             sessions: { $sum: "$metrics.sessions" },
             activeUsers: { $sum: "$metrics.users" }
         }},
@@ -81,7 +81,7 @@ export const getDevices = async (req, res) => {
     const data = await DailyMetric.aggregate([
         { $match: filter },
         { $group: {
-            _id: "$dimensions.device",
+            _id: "$metadata.dimensions.device",
             sessions: { $sum: "$metrics.sessions" },
             activeUsers: { $sum: "$metrics.users" }
         }}

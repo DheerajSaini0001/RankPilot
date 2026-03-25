@@ -15,6 +15,25 @@ import { syncHistoricalData } from '../services/syncService.js';
 import { sendPasswordResetEmail } from '../utils/emailService.js';
 import crypto from 'crypto';
 
+// Helper to cleanup metrics if they are no longer used by any other site of the user
+async function cleanupMetrics(userId, platformAccountId) {
+    if (!platformAccountId) return;
+    const otherSiteUsingThis = await UserAccounts.findOne({
+        userId,
+        $or: [
+            { ga4PropertyId: platformAccountId },
+            { gscSiteUrl: platformAccountId },
+            { googleAdsCustomerId: platformAccountId },
+            { facebookAdAccountId: platformAccountId }
+        ]
+    });
+
+    if (!otherSiteUsingThis) {
+        console.log(`[Cleanup] Deleting metrics for unused platform account: ${platformAccountId}`);
+        await DailyMetric.deleteMany({ 'metadata.userId': userId, 'metadata.platformAccountId': platformAccountId });
+    }
+}
+
 export const listGa4 = async (req, res) => {
     try {
         const { tokenId } = req.query;
@@ -123,15 +142,19 @@ export const selectAccounts = async (req, res) => {
     };
 
     if (shouldSync('ga4PropertyId', existingAccount?.ga4PropertyId)) {
+        if (existingAccount?.ga4PropertyId) cleanupMetrics(req.user._id, existingAccount.ga4PropertyId);
         syncHistoricalData(account._id, 'ga4').catch(e => console.error('Initial GA4 Sync Fail:', e));
     }
     if (shouldSync('gscSiteUrl', existingAccount?.gscSiteUrl)) {
+        if (existingAccount?.gscSiteUrl) cleanupMetrics(req.user._id, existingAccount.gscSiteUrl);
         syncHistoricalData(account._id, 'gsc').catch(e => console.error('Initial GSC Sync Fail:', e));
     }
     if (shouldSync('googleAdsCustomerId', existingAccount?.googleAdsCustomerId)) {
+        if (existingAccount?.googleAdsCustomerId) cleanupMetrics(req.user._id, existingAccount.googleAdsCustomerId);
         syncHistoricalData(account._id, 'google-ads').catch(e => console.error('Initial Google Ads Sync Fail:', e));
     }
     if (shouldSync('facebookAdAccountId', existingAccount?.facebookAdAccountId)) {
+        if (existingAccount?.facebookAdAccountId) cleanupMetrics(req.user._id, existingAccount.facebookAdAccountId);
         syncHistoricalData(account._id, 'facebook-ads').catch(e => console.error('Initial Facebook Ads Sync Fail:', e));
     }
 
@@ -187,22 +210,8 @@ export const deleteSite = async (req, res) => {
         await WeeklyInsight.deleteMany({ siteId, userId });
 
         // 4. Delete daily metrics
-        // We only delete metrics if no other site for this user is using the same platform account
         for (const pid of platformIds) {
-            const otherSiteUsingThis = await UserAccounts.findOne({
-                userId,
-                _id: { $ne: siteId },
-                $or: [
-                    { ga4PropertyId: pid },
-                    { gscSiteUrl: pid },
-                    { googleAdsCustomerId: pid },
-                    { facebookAdAccountId: pid }
-                ]
-            });
-
-            if (!otherSiteUsingThis) {
-                await DailyMetric.deleteMany({ userId, platformAccountId: pid });
-            }
+            await cleanupMetrics(userId, pid);
         }
 
         // 5. Finally delete the site record
@@ -220,17 +229,39 @@ export const disconnectGoogle = async (req, res) => {
     const user = await User.findById(req.user._id);
 
     if (tokenId) {
+        const affectedAccounts = await UserAccounts.find({
+            userId: req.user._id,
+            $or: [{ ga4TokenId: tokenId }, { gscTokenId: tokenId }, { googleAdsTokenId: tokenId }]
+        });
+
         await GoogleToken.deleteOne({ _id: tokenId, userId: req.user._id });
-        // Unset only services that were using this specific token
+
+        // Unset services using this specific token
         await UserAccounts.updateMany({ userId: req.user._id, ga4TokenId: tokenId }, {
-            $unset: { ga4PropertyId: "", ga4PropertyName: "", ga4AccountId: "", ga4TokenId: "" }
+            $unset: { 
+                ga4PropertyId: "", ga4PropertyName: "", ga4AccountId: "", ga4TokenId: "",
+                ga4SyncStatus: "", ga4SyncProgress: "", ga4HistoricalComplete: "", ga4HistoricalMonthIndex: ""
+            }
         });
         await UserAccounts.updateMany({ userId: req.user._id, gscTokenId: tokenId }, {
-            $unset: { gscSiteUrl: "", gscPermission: "", gscTokenId: "" }
+            $unset: { 
+                gscSiteUrl: "", gscPermission: "", gscTokenId: "",
+                gscSyncStatus: "", gscSyncProgress: "", gscHistoricalComplete: "", gscHistoricalMonthIndex: ""
+            }
         });
         await UserAccounts.updateMany({ userId: req.user._id, googleAdsTokenId: tokenId }, {
-            $unset: { googleAdsCustomerId: "", googleAdsAccountName: "", googleAdsCurrencyCode: "", googleAdsTokenId: "" }
+            $unset: { 
+                googleAdsCustomerId: "", googleAdsAccountName: "", googleAdsCurrencyCode: "", googleAdsTokenId: "",
+                googleAdsSyncStatus: "", googleAdsSyncProgress: "", googleAdsHistoricalComplete: "", googleAdsHistoricalMonthIndex: ""
+            }
         });
+
+        // Cleanup metrics for ALL affected platforms
+        for (const acc of affectedAccounts) {
+            if (acc.ga4TokenId?.toString() === tokenId) await cleanupMetrics(req.user._id, acc.ga4PropertyId);
+            if (acc.gscTokenId?.toString() === tokenId) await cleanupMetrics(req.user._id, acc.gscSiteUrl);
+            if (acc.googleAdsTokenId?.toString() === tokenId) await cleanupMetrics(req.user._id, acc.googleAdsCustomerId);
+        }
     } else {
         // Broad disconnect (legacy behavior or full disconnect)
         await GoogleToken.deleteMany({ userId: req.user._id });
@@ -265,15 +296,29 @@ export const disconnectGoogle = async (req, res) => {
 export const disconnectFacebook = async (req, res) => {
     const { tokenId } = req.body;
     if (tokenId) {
+        const affectedAccounts = await UserAccounts.find({ userId: req.user._id, facebookTokenId: tokenId });
         await FacebookToken.deleteOne({ _id: tokenId, userId: req.user._id });
         await UserAccounts.updateMany({ userId: req.user._id, facebookTokenId: tokenId }, {
-            $unset: { facebookAdAccountId: "", facebookAdAccountName: "", facebookAdCurrencyCode: "", facebookTokenId: "" }
+            $unset: { 
+                facebookAdAccountId: "", facebookAdAccountName: "", facebookAdCurrencyCode: "", facebookTokenId: "",
+                facebookAdsSyncStatus: "", facebookAdsSyncProgress: "", facebookAdsHistoricalComplete: "", facebookAdsHistoricalMonthIndex: ""
+            }
         });
+        for (const acc of affectedAccounts) {
+            await cleanupMetrics(req.user._id, acc.facebookAdAccountId);
+        }
     } else {
+        const affectedAccounts = await UserAccounts.find({ userId: req.user._id });
         await FacebookToken.deleteMany({ userId: req.user._id });
         await UserAccounts.updateMany({ userId: req.user._id }, {
-            $unset: { facebookAdAccountId: "", facebookAdAccountName: "", facebookAdCurrencyCode: "", facebookTokenId: "" }
+            $unset: { 
+                facebookAdAccountId: "", facebookAdAccountName: "", facebookAdCurrencyCode: "", facebookTokenId: "",
+                facebookAdsSyncStatus: "", facebookAdsSyncProgress: "", facebookAdsHistoricalComplete: "", facebookAdsHistoricalMonthIndex: ""
+            }
         });
+        for (const acc of affectedAccounts) {
+            await cleanupMetrics(req.user._id, acc.facebookAdAccountId);
+        }
     }
     res.status(200).json({ message: tokenId ? 'Facebook account disconnected' : 'All Facebook accounts disconnected' });
 };

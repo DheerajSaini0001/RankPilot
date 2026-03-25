@@ -50,10 +50,10 @@ const fetchPlatformData = async (userId, startDate, endDate, siteId, activeSourc
     const dbSources = activeSources.flatMap(s => sourceMap[s] || [s]);
 
     const dailyQuery = { 
-        userId,
-        date: { $gte: startDate, $lte: endDate }
+        'metadata.userId': userId,
+        date: { $gte: new Date(startDate), $lte: new Date(endDate) }
     };
-    if (dbSources.length > 0) dailyQuery.source = { $in: dbSources };
+    if (dbSources.length > 0) dailyQuery['metadata.source'] = { $in: dbSources };
     
     // Site-specific platform filter
     const platformIds = [];
@@ -61,7 +61,7 @@ const fetchPlatformData = async (userId, startDate, endDate, siteId, activeSourc
     if (userAcc.gscSiteUrl) platformIds.push(userAcc.gscSiteUrl);
     if (userAcc.googleAdsCustomerId) platformIds.push(userAcc.googleAdsCustomerId);
     if (userAcc.facebookAdAccountId) platformIds.push(userAcc.facebookAdAccountId);
-    if (platformIds.length > 0) dailyQuery.platformAccountId = { $in: platformIds };
+    if (platformIds.length > 0) dailyQuery['metadata.platformAccountId'] = { $in: platformIds };
 
     const dailyLogs = await DailyMetric.find(dailyQuery).sort({ date: 1 });
 
@@ -80,17 +80,19 @@ const fetchPlatformData = async (userId, startDate, endDate, siteId, activeSourc
         };
 
         dailyLogs.forEach(log => {
-            const key = `${log.source}_${log.date}`;
+            const source = log.metadata.source;
+            const dateStr = log.date.toISOString().split('T')[0];
+            const key = `${source}_${dateStr}`;
             
-            if (!sourceTotals[log.source]) {
-                sourceTotals[log.source] = {};
-                sourceEntryCount[log.source] = 0;
+            if (!sourceTotals[source]) {
+                sourceTotals[source] = {};
+                sourceEntryCount[source] = 0;
             }
-            sourceEntryCount[log.source] += 1;
+            sourceEntryCount[source] += 1;
 
             // Daily Aggregation
             if (!aggregated[key]) {
-                aggregated[key] = { source: log.source, date: log.date, metrics: { ...log.metrics } };
+                aggregated[key] = { source, date: dateStr, metrics: { ...log.metrics } };
             } else {
                 Object.keys(log.metrics).forEach(m => {
                     if (typeof log.metrics[m] === 'number') {
@@ -102,13 +104,13 @@ const fetchPlatformData = async (userId, startDate, endDate, siteId, activeSourc
             // Overall Range Totals
             Object.keys(log.metrics).forEach(m => {
                 if (typeof log.metrics[m] === 'number') {
-                    sourceTotals[log.source][m] = (sourceTotals[log.source][m] || 0) + log.metrics[m];
+                    sourceTotals[source][m] = (sourceTotals[source][m] || 0) + log.metrics[m];
                 }
             });
 
-            // Dimension Aggregation
-            if (log.dimensions) {
-                const d = log.dimensions;
+            // Dimension Aggregation (from metadata)
+            if (log.metadata && log.metadata.dimensions) {
+                const d = log.metadata.dimensions;
                 const m = log.metrics;
                 
                 if (d.query) dimensions.queries[d.query] = (dimensions.queries[d.query] || 0) + (m.clicks || 0);

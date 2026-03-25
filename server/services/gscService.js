@@ -22,7 +22,8 @@ export const runQuery = async (userId, siteUrl, reportType, startDate, endDate, 
         requestBody: {
             startDate,
             endDate,
-            dimensions
+            dimensions,
+            rowLimit: 25000
         }
     });
 

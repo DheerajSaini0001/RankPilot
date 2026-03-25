@@ -4,38 +4,40 @@ import { syncGsc, syncGa4, syncGoogleAds, syncFacebookAds } from '../services/sy
 
 export const buildMatchFilter = async (userId, source, query) => {
     const { startDate, endDate, device, campaign, channel, siteId } = query;
-    const filter = { userId, date: { $gte: startDate, $lte: endDate } };
     
-    // If siteId is provided, we need to filter by platformAccountId
+    // Crucial: Use metadata prefix for Timeseries partitioning/filtering
+    const filter = { 
+        'metadata.userId': userId, 
+        date: { $gte: new Date(startDate), $lte: new Date(endDate) } 
+    };
+    
     if (siteId) {
         const acc = await UserAccounts.findOne({ _id: siteId, userId });
         if (acc) {
-            if (source === 'ga4') filter.platformAccountId = acc.ga4PropertyId;
-            else if (source === 'gsc') filter.platformAccountId = acc.gscSiteUrl;
-            else if (source === 'google-ads') filter.platformAccountId = acc.googleAdsCustomerId;
-            else if (source === 'facebook-ads') filter.platformAccountId = acc.facebookAdAccountId;
+            if (source === 'ga4') filter['metadata.platformAccountId'] = acc.ga4PropertyId;
+            else if (source === 'gsc') filter['metadata.platformAccountId'] = acc.gscSiteUrl;
+            else if (source === 'google-ads') filter['metadata.platformAccountId'] = acc.googleAdsCustomerId;
+            else if (source === 'facebook-ads') filter['metadata.platformAccountId'] = acc.facebookAdAccountId;
             else if (Array.isArray(source)) {
-                // For combined ads summary
                 filter.$or = [
-                    { source: 'google-ads', platformAccountId: acc.googleAdsCustomerId },
-                    { source: 'facebook-ads', platformAccountId: acc.facebookAdAccountId }
+                    { 'metadata.source': 'google-ads', 'metadata.platformAccountId': acc.googleAdsCustomerId },
+                    { 'metadata.source': 'facebook-ads', 'metadata.platformAccountId': acc.facebookAdAccountId }
                 ];
-                // Remove the top level source filter if using $or
             }
         }
     }
 
     if (source && !filter.$or) {
         if (Array.isArray(source)) {
-            filter.source = { $in: source };
+            filter['metadata.source'] = { $in: source };
         } else {
-            filter.source = source;
+            filter['metadata.source'] = source;
         }
     }
 
-    if (device) filter["dimensions.device"] = device;
-    if (campaign) filter["dimensions.campaign"] = campaign;
-    if (channel) filter["dimensions.channel"] = channel;
+    if (device) filter["metadata.dimensions.device"] = device;
+    if (campaign) filter["metadata.dimensions.campaign"] = campaign;
+    if (channel) filter["metadata.dimensions.channel"] = channel;
     
     return filter;
 };
@@ -73,23 +75,23 @@ export const getDashboardSummary = async (req, res) => {
             // Current Period
             DailyMetric.aggregate([ { $match: ga4Filter }, { $group: { _id: null, users: { $sum: "$metrics.users" }, sessions: { $sum: "$metrics.sessions" }, pageViews: { $sum: "$metrics.pageViews" }, bounceRate: { $avg: "$metrics.bounceRate" }, avgSessionDuration: { $avg: "$metrics.avgSessionDuration" } }} ]),
             DailyMetric.aggregate([ { $match: gscFilter }, { $group: { _id: null, clicks: { $sum: "$metrics.clicks" }, impressions: { $sum: "$metrics.impressions" }, position: { $avg: "$metrics.position" } }} ]),
-            DailyMetric.aggregate([ { $match: adsFilter }, { $group: { _id: "$source", spend: { $sum: "$metrics.spend" }, impressions: { $sum: "$metrics.impressions" }, clicks: { $sum: "$metrics.clicks" }, conversions: { $sum: "$metrics.conversions" }, reach: { $sum: "$metrics.reach" }, purchaseValue: { $sum: "$metrics.purchase_value" } }} ]),
+            DailyMetric.aggregate([ { $match: adsFilter }, { $group: { _id: "$metadata.source", spend: { $sum: "$metrics.spend" }, impressions: { $sum: "$metrics.impressions" }, clicks: { $sum: "$metrics.clicks" }, conversions: { $sum: "$metrics.conversions" }, reach: { $sum: "$metrics.reach" }, purchaseValue: { $sum: "$metrics.purchase_value" } }} ]),
             
-            // Timeseries
-            DailyMetric.aggregate([ { $match: tsGa4Filter }, { $group: { _id: "$date", sessions: { $sum: "$metrics.sessions" } }}, { $sort: { _id: 1 } } ]),
-            DailyMetric.aggregate([ { $match: tsGscFilter }, { $group: { _id: "$date", clicks: { $sum: "$metrics.clicks" }, impressions: { $sum: "$metrics.impressions" } }}, { $sort: { _id: 1 } } ]),
-            DailyMetric.aggregate([ { $match: tsAdsFilter }, { $group: { _id: "$date", spend: { $sum: "$metrics.spend" }, conversions: { $sum: "$metrics.conversions" } }}, { $sort: { _id: 1 } } ]),
+            // Timeseries (Format Date to string for frontend compatibility)
+            DailyMetric.aggregate([ { $match: tsGa4Filter }, { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, sessions: { $sum: "$metrics.sessions" } }}, { $sort: { _id: 1 } } ]),
+            DailyMetric.aggregate([ { $match: tsGscFilter }, { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, clicks: { $sum: "$metrics.clicks" }, impressions: { $sum: "$metrics.impressions" } }}, { $sort: { _id: 1 } } ]),
+            DailyMetric.aggregate([ { $match: tsAdsFilter }, { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, spend: { $sum: "$metrics.spend" }, conversions: { $sum: "$metrics.conversions" } }}, { $sort: { _id: 1 } } ]),
             
             // Previous Period (for growth)
             DailyMetric.aggregate([ { $match: prevGa4Filter }, { $group: { _id: null, sessions: { $sum: "$metrics.sessions" } }} ]),
             DailyMetric.aggregate([ { $match: prevGscFilter }, { $group: { _id: null, clicks: { $sum: "$metrics.clicks" } }} ]),
-            DailyMetric.aggregate([ { $match: prevAdsFilter }, { $group: { _id: "$source", spend: { $sum: "$metrics.spend" }, conversions: { $sum: "$metrics.conversions" } }} ]),
+            DailyMetric.aggregate([ { $match: prevAdsFilter }, { $group: { _id: "$metadata.source", spend: { $sum: "$metrics.spend" }, conversions: { $sum: "$metrics.conversions" } }} ]),
 
             // Top Pages
             DailyMetric.aggregate([
                 { $match: topPagesFilter },
                 { $group: {
-                    _id: "$dimensions.pagePath",
+                    _id: "$metadata.dimensions.pagePath",
                     views: { $sum: "$metrics.pageViews" },
                     users: { $sum: "$metrics.users" },
                     bounceRate: { $avg: "$metrics.bounceRate" }
@@ -231,7 +233,7 @@ export const getGa4Summary = async (req, res) => {
             DailyMetric.aggregate([
                 { $match: filter },
                 { $group: { 
-                    _id: "$date", 
+                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, 
                     sessions: { $sum: "$metrics.sessions" },
                     pageViews: { $sum: "$metrics.pageViews" },
                     users: { $sum: "$metrics.users" },
@@ -242,7 +244,7 @@ export const getGa4Summary = async (req, res) => {
             DailyMetric.aggregate([
                 { $match: filter },
                 { $group: {
-                    _id: { channel: "$dimensions.channel", source: "$dimensions.source" },
+                    _id: { channel: "$metadata.dimensions.channel", source: "$metadata.dimensions.source" },
                     sessions: { $sum: "$metrics.sessions" },
                     users: { $sum: "$metrics.users" }
                 }},
@@ -252,7 +254,7 @@ export const getGa4Summary = async (req, res) => {
             DailyMetric.aggregate([
                 { $match: filter },
                 { $group: {
-                    _id: { path: "$dimensions.pagePath", title: "$dimensions.pageTitle" },
+                    _id: { path: "$metadata.dimensions.pagePath", title: "$metadata.dimensions.pageTitle" },
                     views: { $sum: "$metrics.pageViews" },
                     users: { $sum: "$metrics.users" }
                 }},
@@ -262,7 +264,7 @@ export const getGa4Summary = async (req, res) => {
             DailyMetric.aggregate([
                 { $match: filter },
                 { $group: {
-                    _id: "$dimensions.device",
+                    _id: "$metadata.dimensions.device",
                     value: { $sum: "$metrics.sessions" }
                 }},
                 { $sort: { value: -1 } }
@@ -270,7 +272,7 @@ export const getGa4Summary = async (req, res) => {
             DailyMetric.aggregate([
                 { $match: filter },
                 { $group: {
-                    _id: "$dimensions.country",
+                    _id: "$metadata.dimensions.country",
                     value: { $sum: "$metrics.sessions" }
                 }},
                 { $sort: { value: -1 } },
@@ -339,7 +341,7 @@ export const getGscSummary = async (req, res) => {
             DailyMetric.aggregate([
                 { $match: filter },
                 { $group: { 
-                    _id: "$date", 
+                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, 
                     clicks: { $sum: "$metrics.clicks" }, 
                     impressions: { $sum: "$metrics.impressions" },
                     position: { $avg: "$metrics.position" }
@@ -349,7 +351,7 @@ export const getGscSummary = async (req, res) => {
             DailyMetric.aggregate([
                 { $match: filter },
                 { $group: {
-                    _id: "$dimensions.query",
+                    _id: "$metadata.dimensions.query",
                     clicks: { $sum: "$metrics.clicks" },
                     impressions: { $sum: "$metrics.impressions" },
                     position: { $avg: "$metrics.position" }
@@ -360,7 +362,7 @@ export const getGscSummary = async (req, res) => {
             DailyMetric.aggregate([
                 { $match: filter },
                 { $group: {
-                    _id: "$dimensions.page",
+                    _id: "$metadata.dimensions.page",
                     clicks: { $sum: "$metrics.clicks" },
                     impressions: { $sum: "$metrics.impressions" },
                     position: { $avg: "$metrics.position" }
@@ -370,11 +372,11 @@ export const getGscSummary = async (req, res) => {
             ]),
             DailyMetric.aggregate([
                 { $match: filter },
-                { $group: { _id: "$dimensions.device", value: { $sum: "$metrics.clicks" } } }
+                { $group: { _id: "$metadata.dimensions.device", value: { $sum: "$metrics.clicks" } } }
             ]),
             DailyMetric.aggregate([
                 { $match: filter },
-                { $group: { _id: "$dimensions.country", value: { $sum: "$metrics.clicks" } } },
+                { $group: { _id: "$metadata.dimensions.country", value: { $sum: "$metrics.clicks" } } },
                 { $sort: { value: -1 } },
                 { $limit: 10 }
             ])
@@ -435,7 +437,7 @@ export const getGoogleAdsSummary = async (req, res) => {
             DailyMetric.aggregate([
                 { $match: filter },
                 { $group: { 
-                    _id: "$date", 
+                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, 
                     cost: { $sum: "$metrics.spend" }, 
                     clicks: { $sum: "$metrics.clicks" },
                     impressions: { $sum: "$metrics.impressions" },
@@ -456,7 +458,7 @@ export const getGoogleAdsSummary = async (req, res) => {
             DailyMetric.aggregate([
                 { $match: filter },
                 { $group: {
-                    _id: { name: "$dimensions.campaign", status: "$dimensions.campaignStatus" },
+                    _id: { name: "$metadata.dimensions.campaign", status: "$metadata.dimensions.campaignStatus" },
                     cost: { $sum: "$metrics.spend" },
                     impressions: { $sum: "$metrics.impressions" },
                     clicks: { $sum: "$metrics.clicks" },
@@ -467,7 +469,7 @@ export const getGoogleAdsSummary = async (req, res) => {
             DailyMetric.aggregate([
                 { $match: filter },
                 { $group: {
-                    _id: "$dimensions.adGroup",
+                    _id: "$metadata.dimensions.adGroup",
                     cost: { $sum: "$metrics.spend" },
                     impressions: { $sum: "$metrics.impressions" },
                     clicks: { $sum: "$metrics.clicks" }
@@ -477,7 +479,7 @@ export const getGoogleAdsSummary = async (req, res) => {
             ]),
             DailyMetric.aggregate([
                 { $match: filter },
-                { $group: { _id: "$dimensions.device", value: { $sum: "$metrics.spend" } } }
+                { $group: { _id: "$metadata.dimensions.device", value: { $sum: "$metrics.spend" } } }
             ])
         ]);
 
@@ -564,7 +566,7 @@ export const getFacebookAdsSummary = async (req, res) => {
             DailyMetric.aggregate([
                 { $match: filter },
                 { $group: { 
-                    _id: "$date", 
+                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, 
                     spend: { $sum: "$metrics.spend" }, 
                     clicks: { $sum: "$metrics.clicks" },
                     impressions: { $sum: "$metrics.impressions" },
@@ -587,7 +589,7 @@ export const getFacebookAdsSummary = async (req, res) => {
             DailyMetric.aggregate([
                 { $match: filter },
                 { $group: {
-                    _id: "$dimensions.campaign",
+                    _id: "$metadata.dimensions.campaign",
                     spend: { $sum: "$metrics.spend" },
                     impressions: { $sum: "$metrics.impressions" },
                     clicks: { $sum: "$metrics.clicks" },
@@ -599,7 +601,7 @@ export const getFacebookAdsSummary = async (req, res) => {
             DailyMetric.aggregate([
                 { $match: filter },
                 { $group: {
-                    _id: "$dimensions.adset",
+                    _id: "$metadata.dimensions.adset",
                     spend: { $sum: "$metrics.spend" },
                     impressions: { $sum: "$metrics.impressions" },
                     clicks: { $sum: "$metrics.clicks" },
@@ -611,7 +613,7 @@ export const getFacebookAdsSummary = async (req, res) => {
             ]),
             DailyMetric.aggregate([
                 { $match: filter },
-                { $group: { _id: "$dimensions.device", value: { $sum: "$metrics.spend" } } }
+                { $group: { _id: "$metadata.dimensions.device", value: { $sum: "$metrics.spend" } } }
             ])
         ]);
 

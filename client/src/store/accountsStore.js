@@ -36,7 +36,8 @@ export const useAccountsStore = create(
                 }
                 return newState;
             }),
-            clearAccounts: () => set({ ga4: {}, gsc: {}, googleAds: {}, facebook: {}, connectedSources: [], gscSites: [], activeGscSite: null, activeGa4PropertyId: null, activeGoogleAdsCustomerId: null, activeFacebookAdAccountId: null, syncMetadata: { isHistoricalSyncComplete: false, lastDailySyncAt: null, syncStatus: 'idle' } }),
+            setUserSites: (sites) => set({ userSites: sites }),
+            clearAccounts: () => set({ ga4: {}, gsc: {}, googleAds: {}, facebook: {}, connectedSources: [], gscSites: [], userSites: [], activeSiteId: null, activeGscSite: null, activeGa4PropertyId: null, activeGoogleAdsCustomerId: null, activeFacebookAdAccountId: null, syncMetadata: { isHistoricalSyncComplete: false, lastDailySyncAt: null, syncStatus: 'idle' } }),
         }),
         {
             name: 'accounts-storage',

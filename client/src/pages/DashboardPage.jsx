@@ -55,7 +55,9 @@ const DashboardPage = () => {
     activeFacebookAdAccountId,
     activeSiteId,
     syncMetadata,
-    setAccounts
+    userSites,
+    setAccounts,
+    setUserSites
   } = useAccountsStore();
 
   const [loading, setLoading] = useState(true);
@@ -161,13 +163,34 @@ const DashboardPage = () => {
     return () => clearInterval(interval);
   }, [loadDashboardData]);
 
-  // Refresh data when sync completes
   useEffect(() => {
     if (syncMetadata?.syncStatus !== 'syncing' && activeSiteId) {
       console.log('Sync completed or idle, refreshing data...');
       loadDashboardData();
     }
   }, [syncMetadata?.syncStatus, activeSiteId, loadDashboardData]);
+
+  // Background Polling for Sync Status (Specific for historical sync progress)
+  const activeSite = userSites.find(s => s._id === activeSiteId);
+  const isSyncingHistorical = !!(activeSite && (
+    (activeSite.ga4PropertyId && !activeSite.ga4HistoricalComplete) ||
+    (activeSite.gscSiteUrl && !activeSite.gscHistoricalComplete) ||
+    (activeSite.googleAdsCustomerId && !activeSite.googleAdsHistoricalComplete) ||
+    (activeSite.facebookAdAccountId && !activeSite.facebookAdsHistoricalComplete)
+  ));
+
+  useEffect(() => {
+    let interval;
+    if (isSyncingHistorical) {
+      interval = setInterval(async () => {
+         try {
+           const res = await api.get('/accounts/sites'); 
+           if (res.data) setUserSites(res.data);
+         } catch (e) { console.error("Polling error", e); }
+      }, 10000); 
+    }
+    return () => clearInterval(interval);
+  }, [isSyncingHistorical, setUserSites]);
 
   const { user } = useAuthStore();
   const totalTraffic = (overviewData.ga4?.sessions || 0);
@@ -238,9 +261,50 @@ const DashboardPage = () => {
     Conversions: '#EF4444',
   }[selectedMetric] || '#3B82F6';
 
+  // Calculate overall historical progress
+  const getOverallProgress = () => {
+    if (!activeSite) return 0;
+    const items = [];
+    if (activeSite.ga4PropertyId) items.push(activeSite.ga4SyncProgress || 0);
+    if (activeSite.gscSiteUrl) items.push(activeSite.gscSyncProgress || 0);
+    if (activeSite.googleAdsCustomerId) items.push(activeSite.googleAdsSyncProgress || 0);
+    if (activeSite.facebookAdAccountId) items.push(activeSite.facebookAdsSyncProgress || 0);
+    if (items.length === 0) return 0;
+    return Math.round(items.reduce((a, b) => a + b, 0) / items.length);
+  };
+
   return (
     <DashboardLayout>
       <div className="flex flex-col space-y-8 max-w-[1600px] mx-auto">
+        {/* SECTION 0 — Detailed Sync Banner (Only if historical in progress) */}
+        {isSyncingHistorical && (
+          <div className="bg-brand-600/10 border border-brand-200 dark:border-brand-900/30 rounded-3xl p-4 flex flex-col md:flex-row items-center gap-4 animate-in slide-in-from-top duration-500">
+            <div className="w-12 h-12 rounded-2xl bg-brand-600 flex items-center justify-center shrink-0 shadow-lg shadow-brand-600/20">
+              <CloudArrowUpIcon className="w-6 h-6 text-white animate-bounce" />
+            </div>
+            <div className="flex-1 text-center md:text-left">
+              <h3 className="text-sm font-black text-brand-900 dark:text-brand-100">Optimizing Historical Data Sync</h3>
+              <p className="text-xs font-bold text-brand-700/70 dark:text-brand-400 mt-1">
+                We're fetching {activeSite.siteName}'s 24-month marketing history into RankPilot's high-speed memory.
+              </p>
+            </div>
+            <div className="flex flex-col items-center md:items-end gap-2 shrink-0">
+               <div className="text-sm font-black text-brand-600 dark:text-brand-400 flex items-center gap-2">
+                 <span className="tabular-nums font-black">{getOverallProgress()}%</span>
+                 <div className="w-24 h-2 bg-brand-200 dark:bg-brand-900/50 rounded-full overflow-hidden">
+                    <div className="h-full bg-brand-600 rounded-full transition-all duration-500" style={{ width: `${getOverallProgress()}%` }}></div>
+                 </div>
+               </div>
+               <div className="flex items-center gap-3">
+                  {activeSite.ga4PropertyId && <span className={`w-2 h-2 rounded-full ${activeSite.ga4HistoricalComplete ? 'bg-semantic-green' : 'bg-brand-400 animate-pulse'}`} title="GA4" />}
+                  {activeSite.gscSiteUrl && <span className={`w-2 h-2 rounded-full ${activeSite.gscHistoricalComplete ? 'bg-semantic-green' : 'bg-brand-400 animate-pulse'}`} title="GSC" />}
+                  {activeSite.googleAdsCustomerId && <span className={`w-2 h-2 rounded-full ${activeSite.googleAdsHistoricalComplete ? 'bg-semantic-green' : 'bg-brand-400 animate-pulse'}`} title="Google Ads" />}
+                  {activeSite.facebookAdAccountId && <span className={`w-2 h-2 rounded-full ${activeSite.facebookAdsHistoricalComplete ? 'bg-semantic-green' : 'bg-brand-400 animate-pulse'}`} title="Meta Ads" />}
+               </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col space-y-8 min-w-0">
           {/* SECTION 1 — Greeting Card */}
           <div className="bg-white/60 dark:bg-dark-card/60 backdrop-blur-xl border border-neutral-200/60 dark:border-neutral-800/60 rounded-[2rem] p-6 shadow-sm relative overflow-hidden group flex flex-col md:flex-row md:items-center justify-between gap-4">
