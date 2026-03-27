@@ -13,13 +13,13 @@ let isGa4CronRunning = false;
 let isGAdsCronRunning = false;
 let isFbCronRunning = false;
 
-// Helper for retries with exponential backoff
+// Helper for retries
 const withRetry = async (fn, retries = 3, delay = 1000) => {
     try {
         return await fn();
     } catch (err) {
         if (retries === 0) throw err;
-        console.log(`[Retry] Attempt failed. Retrying in ${delay}ms... (${retries} left)`);
+        console.log(`[Retry] ⚠️ Attempt failed! Retrying in ${delay}ms... (Remaining: ${retries})`);
         await new Promise(res => setTimeout(res, delay));
         return withRetry(fn, retries - 1, delay * 2);
     }
@@ -73,7 +73,7 @@ export const syncHistoricalData = async (accountId, source) => {
 
     // 1. Guard: If source is not configured, skip it and clear status
     if (!acc[configField]) {
-        console.log(`[Historical Sync] Skipping ${source} for ${acc.siteName} (not configured).`);
+        console.log(`[Historical Sync] ⏭️ Skipping [${source.toUpperCase()}] for "${acc.siteName}" (Not Configured)`);
         if (acc[statusField] !== 'idle') {
             const updatedAcc = await UserAccounts.findByIdAndUpdate(accountId, { [statusField]: 'idle' }, { new: true });
             await updateGlobalSyncStatus(updatedAcc);
@@ -88,7 +88,7 @@ export const syncHistoricalData = async (accountId, source) => {
 
     if (isAnythingSyncing) {
         if (acc[statusField] !== 'syncing') {
-            console.log(`[Historical Sync] Queue: ${source} for ${acc.siteName} marked as pending (another sync is active).`);
+            console.log(`[Historical Sync] ⏳ Queued [${source.toUpperCase()}] for "${acc.siteName}" | Waiting for other syncs...`);
             await UserAccounts.findByIdAndUpdate(accountId, { [statusField]: 'pending' });
         }
         return;
@@ -96,7 +96,7 @@ export const syncHistoricalData = async (accountId, source) => {
 
     const limits = { 'gsc': 1.5, 'ga4': 2, 'google-ads': 3, 'facebook-ads': 3 };
     const years = limits[source] || 3;
-    console.log(`[Historical Sync] Starting ${source} for ${acc.siteName}`);
+    console.log(`[Historical Sync] 🔄 Starting [${source.toUpperCase()}] for "${acc.siteName}" | Target: ${years} Years`);
 
     try {
         // Mark both global and individual source as syncing
@@ -117,7 +117,8 @@ export const syncHistoricalData = async (accountId, source) => {
             const startDate = start.toISOString().split('T')[0];
             const endDate = (end > now ? now : end).toISOString().split('T')[0];
 
-            console.log(`[Historical Sync] ${acc.siteName} (${source}): ${startDate} to ${endDate} (${i + 1}/${months})`);
+            const progressNum = Math.round(((i + 1) / months) * 100);
+            console.log(`[Historical Sync] 📈 Progress [${source.toUpperCase()}] | "${acc.siteName}" | ${startDate} -> ${endDate} (${progressNum}%)`);
 
             switch (source) {
                 case 'ga4': await withRetry(() => syncGa4(acc, startDate, endDate)); break;
@@ -157,9 +158,9 @@ export const syncHistoricalData = async (accountId, source) => {
             actionPath: '/dashboard'
         });
 
-        console.log(`[Historical Sync] Success for ${acc.siteName} (${source})`);
+        console.log(`[Historical Sync] ✅ Completed [${source.toUpperCase()}] for "${acc.siteName}" | Total Months: ${months}`);
     } catch (err) {
-        console.error(`[Historical Sync] ERROR for ${source}:`, err.message);
+        console.error(`[Historical Sync] ❌ Failed [${source.toUpperCase()}] for "${acc.siteName}" | Error: ${err.message}`);
         const updatedAcc = await UserAccounts.findByIdAndUpdate(accountId, { 
             [statusField]: 'error' 
         }, { new: true });
@@ -419,7 +420,7 @@ export const syncFacebookAds = async (acc, startDate, endDate) => {
 export const syncAllGsc = async () => {
     if (isGscCronRunning) return;
     isGscCronRunning = true;
-    console.log('[Cron] Starting GSC Sync...');
+    console.log('[Cron] 🕒 Starting Global Sync: [GSC]...');
     try {
         const users = await UserAccounts.find({ gscSiteUrl: { $exists: true, $ne: null, $gt: '' } });
         for (const acc of users) {
@@ -432,15 +433,15 @@ export const syncAllGsc = async () => {
                 if (!acc.gscHistoricalComplete) {
                     await addSyncJob('historical-sync', { accountId: acc._id, source: 'gsc' });
                 }
-            } catch (e) { console.error(`GSC Queue Fail: ${acc._id}`, e.message); }
+            } catch (e) { console.error(`[Cron] ❌ Queue Fail [GSC] | Account: ${acc._id} | Reason: ${e.message}`); }
         }
-    } finally { isGscCronRunning = false; console.log('[Cron] GSC Sync Completed.'); }
+    } finally { isGscCronRunning = false; console.log('[Cron] ✨ [GSC] Global Sync Completed.'); }
 };
 
 export const syncAllGa4 = async () => {
     if (isGa4CronRunning) return;
     isGa4CronRunning = true;
-    console.log('[Cron] Starting GA4 Sync...');
+    console.log('[Cron] 🕒 Starting Global Sync: [GA4]...');
     try {
         const users = await UserAccounts.find({ ga4PropertyId: { $exists: true, $ne: null, $gt: '' } });
         for (const acc of users) {
@@ -453,15 +454,15 @@ export const syncAllGa4 = async () => {
                 if (!acc.ga4HistoricalComplete) {
                     await addSyncJob('historical-sync', { accountId: acc._id, source: 'ga4' });
                 }
-            } catch (e) { console.error(`GA4 Queue Fail: ${acc._id}`, e.message); }
+            } catch (e) { console.error(`[Cron] ❌ Queue Fail [GA4] | Account: ${acc._id} | Reason: ${e.message}`); }
         }
-    } finally { isGa4CronRunning = false; console.log('[Cron] GA4 Sync Completed.'); }
+    } finally { isGa4CronRunning = false; console.log('[Cron] ✨ [GA4] Global Sync Completed.'); }
 };
 
 export const syncAllGoogleAds = async () => {
     if (isGAdsCronRunning) return;
     isGAdsCronRunning = true;
-    console.log('[Cron] Starting Google Ads Sync...');
+    console.log('[Cron] 🕒 Starting Global Sync: [GOOGLE ADS]...');
     try {
         const users = await UserAccounts.find({ googleAdsCustomerId: { $exists: true, $ne: null, $gt: '' } });
         for (const acc of users) {
@@ -474,15 +475,15 @@ export const syncAllGoogleAds = async () => {
                 if (!acc.googleAdsHistoricalComplete) {
                     await addSyncJob('historical-sync', { accountId: acc._id, source: 'google-ads' });
                 }
-            } catch (e) { console.error(`GAds Queue Fail: ${acc._id}`, e.message); }
+            } catch (e) { console.error(`[Cron] ❌ Queue Fail [GOOGLE ADS] | Account: ${acc._id} | Reason: ${e.message}`); }
         }
-    } finally { isGAdsCronRunning = false; console.log('[Cron] Google Ads Sync Completed.'); }
+    } finally { isGAdsCronRunning = false; console.log('[Cron] ✨ [GOOGLE ADS] Global Sync Completed.'); }
 };
 
 export const syncAllFacebookAds = async () => {
     if (isFbCronRunning) return;
     isFbCronRunning = true;
-    console.log('[Cron] Starting Facebook Ads Sync...');
+    console.log('[Cron] 🕒 Starting Global Sync: [FB ADS]...');
     try {
         const users = await UserAccounts.find({ facebookAdAccountId: { $exists: true, $ne: null, $gt: '' } });
         for (const acc of users) {
@@ -495,9 +496,9 @@ export const syncAllFacebookAds = async () => {
                 if (!acc.facebookAdsHistoricalComplete) {
                     await addSyncJob('historical-sync', { accountId: acc._id, source: 'facebook-ads' });
                 }
-            } catch (e) { console.error(`FB Queue Fail: ${acc._id}`, e.message); }
+            } catch (e) { console.error(`[Cron] ❌ Queue Fail [FB ADS] | Account: ${acc._id} | Reason: ${e.message}`); }
         }
-    } finally { isFbCronRunning = false; console.log('[Cron] Facebook Ads Sync Completed.'); }
+    } finally { isFbCronRunning = false; console.log('[Cron] ✨ [FB ADS] Global Sync Completed.'); }
 };
 
 export const syncDailyForAllUsers = async () => {

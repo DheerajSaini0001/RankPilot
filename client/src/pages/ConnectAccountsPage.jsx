@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/ui/DashboardLayout';
 import Button from '../components/ui/Button';
 import { getMe } from '../api/authApi';
-import { listGa4, listGsc, listGoogleAds, listGoogleAccounts, listFacebookAds, listFacebookAccounts, selectAccounts, getActiveAccounts } from '../api/accountApi';
+import { listGa4, listGsc, listGoogleAds, listGoogleAccounts, listFacebookAds, listFacebookAccounts, selectAccounts, getActiveAccounts, resumeSync } from '../api/accountApi';
 import { useAccountsStore } from '../store/accountsStore';
 import { useAuthStore } from '../store/authStore';
 import { useNotificationStore } from '../store/notificationStore';
@@ -13,6 +13,7 @@ import { getApiUrl } from '../api/index';
 const ConnectAccountsPage = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [resumingSource, setResumingSource] = useState(null);
 
     const { connectedSources, activeSiteId, setAccounts } = useAccountsStore();
     const { token } = useAuthStore();
@@ -78,12 +79,20 @@ const ConnectAccountsPage = () => {
                             siteName: active.data.siteName || '',
                             ga4: active.data.ga4PropertyId || '',
                             ga4TokenId: active.data.ga4TokenId || '',
+                            ga4SyncStatus: active.data.ga4SyncStatus || 'idle',
+                            ga4HistoricalComplete: active.data.ga4HistoricalComplete,
                             gsc: active.data.gscSiteUrl || '',
                             gscTokenId: active.data.gscTokenId || '',
+                            gscSyncStatus: active.data.gscSyncStatus || 'idle',
+                            gscHistoricalComplete: active.data.gscHistoricalComplete,
                             gAds: active.data.googleAdsCustomerId || '',
                             googleAdsTokenId: active.data.googleAdsTokenId || '',
+                            googleAdsSyncStatus: active.data.googleAdsSyncStatus || 'idle',
+                            googleAdsHistoricalComplete: active.data.googleAdsHistoricalComplete,
                             fbAds: active.data.facebookAdAccountId || '',
-                            facebookTokenId: active.data.facebookTokenId || ''
+                            facebookTokenId: active.data.facebookTokenId || '',
+                            facebookAdsSyncStatus: active.data.facebookAdsSyncStatus || 'idle',
+                            facebookAdsHistoricalComplete: active.data.facebookAdsHistoricalComplete
                         };
                         setInitialValues(vals);
                         if (vals.siteName) setSiteName(vals.siteName);
@@ -214,6 +223,24 @@ const ConnectAccountsPage = () => {
         }
     };
 
+    const handleResumeSync = async (source) => {
+        setResumingSource(source);
+        try {
+            await resumeSync({ siteId: activeSiteId, source });
+            toast.success(`Sync for ${source.toUpperCase().replace('-', ' ')} resumed!`);
+            
+            // Update local state status to pending/syncing
+            setInitialValues(prev => ({
+                ...prev,
+                [`${source.replace('-', 'Ads').replace('googleAds', 'googleAds').replace('facebookAds', 'facebookAds')}SyncStatus`]: 'pending'
+            }));
+        } catch (error) {
+            toast.error('Failed to resume sync');
+        } finally {
+            setResumingSource(null);
+        }
+    };
+
     return (
         <DashboardLayout>
             <div className="w-full py-8">
@@ -324,7 +351,16 @@ const ConnectAccountsPage = () => {
                                  {/* GA4 */}
                                  <div className="space-y-3 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800 relative">
                                    {isGa4Connected && !modifyingGa4 && (
-                                     <div className="absolute top-3 right-3 z-10">
+                                     <div className="absolute top-3 right-3 z-10 flex gap-2">
+                                       {(initialValues.ga4SyncStatus === 'error' || !initialValues.ga4HistoricalComplete) && (
+                                         <button 
+                                           onClick={() => handleResumeSync('ga4')}
+                                           disabled={resumingSource === 'ga4' || initialValues.ga4SyncStatus === 'syncing'}
+                                           className="text-[10px] font-black uppercase text-amber-600 dark:text-amber-400 bg-white dark:bg-neutral-900 border border-amber-200 dark:border-amber-800 px-2 py-1 rounded-lg shadow-sm hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all disabled:opacity-50"
+                                         >
+                                           {initialValues.ga4SyncStatus === 'syncing' ? 'Syncing...' : 'Resume Sync'}
+                                         </button>
+                                       )}
                                        <button 
                                          onClick={() => {
                                            setModifyingGa4(true);
@@ -373,7 +409,16 @@ const ConnectAccountsPage = () => {
                                  {/* GSC */}
                                  <div className="space-y-3 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800 relative">
                                    {isGscConnected && !modifyingGsc && (
-                                     <div className="absolute top-3 right-3 z-10">
+                                     <div className="absolute top-3 right-3 z-10 flex gap-2">
+                                       {(initialValues.gscSyncStatus === 'error' || !initialValues.gscHistoricalComplete) && (
+                                         <button 
+                                           onClick={() => handleResumeSync('gsc')}
+                                           disabled={resumingSource === 'gsc' || initialValues.gscSyncStatus === 'syncing'}
+                                           className="text-[10px] font-black uppercase text-amber-600 dark:text-amber-400 bg-white dark:bg-neutral-900 border border-amber-200 dark:border-amber-800 px-2 py-1 rounded-lg shadow-sm hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all disabled:opacity-50"
+                                         >
+                                           {initialValues.gscSyncStatus === 'syncing' ? 'Syncing...' : 'Resume Sync'}
+                                         </button>
+                                       )}
                                        <button 
                                          onClick={() => {
                                            setModifyingGsc(true);
@@ -421,7 +466,16 @@ const ConnectAccountsPage = () => {
                                  {/* Google Ads */}
                                  <div className="lg:col-span-2 space-y-3 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800 relative">
                                    {isGAdsConnected && !modifyingGAds && (
-                                     <div className="absolute top-3 right-3 z-10">
+                                     <div className="absolute top-3 right-3 z-10 flex gap-2">
+                                       {(initialValues.googleAdsSyncStatus === 'error' || !initialValues.googleAdsHistoricalComplete) && (
+                                         <button 
+                                           onClick={() => handleResumeSync('google-ads')}
+                                           disabled={resumingSource === 'google-ads' || initialValues.googleAdsSyncStatus === 'syncing'}
+                                           className="text-[10px] font-black uppercase text-amber-600 dark:text-amber-400 bg-white dark:bg-neutral-900 border border-amber-200 dark:border-amber-800 px-2 py-1 rounded-lg shadow-sm hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all disabled:opacity-50"
+                                         >
+                                           {initialValues.googleAdsSyncStatus === 'syncing' ? 'Syncing...' : 'Resume Sync'}
+                                         </button>
+                                       )}
                                        <button 
                                          onClick={() => {
                                            setModifyingGAds(true);
@@ -525,7 +579,16 @@ const ConnectAccountsPage = () => {
                               </div>
                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 relative">
                                 {isFbAdsConnected && !modifyingFbAds && (
-                                   <div className="absolute top-3 right-3 z-10">
+                                   <div className="absolute top-3 right-3 z-10 flex gap-2">
+                                     {(initialValues.facebookAdsSyncStatus === 'error' || !initialValues.facebookAdsHistoricalComplete) && (
+                                       <button 
+                                         onClick={() => handleResumeSync('facebook-ads')}
+                                         disabled={resumingSource === 'facebook-ads' || initialValues.facebookAdsSyncStatus === 'syncing'}
+                                         className="text-[10px] font-black uppercase text-amber-600 dark:text-amber-400 bg-white dark:bg-neutral-900 border border-amber-200 dark:border-amber-800 px-2 py-1 rounded-lg shadow-sm hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all disabled:opacity-50"
+                                       >
+                                         {initialValues.facebookAdsSyncStatus === 'syncing' ? 'Syncing...' : 'Resume Sync'}
+                                       </button>
+                                     )}
                                      <button 
                                        onClick={() => {
                                          setModifyingFbAds(true);

@@ -13,7 +13,8 @@ import {
     listSites,
     deleteSite,
     disconnectGoogle,
-    disconnectFacebook
+    disconnectFacebook,
+    resumeHistoricalSync
 } from '../controllers/accountController.js';
 
 const router = express.Router();
@@ -31,5 +32,6 @@ router.get('/sites', catchAsync(listSites));
 router.delete('/sites/:siteId', catchAsync(deleteSite));
 router.delete('/disconnect/google', catchAsync(disconnectGoogle));
 router.delete('/disconnect/facebook', catchAsync(disconnectFacebook));
+router.post('/resume-sync', catchAsync(resumeHistoricalSync));
 
 export default router;

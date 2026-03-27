@@ -12,3 +12,4 @@ export const listSites = () => api.get('/accounts/sites');
 export const deleteSite = (siteId) => api.delete(`/accounts/sites/${siteId}`);
 export const disconnectGoogle = (tokenId) => api.delete('/accounts/disconnect/google', { data: { tokenId } });
 export const disconnectFacebook = (tokenId) => api.delete('/accounts/disconnect/facebook', { data: { tokenId } });
+export const resumeSync = (data) => api.post('/accounts/resume-sync', data);

@@ -26,8 +26,10 @@ export const initWorker = () => {
     const worker = new Worker('sync-data-queue', async (job) => {
         const { accountId, source, startDate, endDate, acc } = job.data;
         const targetAccId = accountId || acc?._id;
-        
-        console.log(`[Worker] Started job: ${job.name} (ID: ${job.id}) for Account: ${targetAccId}`);
+        const startTime = Date.now();
+        const jobTag = `${job.name.toUpperCase()}${source ? ` (${source.toUpperCase()})` : ''}`;
+
+        console.log(`[Worker] 🚀 Started: [${jobTag}] | Account: ${targetAccId} | ID: ${job.id}`);
 
         try {
             // Update status to syncing
@@ -64,19 +66,19 @@ export const initWorker = () => {
                 await UserAccounts.findByIdAndUpdate(targetAccId, { $set: updateData });
             }
 
-            console.log(`[Worker] Job ${job.id} completed successfully!`);
+            console.log(`[Worker] ✅ Success: [${jobTag}] | ID: ${job.id} | Duration: ${Date.now() - startTime}ms`);
         } catch (error) {
-            console.error(`[Worker] Job ${job.id} FAILED:`, error.message);
-            
+            console.error(`[Worker] ❌ Failed: [${jobTag}] | ID: ${job.id} | Error: ${error.message}`);
+
             if (targetAccId) {
                 await UserAccounts.findByIdAndUpdate(targetAccId, { syncStatus: 'error' });
             }
-            
+
             throw error;
         }
-    }, { 
+    }, {
         connection,
-        concurrency: 2 
+        concurrency: 2
     });
 
     worker.on('failed', (job, err) => {

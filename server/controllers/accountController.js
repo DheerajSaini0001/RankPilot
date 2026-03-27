@@ -379,3 +379,41 @@ export const disconnectFacebook = async (req, res) => {
     res.status(200).json({ message: tokenId ? 'Facebook account disconnected' : 'All Facebook accounts disconnected' });
 };
 
+export const resumeHistoricalSync = async (req, res) => {
+    try {
+        const { siteId, source } = req.body;
+        const userId = req.user._id;
+
+        if (!siteId || !source) {
+            return res.status(400).json({ message: 'Missing siteId or source' });
+        }
+
+        const account = await UserAccounts.findOne({ _id: siteId, userId });
+        if (!account) return res.status(404).json({ message: 'Site not found' });
+
+        const sourceMap = {
+            'ga4': 'ga4',
+            'gsc': 'gsc',
+            'google-ads': 'googleAds',
+            'facebook-ads': 'facebookAds'
+        };
+        const prefix = sourceMap[source];
+        if (!prefix) return res.status(400).json({ message: 'Invalid source' });
+
+        const statusField = `${prefix}SyncStatus`;
+
+        // Reset status to idle/pending so syncHistoricalData can start it
+        await UserAccounts.findByIdAndUpdate(siteId, { [statusField]: 'idle' });
+
+        // Re-add the job to BullMQ
+        await addSyncJob('historical-sync', { accountId: siteId, source });
+
+        res.status(200).json({ 
+            success: true, 
+            message: `Historical sync for ${source.toUpperCase().replace('-', ' ')} has been resumed.` 
+        });
+    } catch (error) {
+        console.error('Resume Sync Error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};

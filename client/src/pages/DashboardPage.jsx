@@ -187,7 +187,7 @@ const DashboardPage = () => {
            const res = await api.get('/accounts/sites'); 
            if (res.data) setUserSites(res.data);
          } catch (e) { console.error("Polling error", e); }
-      }, 10000); 
+      }, 60000); 
     }
     return () => clearInterval(interval);
   }, [isSyncingHistorical, setUserSites]);
