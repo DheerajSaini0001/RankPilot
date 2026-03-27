@@ -76,7 +76,7 @@ const DashboardLayout = ({ children }) => {
                         }
                     })
                     .catch(() => { });
-            }, 5000);
+            }, 60000);
         }
         return () => clearInterval(interval);
     }, [user, activeSiteId, syncMetadata?.syncStatus, setAccounts]);
