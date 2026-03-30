@@ -29,7 +29,7 @@ export const initWorker = () => {
         const startTime = Date.now();
         const jobTag = `${job.name.toUpperCase()}${source ? ` (${source.toUpperCase()})` : ''}`;
 
-        console.log(`[Worker] 🚀 Started: [${jobTag}] | Account: ${targetAccId} | Priority: ${job.opts.priority || 'Normal'}`);
+        console.log(`[Worker] 🚀 Started: [${jobTag}] | Account: ${acc.name}`);
 
         try {
             if (targetAccId) {
@@ -64,9 +64,9 @@ export const initWorker = () => {
                 await UserAccounts.findByIdAndUpdate(targetAccId, { $set: updateData });
             }
 
-            console.log(`[Worker] ✅ Success: [${jobTag}] | Duration: ${Date.now() - startTime}ms`);
+            console.log(`[Worker] ✅ Completed: [${jobTag}] | Account: ${acc.name}`);
         } catch (error) {
-            console.error(`[Worker] ❌ Failed: [${jobTag}] | Error: ${error.message}`);
+            console.error(`[Worker] ❌ Failed: [${jobTag}] | Account: ${acc.name} | Error: ${error.message}`);
 
             if (targetAccId) {
                 await UserAccounts.findByIdAndUpdate(targetAccId, { syncStatus: 'error' });
