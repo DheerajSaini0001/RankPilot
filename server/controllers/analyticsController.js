@@ -694,12 +694,12 @@ export const syncAccountData = async (req, res) => {
         // Update status to syncing
         await UserAccounts.findByIdAndUpdate(siteId, { syncStatus: 'syncing' });
 
-        // Calculate a small window for daily refresh (last 3 days)
+        // Calculate a small window for daily refresh (last 7 days)
         const now = new Date();
         const todayStr = now.toISOString().split('T')[0];
-        const threeDaysAgo = new Date();
-        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-        const startDate = threeDaysAgo.toISOString().split('T')[0];
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const startDate = sevenDaysAgo.toISOString().split('T')[0];
         const endDate = todayStr;
 
         // Perform sync for all connected platforms on this account
