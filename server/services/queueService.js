@@ -24,12 +24,12 @@ export const initWorker = () => {
     console.log('[Worker] Initializing BullMQ Worker...');
 
     const worker = new Worker('sync-data-queue', async (job) => {
-        const { accountId, source, startDate, endDate, acc } = job.data;
+        const { accountId, source, startDate, endDate, acc, accName } = job.data;
         const targetAccId = accountId || acc?._id;
-        const startTime = Date.now();
         const jobTag = `${job.name.toUpperCase()}${source ? ` (${source.toUpperCase()})` : ''}`;
+        const accountName = acc?.siteName || acc?.name || accName || targetAccId || 'Unknown';
 
-        console.log(`[Worker] 🚀 Started: [${jobTag}] | Account: ${acc.name}`);
+        console.log(`[Worker] 🚀 Started: [${jobTag}] | Account: ${accountName}`);
 
         try {
             if (targetAccId) {
@@ -63,10 +63,9 @@ export const initWorker = () => {
                 }
                 await UserAccounts.findByIdAndUpdate(targetAccId, { $set: updateData });
             }
-
-            console.log(`[Worker] ✅ Completed: [${jobTag}] | Account: ${acc.name}`);
+            console.log(`[Worker] ✅ Completed: [${jobTag}] | Account: ${accountName}`);
         } catch (error) {
-            console.error(`[Worker] ❌ Failed: [${jobTag}] | Account: ${acc.name} | Error: ${error.message}`);
+            console.error(`[Worker] ❌ Failed: [${jobTag}] | Account: ${accountName} | Error: ${error.message}`);
 
             if (targetAccId) {
                 await UserAccounts.findByIdAndUpdate(targetAccId, { syncStatus: 'error' });
@@ -87,7 +86,7 @@ export const initWorker = () => {
 // Helper to add jobs
 export const addSyncJob = async (name, data, options = {}) => {
     // BullMQ priority: 1 is highest, higher numbers are lower priority
-    const priority = options.priority || 10; 
+    const priority = options.priority || 10;
 
     await syncQueue.add(name, data, {
         attempts: 3,

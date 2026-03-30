@@ -186,25 +186,25 @@ export const selectAccounts = async (req, res) => {
     if (hasChanged('ga4PropertyId', existingAccount?.ga4PropertyId)) {
         if (existingAccount?.ga4PropertyId) cleanupMetrics(req.user._id, existingAccount.ga4PropertyId);
         if (updates.ga4PropertyId) {
-            addSyncJob('historical-sync', { accountId: account._id, source: 'ga4' }, { priority: 20 }).catch(e => console.error('Queue GA4 Fail:', e));
+            addSyncJob('historical-sync', { accountId: account._id, accName: account.siteName, source: 'ga4' }, { priority: 20 }).catch(e => console.error('Queue GA4 Fail:', e));
         }
     }
     if (hasChanged('gscSiteUrl', existingAccount?.gscSiteUrl)) {
         if (existingAccount?.gscSiteUrl) cleanupMetrics(req.user._id, existingAccount.gscSiteUrl);
         if (updates.gscSiteUrl) {
-            addSyncJob('historical-sync', { accountId: account._id, source: 'gsc' }, { priority: 20 }).catch(e => console.error('Queue GSC Fail:', e));
+            addSyncJob('historical-sync', { accountId: account._id, accName: account.siteName, source: 'gsc' }, { priority: 20 }).catch(e => console.error('Queue GSC Fail:', e));
         }
     }
     if (hasChanged('googleAdsCustomerId', existingAccount?.googleAdsCustomerId)) {
         if (existingAccount?.googleAdsCustomerId) cleanupMetrics(req.user._id, existingAccount.googleAdsCustomerId);
         if (updates.googleAdsCustomerId) {
-            addSyncJob('historical-sync', { accountId: account._id, source: 'google-ads' }, { priority: 20 }).catch(e => console.error('Queue Google Ads Fail:', e));
+            addSyncJob('historical-sync', { accountId: account._id, accName: account.siteName, source: 'google-ads' }, { priority: 20 }).catch(e => console.error('Queue Google Ads Fail:', e));
         }
     }
     if (hasChanged('facebookAdAccountId', existingAccount?.facebookAdAccountId)) {
         if (existingAccount?.facebookAdAccountId) cleanupMetrics(req.user._id, existingAccount.facebookAdAccountId);
         if (updates.facebookAdAccountId) {
-            addSyncJob('historical-sync', { accountId: account._id, source: 'facebook-ads' }, { priority: 20 }).catch(e => console.error('Queue Facebook Ads Fail:', e));
+            addSyncJob('historical-sync', { accountId: account._id, accName: account.siteName, source: 'facebook-ads' }, { priority: 20 }).catch(e => console.error('Queue Facebook Ads Fail:', e));
         }
     }
 
@@ -403,7 +403,7 @@ export const resumeHistoricalSync = async (req, res) => {
         await UserAccounts.findByIdAndUpdate(siteId, { [statusField]: 'idle' });
 
         // Re-add the job to BullMQ
-        await addSyncJob('historical-sync', { accountId: siteId, source });
+        await addSyncJob('historical-sync', { accountId: siteId, accName: account.siteName, source });
 
         res.status(200).json({ 
             success: true, 

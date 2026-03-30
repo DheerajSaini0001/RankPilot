@@ -191,7 +191,7 @@ const checkNextPendingSync = async (accountId) => {
             return checkNextPendingSync(accountId); 
         }
         console.log(`[Historical Sync] Queue: Triggering next pending source: ${next.key} for ${acc.siteName}`);
-        await addSyncJob('historical-sync', { accountId, source: next.key }, { priority: 20 });
+        await addSyncJob('historical-sync', { accountId, accName: acc.siteName, source: next.key }, { priority: 20 });
     }
 };
 
