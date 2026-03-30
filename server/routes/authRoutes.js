@@ -14,7 +14,7 @@ import {
 } from '../controllers/authController.js';
 import { protect, attachUserFromState } from '../middleware/auth.js';
 import { catchAsync } from '../utils/catchAsync.js';
-import { authLimiter } from '../middleware/rateLimiter.js';
+import { authLimiter, sensitiveActionLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
@@ -22,9 +22,9 @@ router.post('/register', authLimiter, catchAsync(register));
 router.get('/verify-email/:token', catchAsync(verifyEmail));
 router.post('/login', authLimiter, catchAsync(login));
 router.post('/logout', protect, catchAsync(logout));
-router.post('/forgot-password', authLimiter, catchAsync(forgotPassword));
-router.post('/reset-password', catchAsync(resetPassword));
-router.post('/resend-verification', catchAsync(resendVerification));
+router.post('/forgot-password', sensitiveActionLimiter, catchAsync(forgotPassword));
+router.post('/reset-password', sensitiveActionLimiter, catchAsync(resetPassword));
+router.post('/resend-verification', sensitiveActionLimiter, catchAsync(resendVerification));
 
 // Google Auth
 router.get('/google', (req, res, next) => {

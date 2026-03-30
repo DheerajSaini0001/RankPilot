@@ -9,7 +9,7 @@ dotenv.config();
 const connection = new Redis({
     host: process.env.REDIS_HOST || '127.0.0.1',
     port: process.env.REDIS_PORT || 6379,
-    maxRetriesPerRequest: null, // Critical for BullMQ
+    maxRetriesPerRequest: null,
 });
 
 connection.on('error', (err) => {
@@ -29,10 +29,9 @@ export const initWorker = () => {
         const startTime = Date.now();
         const jobTag = `${job.name.toUpperCase()}${source ? ` (${source.toUpperCase()})` : ''}`;
 
-        console.log(`[Worker] 🚀 Started: [${jobTag}] | Account: ${targetAccId} | ID: ${job.id}`);
+        console.log(`[Worker] 🚀 Started: [${jobTag}] | Account: ${targetAccId} | Priority: ${job.opts.priority || 'Normal'}`);
 
         try {
-            // Update status to syncing
             if (targetAccId) {
                 await UserAccounts.findByIdAndUpdate(targetAccId, { syncStatus: 'syncing' });
             }
@@ -57,7 +56,6 @@ export const initWorker = () => {
                     console.warn(`[Worker] Unknown job type: ${job.name}`);
             }
 
-            // Update status to idle and update sync time
             if (targetAccId) {
                 const updateData = { lastDailySyncAt: new Date() };
                 if (job.name !== 'historical-sync') {
@@ -66,9 +64,9 @@ export const initWorker = () => {
                 await UserAccounts.findByIdAndUpdate(targetAccId, { $set: updateData });
             }
 
-            console.log(`[Worker] ✅ Success: [${jobTag}] | ID: ${job.id} | Duration: ${Date.now() - startTime}ms`);
+            console.log(`[Worker] ✅ Success: [${jobTag}] | Duration: ${Date.now() - startTime}ms`);
         } catch (error) {
-            console.error(`[Worker] ❌ Failed: [${jobTag}] | ID: ${job.id} | Error: ${error.message}`);
+            console.error(`[Worker] ❌ Failed: [${jobTag}] | Error: ${error.message}`);
 
             if (targetAccId) {
                 await UserAccounts.findByIdAndUpdate(targetAccId, { syncStatus: 'error' });
@@ -78,7 +76,7 @@ export const initWorker = () => {
         }
     }, {
         connection,
-        concurrency: 2
+        concurrency: parseInt(process.env.QUEUE_CONCURRENCY || '10')
     });
 
     worker.on('failed', (job, err) => {
@@ -88,6 +86,9 @@ export const initWorker = () => {
 
 // Helper to add jobs
 export const addSyncJob = async (name, data, options = {}) => {
+    // BullMQ priority: 1 is highest, higher numbers are lower priority
+    const priority = options.priority || 10; 
+
     await syncQueue.add(name, data, {
         attempts: 3,
         backoff: {
@@ -95,6 +96,7 @@ export const addSyncJob = async (name, data, options = {}) => {
             delay: 1000 * 60 * 5, // 5 min retry
         },
         removeOnComplete: true,
+        priority,
         ...options
     });
 };

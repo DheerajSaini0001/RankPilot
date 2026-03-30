@@ -37,7 +37,6 @@ async function cleanupMetrics(userId, platformAccountId, ignoreSiteId = null) {
     const otherSiteUsingThis = await UserAccounts.findOne(query);
 
     if (!otherSiteUsingThis) {
-        console.log(`[Cleanup] Deleting metrics for unused platform account: ${platformAccountId}`);
         await DailyMetric.deleteMany({ 'metadata.userId': userId, 'metadata.platformAccountId': platformAccountId });
     }
 }
@@ -76,7 +75,6 @@ async function performSiteDelete(userId, siteId, account = null) {
 
     // 5. Finally delete the site record
     await UserAccounts.deleteOne({ _id: siteId, userId });
-    console.log(`[Cleanup] Site "${account.siteName}" (ID: ${siteId}) deleted because no integrations remain.`);
 }
 
 export const listGa4 = async (req, res) => {
@@ -153,7 +151,6 @@ export const selectAccounts = async (req, res) => {
     fields.forEach(field => {
         if (req.body[field] !== undefined) {
             let value = req.body[field];
-            // Fix: Mongoose fails to cast empty string to ObjectId. Convert to null instead.
             if (['ga4TokenId', 'gscTokenId', 'googleAdsTokenId', 'facebookTokenId'].includes(field) && value === "") {
                 value = null;
             }
@@ -189,25 +186,25 @@ export const selectAccounts = async (req, res) => {
     if (hasChanged('ga4PropertyId', existingAccount?.ga4PropertyId)) {
         if (existingAccount?.ga4PropertyId) cleanupMetrics(req.user._id, existingAccount.ga4PropertyId);
         if (updates.ga4PropertyId) {
-            addSyncJob('historical-sync', { accountId: account._id, source: 'ga4' }).catch(e => console.error('Queue GA4 Fail:', e));
+            addSyncJob('historical-sync', { accountId: account._id, source: 'ga4' }, { priority: 20 }).catch(e => console.error('Queue GA4 Fail:', e));
         }
     }
     if (hasChanged('gscSiteUrl', existingAccount?.gscSiteUrl)) {
         if (existingAccount?.gscSiteUrl) cleanupMetrics(req.user._id, existingAccount.gscSiteUrl);
         if (updates.gscSiteUrl) {
-            addSyncJob('historical-sync', { accountId: account._id, source: 'gsc' }).catch(e => console.error('Queue GSC Fail:', e));
+            addSyncJob('historical-sync', { accountId: account._id, source: 'gsc' }, { priority: 20 }).catch(e => console.error('Queue GSC Fail:', e));
         }
     }
     if (hasChanged('googleAdsCustomerId', existingAccount?.googleAdsCustomerId)) {
         if (existingAccount?.googleAdsCustomerId) cleanupMetrics(req.user._id, existingAccount.googleAdsCustomerId);
         if (updates.googleAdsCustomerId) {
-            addSyncJob('historical-sync', { accountId: account._id, source: 'google-ads' }).catch(e => console.error('Queue Google Ads Fail:', e));
+            addSyncJob('historical-sync', { accountId: account._id, source: 'google-ads' }, { priority: 20 }).catch(e => console.error('Queue Google Ads Fail:', e));
         }
     }
     if (hasChanged('facebookAdAccountId', existingAccount?.facebookAdAccountId)) {
         if (existingAccount?.facebookAdAccountId) cleanupMetrics(req.user._id, existingAccount.facebookAdAccountId);
         if (updates.facebookAdAccountId) {
-            addSyncJob('historical-sync', { accountId: account._id, source: 'facebook-ads' }).catch(e => console.error('Queue Facebook Ads Fail:', e));
+            addSyncJob('historical-sync', { accountId: account._id, source: 'facebook-ads' }, { priority: 20 }).catch(e => console.error('Queue Facebook Ads Fail:', e));
         }
     }
 

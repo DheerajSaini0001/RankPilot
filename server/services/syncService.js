@@ -25,22 +25,13 @@ const withRetry = async (fn, retries = 3, delay = 1000) => {
     }
 };
 
-// Unified range calculation for daily/cron syncs
-const getSyncRange = (lastSyncAt) => {
+// 7 days window for daily sync
+const getSyncRange = () => {
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
     
-    // Standard window is 7 days (GSC data is 48h delayed, Ads conversions update late)
     let start = new Date();
     start.setDate(start.getDate() - 7);
-
-    // If last sync was longer ago than 7 days, sync the entire gap
-    if (lastSyncAt) {
-        const lastSync = new Date(lastSyncAt);
-        if (lastSync < start) {
-            start = lastSync;
-        }
-    }
     
     const startDateStr = start.toISOString().split('T')[0];
     return { startDate: startDateStr, endDate: todayStr };
@@ -71,7 +62,7 @@ export const syncHistoricalData = async (accountId, source) => {
     const completeField = `${prefix}HistoricalComplete`;
     const indexField = `${prefix}HistoricalMonthIndex`;
 
-    // 1. Guard: If source is not configured, skip it and clear status
+    //If source is not configured, skip it and clear status
     if (!acc[configField]) {
         console.log(`[Historical Sync] ⏭️ Skipping [${source.toUpperCase()}] for "${acc.siteName}" (Not Configured)`);
         if (acc[statusField] !== 'idle') {
@@ -99,7 +90,6 @@ export const syncHistoricalData = async (accountId, source) => {
     console.log(`[Historical Sync] 🔄 Starting [${source.toUpperCase()}] for "${acc.siteName}" | Target: ${years} Years`);
 
     try {
-        // Mark both global and individual source as syncing
         await UserAccounts.findByIdAndUpdate(accountId, { 
             [statusField]: 'syncing',
             [progressField]: 0,
@@ -194,15 +184,14 @@ const checkNextPendingSync = async (accountId) => {
 
     const next = platforms.find(p => acc[p.status] === 'pending');
     if (next) {
-        // Extra guard: check if configured
         if (!acc[next.config]) {
             console.log(`[Historical Sync] Clearing pending status for ${next.key} (not configured).`);
             const updatedAcc = await UserAccounts.findByIdAndUpdate(accountId, { [next.status]: 'idle' }, { new: true });
             await updateGlobalSyncStatus(updatedAcc);
-            return checkNextPendingSync(accountId); // check next
+            return checkNextPendingSync(accountId); 
         }
         console.log(`[Historical Sync] Queue: Triggering next pending source: ${next.key} for ${acc.siteName}`);
-        await addSyncJob('historical-sync', { accountId, source: next.key });
+        await addSyncJob('historical-sync', { accountId, source: next.key }, { priority: 20 });
     }
 };
 
@@ -425,14 +414,10 @@ export const syncAllGsc = async () => {
         const users = await UserAccounts.find({ gscSiteUrl: { $exists: true, $ne: null, $gt: '' } });
         for (const acc of users) {
             try {
-                const { startDate, endDate } = getSyncRange(acc.lastDailySyncAt);
+                const { startDate, endDate } = getSyncRange();
                 if (acc.syncStatus === 'syncing') continue;
                 
-                await addSyncJob('daily-sync-gsc', { acc, startDate, endDate });
-
-                if (!acc.gscHistoricalComplete) {
-                    await addSyncJob('historical-sync', { accountId: acc._id, source: 'gsc' });
-                }
+                await addSyncJob('daily-sync-gsc', { acc, startDate, endDate }, { priority: 5 });
             } catch (e) { console.error(`[Cron] ❌ Queue Fail [GSC] | Account: ${acc._id} | Reason: ${e.message}`); }
         }
     } finally { isGscCronRunning = false; console.log('[Cron] ✨ [GSC] Global Sync Completed.'); }
@@ -446,14 +431,10 @@ export const syncAllGa4 = async () => {
         const users = await UserAccounts.find({ ga4PropertyId: { $exists: true, $ne: null, $gt: '' } });
         for (const acc of users) {
             try {
-                const { startDate, endDate } = getSyncRange(acc.lastDailySyncAt);
+                const { startDate, endDate } = getSyncRange();
                 if (acc.syncStatus === 'syncing') continue;
                 
-                await addSyncJob('daily-sync-ga4', { acc, startDate, endDate });
-
-                if (!acc.ga4HistoricalComplete) {
-                    await addSyncJob('historical-sync', { accountId: acc._id, source: 'ga4' });
-                }
+                await addSyncJob('daily-sync-ga4', { acc, startDate, endDate }, { priority: 5 });
             } catch (e) { console.error(`[Cron] ❌ Queue Fail [GA4] | Account: ${acc._id} | Reason: ${e.message}`); }
         }
     } finally { isGa4CronRunning = false; console.log('[Cron] ✨ [GA4] Global Sync Completed.'); }
@@ -467,14 +448,10 @@ export const syncAllGoogleAds = async () => {
         const users = await UserAccounts.find({ googleAdsCustomerId: { $exists: true, $ne: null, $gt: '' } });
         for (const acc of users) {
             try {
-                const { startDate, endDate } = getSyncRange(acc.lastDailySyncAt);
+                const { startDate, endDate } = getSyncRange();
                 if (acc.syncStatus === 'syncing') continue;
                 
-                await addSyncJob('daily-sync-google-ads', { acc, startDate, endDate });
-
-                if (!acc.googleAdsHistoricalComplete) {
-                    await addSyncJob('historical-sync', { accountId: acc._id, source: 'google-ads' });
-                }
+                await addSyncJob('daily-sync-google-ads', { acc, startDate, endDate }, { priority: 5 });
             } catch (e) { console.error(`[Cron] ❌ Queue Fail [GOOGLE ADS] | Account: ${acc._id} | Reason: ${e.message}`); }
         }
     } finally { isGAdsCronRunning = false; console.log('[Cron] ✨ [GOOGLE ADS] Global Sync Completed.'); }
@@ -488,14 +465,10 @@ export const syncAllFacebookAds = async () => {
         const users = await UserAccounts.find({ facebookAdAccountId: { $exists: true, $ne: null, $gt: '' } });
         for (const acc of users) {
             try {
-                const { startDate, endDate } = getSyncRange(acc.lastDailySyncAt);
+                const { startDate, endDate } = getSyncRange();
                 if (acc.syncStatus === 'syncing') continue;
                 
-                await addSyncJob('daily-sync-facebook-ads', { acc, startDate, endDate });
-
-                if (!acc.facebookAdsHistoricalComplete) {
-                    await addSyncJob('historical-sync', { accountId: acc._id, source: 'facebook-ads' });
-                }
+                await addSyncJob('daily-sync-facebook-ads', { acc, startDate, endDate }, { priority: 5 });
             } catch (e) { console.error(`[Cron] ❌ Queue Fail [FB ADS] | Account: ${acc._id} | Reason: ${e.message}`); }
         }
     } finally { isFbCronRunning = false; console.log('[Cron] ✨ [FB ADS] Global Sync Completed.'); }
