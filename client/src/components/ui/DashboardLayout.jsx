@@ -27,16 +27,16 @@ import { listSites, getActiveAccounts } from '../../api/accountApi';
 
 const DashboardLayout = ({ children, noScroll = false }) => {
     const { user, clearAuth } = useAuthStore();
-    const { 
-        userSites = [], 
-        activeSiteId, 
+    const {
+        userSites = [],
+        activeSiteId,
         setAccounts,
-        syncMetadata 
+        syncMetadata
     } = useAccountsStore();
-    const { 
-        notifications, 
-        unreadCount, 
-        markAsRead, 
+    const {
+        notifications,
+        unreadCount,
+        markAsRead,
         markAllRead,
         deleteNotification,
         clearAll,
@@ -167,16 +167,16 @@ const DashboardLayout = ({ children, noScroll = false }) => {
     const handleLogout = () => {
         // Specifically clear only necessary authenticated state
         clearAuth();
-        
+
         // Reset accounts state using the store's built-in clear method
         const { clearAccounts } = useAccountsStore.getState();
         clearAccounts();
-        
+
         // DO NOT use localStorage.clear() as it wipes out theme preferences 
         // and other non-authenticated persisted data like notification read status.
         // If notifications are truly user-specific, we can call clearNotifications()
         // below, but according to user preference, they want read status to persist.
-        
+
         // localStorage.removeItem('auth-storage');
         // localStorage.removeItem('accounts-storage');
 
@@ -203,8 +203,8 @@ const DashboardLayout = ({ children, noScroll = false }) => {
 
     useEffect(() => {
         const handleKeyDown = (e) => {
-            if ((e.key === '/' || (e.key === 'k' && (e.ctrlKey || e.metaKey))) && 
-                document.activeElement.tagName !== 'INPUT' && 
+            if ((e.key === '/' || (e.key === 'k' && (e.ctrlKey || e.metaKey))) &&
+                document.activeElement.tagName !== 'INPUT' &&
                 document.activeElement.tagName !== 'TEXTAREA') {
                 e.preventDefault();
                 searchInputRef.current?.focus();
@@ -218,7 +218,7 @@ const DashboardLayout = ({ children, noScroll = false }) => {
         <div className="flex h-screen bg-neutral-50 dark:bg-dark-bg font-sans overflow-hidden transition-colors selection:bg-brand-500 selection:text-white">
             {/* Mobile Sidebar Overlay */}
             {isSidebarOpen && (
-                <div 
+                <div
                     className="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm z-40 md:hidden animate-fade-in"
                     onClick={() => setIsSidebarOpen(false)}
                 ></div>
@@ -232,12 +232,12 @@ const DashboardLayout = ({ children, noScroll = false }) => {
                 md:translate-x-0 md:flex flex-col flex-shrink-0
                 transition-transform duration-300 ease-in-out shadow-xl md:shadow-none
             `}>
-                
+
                 {/* Sidebar Logo */}
                 <div className="px-5 py-5 border-b border-neutral-100 dark:border-neutral-800">
                     <NavLink to="/dashboard" className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center shadow-md shadow-brand-500/30">
-                            <ChartBarIcon className="w-4 h-4 text-white" strokeWidth={2.5}/>
+                            <ChartBarIcon className="w-4 h-4 text-white" strokeWidth={2.5} />
                         </div>
                         <span className="text-lg font-black tracking-tight text-neutral-900 dark:text-white">RankPilot</span>
                     </NavLink>
@@ -249,13 +249,13 @@ const DashboardLayout = ({ children, noScroll = false }) => {
                         <div className="flex items-center justify-between px-3 py-2.5 bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl cursor-pointer hover:border-brand-400 dark:hover:border-brand-600 transition-all">
                             <div className="flex items-center gap-2 min-w-0">
                                 <div className="w-5 h-5 rounded-lg bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center flex-shrink-0">
-                                    <GlobeAltIcon className="w-3 h-3 text-brand-600 dark:text-brand-400"/>
+                                    <GlobeAltIcon className="w-3 h-3 text-brand-600 dark:text-brand-400" />
                                 </div>
                                 <span className="text-xs font-black text-neutral-800 dark:text-neutral-100 truncate">
                                     {userSites.find(s => s._id === activeSiteId)?.siteName || 'Select Website'}
                                 </span>
                             </div>
-                            <ChevronDownIcon className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" strokeWidth={3}/>
+                            <ChevronDownIcon className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" strokeWidth={3} />
                         </div>
                         <select
                             value={activeSiteId || ''}
@@ -351,7 +351,7 @@ const DashboardLayout = ({ children, noScroll = false }) => {
                 <header className="flex-shrink-0 flex items-center justify-between px-3 sm:px-5 py-2.5 sm:py-3 bg-white dark:bg-dark-surface border-b border-neutral-200 dark:border-neutral-800 z-20">
                     <div className="flex items-center gap-2 sm:gap-4 md:gap-8 flex-1">
                         {/* Mobile Menu Toggle */}
-                        <button 
+                        <button
                             onClick={() => setIsSidebarOpen(true)}
                             className="p-1.5 sm:p-2 -ml-1 sm:-ml-2 text-neutral-500 hover:text-brand-500 md:hidden"
                         >
@@ -372,16 +372,16 @@ const DashboardLayout = ({ children, noScroll = false }) => {
                         <div className="hidden lg:flex flex-col flex-1 max-w-md relative group">
                             <div className="flex items-center bg-neutral-100 dark:bg-dark-surface border border-neutral-200 dark:border-neutral-700 rounded-2xl px-4 py-2.5 w-full group focus-within:border-brand-500 focus-within:ring-4 focus-within:ring-brand-500/10 transition-all shadow-inner relative z-30">
                                 <MagnifyingGlassIcon className="w-4 h-4 text-neutral-400 group-focus-within:text-brand-500" strokeWidth={3} />
-                                <input 
+                                <input
                                     ref={searchInputRef}
-                                    type="text" 
+                                    type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="Press / to search anything..." 
+                                    placeholder="Press / to search anything..."
                                     className="bg-transparent border-none focus:ring-0 text-sm font-bold w-full ml-3 text-neutral-900 dark:text-white placeholder:text-neutral-400"
                                 />
                                 {searchQuery && (
-                                    <button 
+                                    <button
                                         onClick={() => setSearchQuery('')}
                                         className="p-1 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-lg transition-colors mr-2"
                                     >
@@ -399,17 +399,17 @@ const DashboardLayout = ({ children, noScroll = false }) => {
                                     <div className="max-h-[400px] overflow-y-auto custom-scrollbar space-y-4">
                                         <div className="px-4 py-2">
                                             <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-4">Quick Results for "{searchQuery}"</p>
-                                            
+
                                             <div className="space-y-1">
                                                 {/* Dashboard Sections */}
                                                 {['Growth Matrix', 'Active Insights', 'Top Performing Pages'].filter(s => s.toLowerCase().includes(searchQuery.toLowerCase())).map((section, idx) => (
-                                                    <button 
+                                                    <button
                                                         key={`section-res-${idx}`}
-                                                        onClick={() => { 
-                                                            const id = section.toLowerCase().includes('matrix') ? 'growth-matrix' : 
-                                                                       section.toLowerCase().includes('insights') ? 'insights-panel' : 'top-pages-table';
+                                                        onClick={() => {
+                                                            const id = section.toLowerCase().includes('matrix') ? 'growth-matrix' :
+                                                                section.toLowerCase().includes('insights') ? 'insights-panel' : 'top-pages-table';
                                                             document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-                                                            setSearchQuery(''); 
+                                                            setSearchQuery('');
                                                         }}
                                                         className="w-full flex items-center gap-4 p-3 rounded-2xl hover:bg-neutral-50 dark:hover:bg-dark-bg transition-all text-left group/sec"
                                                     >
@@ -426,7 +426,7 @@ const DashboardLayout = ({ children, noScroll = false }) => {
 
                                                 {/* Nav Items */}
                                                 {navItems.filter(i => i.label.toLowerCase().includes(searchQuery.toLowerCase())).map((item, idx) => (
-                                                    <button 
+                                                    <button
                                                         key={`search-res-${idx}`}
                                                         onClick={() => { navigate(item.path); setSearchQuery(''); }}
                                                         className="w-full flex items-center gap-4 p-3 rounded-2xl hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all text-left group/res"
@@ -441,7 +441,7 @@ const DashboardLayout = ({ children, noScroll = false }) => {
                                                         <ChevronRightIcon className="w-4 h-4 ml-auto text-neutral-300 group-hover/res:text-brand-500 transition-colors" />
                                                     </button>
                                                 ))}
-                                                <button 
+                                                <button
                                                     onClick={() => { setSearchQuery(''); navigate('/dashboard/ai-chat'); }}
                                                     className="w-full flex items-center gap-4 p-3 rounded-2xl hover:bg-brand-50 group/ai transition-all text-left"
                                                 >
@@ -475,7 +475,7 @@ const DashboardLayout = ({ children, noScroll = false }) => {
                                     onClick={() => setIsNotifOpen(!isNotifOpen)}
                                     className="relative p-2 text-neutral-500 hover:text-brand-500 dark:text-neutral-400 dark:hover:text-brand-400 transition-colors rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800"
                                 >
-                                    <BellIcon className="w-5 h-5" strokeWidth={2}/>
+                                    <BellIcon className="w-5 h-5" strokeWidth={2} />
                                     {unreadCount > 0 && (
                                         <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-0.5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center leading-none border border-white dark:border-dark-surface">
                                             {unreadCount > 9 ? '9+' : unreadCount}
@@ -486,10 +486,10 @@ const DashboardLayout = ({ children, noScroll = false }) => {
                                 {isNotifOpen && (
                                     <>
                                         {/* Backdrop */}
-                                        <div className="fixed inset-0 z-40" onClick={() => setIsNotifOpen(false)}/>
+                                        <div className="fixed inset-0 z-40" onClick={() => setIsNotifOpen(false)} />
 
-                                        {/* Dropdown */}
-                                        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-2xl z-50 overflow-hidden">
+                                        {/* Dropdown - Fixed position on mobile, absolute on desktop */}
+                                        <div className="fixed inset-x-4 top-[64px] sm:absolute sm:top-auto sm:right-0 sm:mt-2 sm:w-96 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
 
                                             {/* Header */}
                                             <div className="px-4 py-3.5 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between bg-neutral-50/50 dark:bg-neutral-800/30">
@@ -522,11 +522,11 @@ const DashboardLayout = ({ children, noScroll = false }) => {
                                             </div>
 
                                             {/* Notifications list */}
-                                            <div className="max-h-[360px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                                            <div className="max-h-[60vh] sm:max-h-[480px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                                                 {notifications.length === 0 ? (
                                                     <div className="flex flex-col items-center justify-center py-12 text-center px-6">
                                                         <div className="w-12 h-12 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mb-3">
-                                                            <BellIcon className="w-6 h-6 text-neutral-400"/>
+                                                            <BellIcon className="w-6 h-6 text-neutral-400" />
                                                         </div>
                                                         <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400">No notifications yet</p>
                                                         <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-1">You're all caught up!</p>
@@ -552,7 +552,7 @@ const DashboardLayout = ({ children, noScroll = false }) => {
                                                                 >
                                                                     {/* Unread indicator */}
                                                                     {!notif.isRead && (
-                                                                        <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-brand-500 rounded-r-full"/>
+                                                                        <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-brand-500 rounded-r-full" />
                                                                     )}
 
                                                                     <div className="flex items-start gap-3">
@@ -572,7 +572,7 @@ const DashboardLayout = ({ children, noScroll = false }) => {
                                                                                     onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }}
                                                                                     className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 text-neutral-400 transition-all flex-shrink-0"
                                                                                 >
-                                                                                    <XMarkIcon className="w-3 h-3"/>
+                                                                                    <XMarkIcon className="w-3 h-3" />
                                                                                 </button>
                                                                             </div>
 
@@ -675,8 +675,8 @@ const DashboardLayout = ({ children, noScroll = false }) => {
                                         </div>
                                         <div className="py-1 border-t border-neutral-100 dark:border-neutral-800/60 bg-neutral-50/50 dark:bg-dark-surface/50">
                                             <button
-                                                onClick={() => { 
-                                                    setIsUserMenuOpen(false); 
+                                                onClick={() => {
+                                                    setIsUserMenuOpen(false);
                                                     if (window.confirm("Are you sure you want to log out?")) {
                                                         handleLogout();
                                                     }

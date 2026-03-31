@@ -178,6 +178,14 @@ const AIChatPage = () => {
     const [chatToDelete, setChatToDelete] = useState(null);
     const messagesEndRef = useRef(null);
     const sourceMenuRef = useRef(null);
+    const textareaRef = useRef(null);
+
+    useEffect(() => {
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 160)}px`;
+        }
+    }, [query]);
 
     useEffect(() => {
         if (connectedSources.length > 0 && selectedSources.length === 0) {
@@ -438,21 +446,86 @@ const AIChatPage = () => {
         <DashboardLayout noScroll>
             <div className="flex-1 flex flex-col min-h-0 h-full w-full overflow-hidden bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700/60 rounded-2xl shadow-sm relative">
 
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-24 bg-brand-500/10 blur-[60px] pointer-events-none z-0" />
+
                 {/* 2. MOBILE HEADER — shrink-0 */}
-                <div className="lg:hidden shrink-0 flex items-center justify-between px-4 py-3 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-dark-card w-full absolute top-0 z-[60]">
+                <div className="lg:hidden shrink-0 flex items-center justify-between px-4 py-3.5 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-dark-card w-full z-[60]">
                     <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center shadow-md shadow-brand-500/30">
                             <SparklesIcon className="w-4 h-4 text-white" />
                         </div>
                         <span className="text-sm font-black text-neutral-900 dark:text-white">RankPilot AI</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                        <button onClick={() => setIsHistoryOpen(true)}
-                            className="w-8 h-8 flex items-center justify-center rounded-xl text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all">
+                    <div className="flex items-center gap-1">
+                        {/* Sources Dropdown in Header for Mobile */}
+                        <div className="relative" ref={sourceMenuRef}>
+                            <button type="button" onClick={() => setIsSourceMenuOpen(!isSourceMenuOpen)}
+                                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-xl text-[10px] font-black border transition-all ${isSourceMenuOpen || selectedSources.length > 0
+                                        ? 'bg-brand-50 dark:bg-brand-900/20 border-brand-200 dark:border-brand-800 text-brand-600 dark:text-brand-400'
+                                        : 'border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:border-neutral-300 dark:hover:border-neutral-600'
+                                    }`}>
+                                <ChartBarIcon className="w-3 h-3" />
+                                <span>{selectedSources.length > 0 ? selectedSources.length : ''}</span>
+                                <ChevronDownIcon className={`w-2.5 h-2.5 transition-transform ${isSourceMenuOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {/* Sources dropdown - opens DOWN in header */}
+                            {isSourceMenuOpen && (
+                                <div className="absolute right-0 top-full mt-2 w-52 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-2xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                                    <div className="px-3 py-2.5 border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/30">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Active Context Sources</p>
+                                    </div>
+                                    {connectedSources.length === 0 ? (
+                                        <div className="px-3 py-6 text-center">
+                                            <p className="text-xs text-neutral-400 italic">No platforms connected</p>
+                                        </div>
+                                    ) : (
+                                        <div className="p-1.5 space-y-0.5">
+                                            {['gsc', 'ga4', 'google-ads', 'facebook-ads']
+                                                .filter(id =>
+                                                    connectedSources.includes(id) ||
+                                                    (id === 'google-ads' && connectedSources.includes('google_ads')) ||
+                                                    (id === 'facebook-ads' && (connectedSources.includes('meta') || connectedSources.includes('facebook')))
+                                                )
+                                                .map(source => (
+                                                    <button key={source} type="button" onClick={() => toggleSource(source)}
+                                                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-all ${selectedSources.includes(source)
+                                                                ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-400'
+                                                                : 'hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
+                                                            }`}>
+                                                        <span>{sourceLabels[source] || source}</span>
+                                                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${selectedSources.includes(source)
+                                                                ? 'bg-brand-600 border-brand-600'
+                                                                : 'border-neutral-300 dark:border-neutral-600'
+                                                            }`}>
+                                                            {selectedSources.includes(source) && (
+                                                                <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                                </svg>
+                                                            )}
+                                                        </div>
+                                                    </button>
+                                                ))
+                                            }
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        <button type="button" title="Weekly Insight"
+                            onClick={() => { setIsInsightOpen(!isInsightOpen); setIsHistoryOpen(false); setIsSourceMenuOpen(false); if (!isInsightOpen && !weeklyInsight) loadWeeklyInsight(); }}
+                            className={`w-8 h-8 flex items-center justify-center rounded-xl transition-all ${isInsightOpen ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20'}`}>
+                            <InboxStackIcon className={`w-4 h-4 ${insightLoading ? 'animate-pulse' : ''}`} />
+                        </button>
+                        <button type="button" title="Chat History"
+                            onClick={() => { setIsHistoryOpen(!isHistoryOpen); setIsInsightOpen(false); setIsSourceMenuOpen(false); }}
+                            className={`w-8 h-8 flex items-center justify-center rounded-xl transition-all ${isHistoryOpen ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20'}`}>
                             <ChatBubbleLeftRightIcon className="w-4 h-4" />
                         </button>
-                        <button onClick={handleNewChat}
-                            className="w-8 h-8 flex items-center justify-center rounded-xl bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 transition-all">
+                        <button type="button" title="New Chat"
+                            onClick={() => { handleNewChat(); setIsHistoryOpen(false); setIsInsightOpen(false); setIsSourceMenuOpen(false); }}
+                            className="w-8 h-8 flex items-center justify-center rounded-xl bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 transition-all active:scale-95">
                             <PlusIcon className="w-4 h-4" />
                         </button>
                     </div>
@@ -494,13 +567,13 @@ const AIChatPage = () => {
                                         <div key={conv._id}
                                             onClick={() => { loadConversationDetails(conv._id); setIsHistoryOpen(false); }}
                                             className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${activeConversationId === conv._id
-                                                    ? 'bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800'
-                                                    : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/50 border border-transparent'
+                                                ? 'bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800'
+                                                : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/50 border border-transparent'
                                                 }`}>
                                             <div className="flex items-center gap-3 min-w-0">
                                                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${activeConversationId === conv._id
-                                                        ? 'bg-brand-600 text-white shadow-md shadow-brand-500/20'
-                                                        : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'
+                                                    ? 'bg-brand-600 text-white shadow-md shadow-brand-500/20'
+                                                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'
                                                     }`}>
                                                     <ChatBubbleLeftRightIcon className="w-3.5 h-3.5" />
                                                 </div>
@@ -610,22 +683,22 @@ const AIChatPage = () => {
                 )}
 
                 <div className="flex-1 min-h-0 flex flex-col overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                        {messages.length === 0 ? (
-                            /* 5. EMPTY STATE — centered, compact */
-                            <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-6 sm:p-10">
-                                {/* AI Icon with glow */}
-                                <div className="relative mb-5 shrink-0">
-                                    <div className="w-16 h-16 rounded-2xl bg-brand-600 flex items-center justify-center shadow-xl shadow-brand-500/30">
-                                        <SparklesIcon className="w-8 h-8 text-white" />
-                                    </div>
-                                    <div className="absolute inset-0 rounded-2xl bg-brand-400/20 animate-ping" />
+                    {messages.length === 0 ? (
+                        /* 5. EMPTY STATE — centered, compact */
+                        <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-4 py-10 sm:p-10">
+                            {/* AI Icon with glow */}
+                            <div className="relative mb-5 shrink-0">
+                                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-brand-600 flex items-center justify-center shadow-2xl shadow-brand-500/40 relative z-10 transition-transform hover:scale-105 duration-300">
+                                    <SparklesIcon className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
                                 </div>
+                                <div className="absolute -inset-2 rounded-2xl bg-brand-400/15 animate-pulse blur-xl" />
+                            </div>
 
                             {/* Greeting */}
-                            <h1 className="text-2xl sm:text-3xl font-black text-neutral-900 dark:text-white tracking-tight mb-2 text-center shrink-0">
+                            <h1 className="text-xl sm:text-3xl font-black text-neutral-900 dark:text-white tracking-tight mb-2 text-center shrink-0">
                                 {getTimeGreeting()}, {user?.name?.split(' ')[0] || 'Explorer'}
                             </h1>
-                            <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium mb-8 text-center max-w-xs sm:max-w-sm leading-relaxed shrink-0">
+                            <p className="text-[13px] sm:text-sm text-neutral-500 dark:text-neutral-400 font-medium mb-6 sm:mb-8 text-center max-w-xs sm:max-w-sm leading-relaxed shrink-0">
                                 Ask anything about your marketing data. I have access to all your connected platforms.
                             </p>
 
@@ -645,7 +718,7 @@ const AIChatPage = () => {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-6">
                                         {suggestions.slice(0, 4).map((q, i) => (
                                             <button key={i} onClick={() => setQuery(q)}
-                                                className="px-5 py-4 bg-neutral-50 dark:bg-neutral-800/50 hover:bg-brand-50 dark:hover:bg-brand-900/20 border border-neutral-200 dark:border-neutral-700 hover:border-brand-300 dark:hover:border-brand-700 rounded-2xl text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-brand-600 dark:hover:text-brand-400 transition-all text-left leading-relaxed active:scale-[0.98] shadow-sm">
+                                                className="px-4 py-3.5 sm:px-5 sm:py-4 bg-neutral-50 dark:bg-neutral-800/50 hover:bg-brand-50 dark:hover:bg-brand-900/20 border border-neutral-200 dark:border-neutral-700 hover:border-brand-300 dark:hover:border-brand-700 rounded-2xl text-[11px] sm:text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-brand-600 dark:hover:text-brand-400 transition-all text-left leading-relaxed active:scale-[0.98] shadow-sm">
                                                 {q}
                                             </button>
                                         ))}
@@ -661,7 +734,7 @@ const AIChatPage = () => {
                                         { label: 'Facebook Ads', icon: ArrowTrendingUpIcon, prompt: 'Review my Meta Ads reach and engagement metrics.' },
                                     ].map((item, i) => (
                                         <button key={i} onClick={() => setQuery(item.prompt)}
-                                            className="flex items-center gap-2 px-3.5 py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-[11px] font-bold text-neutral-500 dark:text-neutral-400 hover:border-brand-400 dark:hover:border-brand-600 hover:text-brand-600 dark:hover:text-brand-400 transition-all active:scale-95 group shadow-sm">
+                                            className="flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-[10px] sm:text-[11px] font-bold text-neutral-500 dark:text-neutral-400 hover:border-brand-400 dark:hover:border-brand-600 hover:text-brand-600 dark:hover:text-brand-400 transition-all active:scale-95 group shadow-sm">
                                             <item.icon className="w-3.5 h-3.5 group-hover:text-brand-500 transition-colors" strokeWidth={2.5} />
                                             {item.label}
                                         </button>
@@ -683,7 +756,7 @@ const AIChatPage = () => {
                         </div>
                     ) : (
                         /* 6. MESSAGES AREA — hidden scrollbar */
-                        <div className="px-3 sm:px-5 md:px-8 py-8">
+                        <div className="px-3 sm:px-5 md:px-8 py-5 sm:py-8">
                             <div className="max-w-3xl mx-auto w-full space-y-6 pb-4">
                                 {messages.map((msg, idx) => (
                                     <ChatMessage key={idx} msg={msg} userName={user?.name} />
@@ -713,16 +786,16 @@ const AIChatPage = () => {
 
                     {/* Input form */}
                     <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto">
-                        <div className="flex items-center gap-2 bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-2xl px-3 py-2.5 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/10 transition-all shadow-sm">
+                        <div className="flex items-end gap-2 bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-2xl px-2.5 sm:px-3 py-2 sm:py-2.5 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/10 transition-all shadow-sm">
                             {/* Left action buttons */}
-                            <div className="flex items-center gap-0.5 flex-shrink-0">
+                            <div className="flex items-center gap-0.5 flex-shrink-0 pb-0.5">
                                 <button type="button" onClick={handleNewChat} title="New Chat"
                                     className="hidden sm:flex w-8 h-8 items-center justify-center rounded-xl text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all">
                                     <PlusIcon className="w-4 h-4" />
                                 </button>
                                 <button type="button" title="Weekly Insight"
                                     onClick={() => { setIsInsightOpen(!isInsightOpen); if (!isInsightOpen) { setIsHistoryOpen(false); if (!weeklyInsight) loadWeeklyInsight(); } }}
-                                    className={`w-8 h-8 flex items-center justify-center rounded-xl transition-all ${isInsightOpen ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20'}`}>
+                                    className={`hidden sm:flex w-8 h-8 items-center justify-center rounded-xl transition-all ${isInsightOpen ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20'}`}>
                                     <InboxStackIcon className={`w-4 h-4 ${insightLoading ? 'animate-pulse' : ''}`} />
                                 </button>
                                 <button type="button" title="Chat History"
@@ -733,27 +806,28 @@ const AIChatPage = () => {
                             </div>
 
                             {/* Divider */}
-                            <div className="w-px h-5 bg-neutral-200 dark:bg-neutral-700 flex-shrink-0" />
+                            <div className="w-px h-5 bg-neutral-200 dark:bg-neutral-700 flex-shrink-0 mb-2" />
 
                             {/* Text input */}
-                            <input
-                                type="text"
+                            <textarea
+                                ref={textareaRef}
                                 value={query}
                                 onChange={e => setQuery(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
                                 placeholder="Message RankPilot AI..."
                                 disabled={loading}
-                                className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500 py-1 min-w-0"
+                                rows={1}
+                                className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500 py-1.5 sm:py-2 min-w-0 resize-none max-h-40 leading-relaxed custom-scrollbar"
                             />
 
                             {/* Right: Sources + Send */}
-                            <div className="flex items-center gap-1.5 flex-shrink-0">
-                                {/* Sources */}
-                                <div className="relative" ref={sourceMenuRef}>
+                            <div className="flex items-end gap-1.5 flex-shrink-0 pb-0.5">
+                                {/* Sources selector - Hidden on mobile, moved to header */}
+                                <div className="hidden sm:block relative" ref={sourceMenuRef}>
                                     <button type="button" onClick={() => setIsSourceMenuOpen(!isSourceMenuOpen)}
                                         className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px] font-black border transition-all ${isSourceMenuOpen || selectedSources.length > 0
-                                                ? 'bg-brand-50 dark:bg-brand-900/20 border-brand-200 dark:border-brand-800 text-brand-600 dark:text-brand-400'
-                                                : 'border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:border-neutral-300 dark:hover:border-neutral-600'
+                                            ? 'bg-brand-50 dark:bg-brand-900/20 border-brand-200 dark:border-brand-800 text-brand-600 dark:text-brand-400'
+                                            : 'border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:border-neutral-300 dark:hover:border-neutral-600'
                                             }`}>
                                         <ChartBarIcon className="w-3 h-3" />
                                         <span className="hidden sm:inline">{selectedSources.length > 0 ? `${selectedSources.length} Sources` : 'Sources'}</span>
@@ -782,13 +856,13 @@ const AIChatPage = () => {
                                                         .map(source => (
                                                             <button key={source} type="button" onClick={() => toggleSource(source)}
                                                                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-all ${selectedSources.includes(source)
-                                                                        ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-400'
-                                                                        : 'hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
+                                                                    ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-400'
+                                                                    : 'hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
                                                                     }`}>
                                                                 <span>{sourceLabels[source] || source}</span>
                                                                 <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${selectedSources.includes(source)
-                                                                        ? 'bg-brand-600 border-brand-600'
-                                                                        : 'border-neutral-300 dark:border-neutral-600'
+                                                                    ? 'bg-brand-600 border-brand-600'
+                                                                    : 'border-neutral-300 dark:border-neutral-600'
                                                                     }`}>
                                                                     {selectedSources.includes(source) && (
                                                                         <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
