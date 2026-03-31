@@ -45,7 +45,10 @@ const userAccountsSchema = new mongoose.Schema({
 
     isHistoricalSyncComplete: { type: Boolean, default: false },
     lastDailySyncAt: { type: Date },
-    syncStatus: { type: String, enum: ['idle', 'syncing', 'error', 'pending'], default: 'idle' }
+    syncStatus: { type: String, enum: ['idle', 'syncing', 'error', 'pending'], default: 'idle' },
+    
+    suggestedQuestions: { type: [String], default: [] },
+    suggestedQuestionsUpdatedAt: { type: Date }
 }, {
     timestamps: true
 });

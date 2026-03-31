@@ -472,48 +472,84 @@ export const refreshWeeklyInsight = async (req, res) => {
     }
 };
 
+export const generateSuggestedQuestionsInternal = async (userId, siteId) => {
+    try {
+        const tzOffset = (new Date()).getTimezoneOffset() * 60000;
+        const nowLocal = new Date(Date.now() - tzOffset);
+        const dateRangeEnd = nowLocal.toISOString().split('T')[0];
+        
+        const thirtyDaysAgo = new Date(nowLocal);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const dateRangeStart = thirtyDaysAgo.toISOString().split('T')[0];
+
+        const data = await fetchPlatformData(userId, dateRangeStart, dateRangeEnd, siteId, []); 
+
+        const prompt = promptBuilder.buildSuggestionsPrompt(data);
+        const aiResult = await getAiResponse(prompt);
+
+        let questions = [];
+        const fallbacks = [
+            "Find keywords with high impressions but low CTR.",
+            "Identify GA4 conversion leaks in my funnel.",
+            "Which Google Ads campaigns have highest ROI?",
+            "Compare ROAS across Meta Ads audiences."
+        ];
+
+        try {
+            const content = aiResult.content;
+            const jsonMatch = content.match(/\[[\s\S]*\]/);
+            const jsonStr = jsonMatch ? jsonMatch[0] : content;
+            questions = JSON.parse(jsonStr);
+            if (!Array.isArray(questions)) questions = [];
+        } catch (e) {
+            console.error("AI Suggestions Parse Error:", e);
+            questions = fallbacks;
+        }
+
+        // Ensure exactly 4 questions
+        if (questions.length < 4) {
+            questions = [...questions, ...fallbacks.slice(questions.length)].slice(0, 4);
+        } else {
+            questions = questions.slice(0, 4);
+        }
+
+        // Save to DB
+        await UserAccounts.findOneAndUpdate(
+            { _id: siteId, userId },
+            { 
+                suggestedQuestions: questions, 
+                suggestedQuestionsUpdatedAt: new Date() 
+            }
+        );
+
+        return questions;
+    } catch (err) {
+        console.error("Internal Suggested Questions Error:", err.message);
+        return [];
+    }
+};
+
 export const getSuggestedQuestions = async (req, res) => {
     const siteId = req.query.siteId || req.body.siteId;
-
-    // Use timezone-aware logic for last 30 days
-    const tzOffset = (new Date()).getTimezoneOffset() * 60000;
-    const nowLocal = new Date(Date.now() - tzOffset);
-    const dateRangeEnd = nowLocal.toISOString().split('T')[0];
-    
-    const thirtyDaysAgo = new Date(nowLocal);
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const dateRangeStart = thirtyDaysAgo.toISOString().split('T')[0];
-
-    const data = await fetchPlatformData(req.user._id, dateRangeStart, dateRangeEnd, siteId, []); 
-
-    const prompt = promptBuilder.buildSuggestionsPrompt(data);
-    const aiResult = await getAiResponse(prompt);
-
-    let questions = [];
-    const fallbacks = [
-        "Find keywords with high impressions but low CTR.",
-        "Identify GA4 conversion leaks in my funnel.",
-        "Which Google Ads campaigns have highest ROI?",
-        "Compare ROAS across Meta Ads audiences."
-    ];
+    const userId = req.user._id;
 
     try {
-        const content = aiResult.content;
-        const jsonMatch = content.match(/\[[\s\S]*\]/);
-        const jsonStr = jsonMatch ? jsonMatch[0] : content;
-        questions = JSON.parse(jsonStr);
-        if (!Array.isArray(questions)) questions = [];
-    } catch (e) {
-        console.error("AI Suggestions Parse Error:", e);
-        questions = fallbacks;
-    }
+        const userAcc = await UserAccounts.findOne({ _id: siteId, userId });
+        
+        if (userAcc && userAcc.suggestedQuestions && userAcc.suggestedQuestions.length > 0) {
+            // Check if updated in the last 24 hours
+            const yesterday = new Date();
+            yesterday.setHours(yesterday.getHours() - 24);
+            
+            if (userAcc.suggestedQuestionsUpdatedAt && userAcc.suggestedQuestionsUpdatedAt > yesterday) {
+                return res.status(200).json({ questions: userAcc.suggestedQuestions });
+            }
+        }
 
-    // Ensure exactly 4 questions
-    if (questions.length < 4) {
-        questions = [...questions, ...fallbacks.slice(questions.length)].slice(0, 4);
-    } else {
-        questions = questions.slice(0, 4);
+        // Generate and save (if not found or stale)
+        const questions = await generateSuggestedQuestionsInternal(userId, siteId);
+        res.status(200).json({ questions });
+    } catch (err) {
+        res.status(500).json({ message: 'Error fetching suggested questions' });
     }
-
-    res.status(200).json({ questions });
 };

@@ -3,7 +3,7 @@ import FacebookToken from '../models/FacebookToken.js';
 import DailyMetric from '../models/DailyMetric.js';
 import UserAccounts from '../models/UserAccounts.js';
 import { createNotification } from '../utils/notification.js';
-import { generateWeeklyInsightInternal } from '../controllers/aiController.js';
+import { generateWeeklyInsightInternal, generateSuggestedQuestionsInternal } from '../controllers/aiController.js';
 
 // Checks for Google and Facebook tokens that will expire within the next 3 days.
 export const checkExpiringTokens = async () => {
@@ -248,5 +248,23 @@ export const generateWeeklyInsightsForAllUsers = async () => {
         }
     } catch (err) {
         console.error('[AI] Weekly Insight Bulk Generation Error:', err.message);
+    }
+};
+
+// Generate suggested questions for ALL users.
+export const generateSuggestedQuestionsForAllUsers = async () => {
+    console.log('🤖 [AI] Generating suggested questions for all active sites...');
+    try {
+        const accounts = await UserAccounts.find();
+        for (const acc of accounts) {
+            try {
+                console.log(`[AI] Processing Suggested Questions for site: ${acc.siteName} (User: ${acc.userId})`);
+                await generateSuggestedQuestionsInternal(acc.userId, acc._id);
+            } catch (err) {
+                console.error(`[AI] Failed to generate questions for ${acc.siteName}:`, err.message);
+            }
+        }
+    } catch (err) {
+        console.error('[AI] Suggested Questions Bulk Generation Error:', err.message);
     }
 };

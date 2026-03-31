@@ -6,7 +6,8 @@ import {
     checkInactiveSources, 
     checkMonthlyGrowth, 
     checkAdSpendSpikes,
-    generateWeeklyInsightsForAllUsers
+    generateWeeklyInsightsForAllUsers,
+    generateSuggestedQuestionsForAllUsers
 } from './notificationMonitoringService.js';
 
 
@@ -29,6 +30,11 @@ export const initCronJobs = () => {
     // Monthly Growth Summary - 1st of every month at 4 AM
     cron.schedule('0 4 1 * *', async () => {
         await checkMonthlyGrowth();
+    }, { timezone: "Asia/Kolkata" });
+    
+    // AI Suggested Questions - Every night at 5 AM
+    cron.schedule('0 5 * * *', async () => {
+        await generateSuggestedQuestionsForAllUsers();
     }, { timezone: "Asia/Kolkata" });
     
     // 🔵 SECTION 2: PLATFORM DATA SYNCHRONIZATION
