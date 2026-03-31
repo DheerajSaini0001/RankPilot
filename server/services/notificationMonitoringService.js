@@ -225,14 +225,6 @@ export const checkAdSpendSpikes = async () => {
     }
 };
 
-// Sends a summary notification after a sync task completes
-export const sendDailySyncSummary = async (userId, siteId, syncResults) => {
-    const { ga4, gsc, gads, fb } = syncResults;
-    const sources = [ga4 && 'GA4', gsc && 'Search Console', gads && 'Google Ads', fb && 'Facebook Ads'].filter(Boolean).join(', ');
-    if (!sources) return;
-    await createNotification(userId, { type: 'success', title: 'Daily Sync Complete', message: `Today's performance data for ${sources} has been successfully updated.`, source: 'system', actionLabel: 'View Updates', actionPath: '/dashboard' });
-};
-
 // Generate weekly reports for ALL users.
 export const generateWeeklyInsightsForAllUsers = async () => {
     console.log('🤖 [AI] Generating weekly insights for all active sites...');
