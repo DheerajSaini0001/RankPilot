@@ -14,9 +14,9 @@ connectDB().then(async () => {
     await initConfig();
     await configurePassport();
     initCronJobs();
-    initWorker(); // Initialize background worker
+    initWorker();
 
     app.listen(PORT, () => {
-        console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+        console.log(`✅ [Server] Running on port ${PORT}`);
     });
 });

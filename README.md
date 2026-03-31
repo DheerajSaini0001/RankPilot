@@ -58,7 +58,6 @@ RankPilot is a premium, state-of-the-art **AI-Powered Analytics Intelligence Pla
 3. **Configure Environment Variables**
    Create a `.env` file in the `/server` directory:
    ```env
-   NODE_ENV=development
    PORT=5001
    MONGODB_URI=your_mongodb_uri
    JWT_SECRET=your_secret

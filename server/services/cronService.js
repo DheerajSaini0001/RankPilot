@@ -58,7 +58,7 @@ export const initCronJobs = () => {
         await syncAllGsc();
     }, { timezone: "Asia/Kolkata" });
 
-    console.log('Staggered Cron Jobs (FB:30m, GAds:1h, GA4:4h, GSC:12h) initialized.');
+    console.log('⚡ [Cron] Sync Schedules Active: [FB: 30m] [GAds: 1h] [GA4: 4h] [GSC: 12h]');
 };
 
 export default { initCronJobs };

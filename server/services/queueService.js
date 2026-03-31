@@ -28,7 +28,7 @@ export const syncQueue = new Queue('sync-data-queue', { connection });
 
 // Initialize Workers
 export const initWorker = () => {
-    console.log('[Worker] Initializing BullMQ Worker...');
+    console.log('🐂 [Worker] BullMQ Ready');
 
     const worker = new Worker('sync-data-queue', async (job) => {
         const { accountId, source, startDate, endDate, acc, accName } = job.data;
