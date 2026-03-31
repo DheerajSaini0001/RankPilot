@@ -68,14 +68,14 @@ class PromptBuilder {
             const { queries, pages, campaigns, devices, channels } = data.topDimensions;
 
             if (queries?.length) {
-                ctx += `#### Top Keywords (GSC):\n| Keyword | Clicks |\n| :--- | :--- |\n`;
-                queries.slice(0, 10).forEach(q => ctx += `| ${q.name} | ${q.value} |\n`);
+                ctx += `#### Top Keywords (GSC Performance):\n| Keyword | Clicks | Impr. | CTR | Pos. |\n| :--- | :--- | :--- | :--- | :--- |\n`;
+                queries.slice(0, 10).forEach(q => ctx += `| ${q.name} | ${q.clicks} | ${q.impressions} | ${q.ctr}% | ${q.position} |\n`);
                 ctx += `\n`;
             }
 
             if (pages?.length) {
-                ctx += `#### Highest Traffic Pages:\n| Page Path | Sessions |\n| :--- | :--- |\n`;
-                pages.slice(0, 10).forEach(p => ctx += `| ${p.name} | ${p.value} |\n`);
+                ctx += `#### Page-Level Intelligence (GA4 + GSC):\n| Page Path | Sessions | Bounce | Clicks | Rank | Top Keywords |\n| :--- | :--- | :--- | :--- | :--- | :--- |\n`;
+                pages.slice(0, 10).forEach(p => ctx += `| ${p.name} | ${p.sessions} | ${p.bounceRate}% | ${p.gscClicks} | ${p.gscPosition} | ${p.topKeywords} |\n`);
                 ctx += `\n`;
             }
 

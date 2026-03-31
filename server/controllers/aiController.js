@@ -74,8 +74,9 @@ const fetchPlatformData = async (userId, startDate, endDate, siteId, activeSourc
         
         // Dimension tracking
         const dimensions = {
-            queries: {},
-            pages: {},
+            queries: {}, 
+            pages: {}, 
+            pageQueryMap: {}, // { pagePath: { query: count } }
             campaigns: {},
             devices: {},
             channels: {}
@@ -116,29 +117,102 @@ const fetchPlatformData = async (userId, startDate, endDate, siteId, activeSourc
                 const d = log.metadata.dimensions;
                 const m = log.metrics;
                 
-                if (d.query) dimensions.queries[d.query] = (dimensions.queries[d.query] || 0) + (m.clicks || 0);
-                if (d.page || d.pagePath) {
-                    const page = d.page || d.pagePath;
-                    dimensions.pages[page] = (dimensions.pages[page] || 0) + (m.sessions || m.clicks || 0);
+                if (d.query) {
+                    if (!dimensions.queries[d.query]) dimensions.queries[d.query] = { clicks: 0, impressions: 0, positionSum: 0, count: 0 };
+                    dimensions.queries[d.query].clicks += (m.clicks || 0);
+                    dimensions.queries[d.query].impressions += (m.impressions || 0);
+                    if (m.position !== undefined) {
+                      dimensions.queries[d.query].positionSum += m.position;
+                      dimensions.queries[d.query].count += 1;
+                    }
                 }
+                
+                if (d.page || d.pagePath) {
+                    let page = d.page || d.pagePath;
+                    
+                    // Normalize URL to Path (GSC often gives full URLs, GA4 gives relative paths)
+                    if (page.startsWith('http')) {
+                        try {
+                            const urlObj = new URL(page);
+                            page = urlObj.pathname || '/';
+                        } catch (e) {
+                            // If invalid URL, use as is or try to fallback
+                            if (page.includes('://')) page = '/' + page.split('://')[1].split('/').slice(1).join('/');
+                        }
+                    }
+                    if (page === '') page = '/';
+
+                    if (!dimensions.pages[page]) dimensions.pages[page] = { sessions: 0, bounceRateSum: 0, gscClicks: 0, gscImpressions: 0, gscPositionSum: 0, gscCount: 0, count: 0 };
+                    
+                    // GA4 Side
+                    dimensions.pages[page].sessions += (m.sessions || 0);
+                    if (m.bounceRate !== undefined) {
+                        dimensions.pages[page].bounceRateSum += m.bounceRate;
+                        dimensions.pages[page].count += 1;
+                    }
+                    // GSC Side
+                    dimensions.pages[page].gscClicks += (m.clicks || 0);
+                    dimensions.pages[page].gscImpressions += (m.impressions || 0);
+                    if (source === 'gsc' && m.position !== undefined) {
+                        dimensions.pages[page].gscPositionSum += m.position;
+                        dimensions.pages[page].gscCount += 1;
+                    }
+
+                    // Map Query to Normalized Page Path
+                    if (d.query) {
+                        if (!dimensions.pageQueryMap[page]) dimensions.pageQueryMap[page] = {};
+                        dimensions.pageQueryMap[page][d.query] = (dimensions.pageQueryMap[page][d.query] || 0) + (m.clicks || m.impressions || 0);
+                    }
+                }
+                
                 if (d.campaign) dimensions.campaigns[d.campaign] = (dimensions.campaigns[d.campaign] || 0) + (m.conversions || m.clicks || 0);
                 if (d.device) dimensions.devices[d.device] = (dimensions.devices[d.device] || 0) + (m.sessions || m.clicks || 0);
                 if (d.channel) dimensions.channels[d.channel] = (dimensions.channels[d.channel] || 0) + (m.sessions || 0);
             }
         });
 
-        // Helper to get top items
-        const getTop = (obj, limit = 10) => Object.entries(obj)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, limit)
-            .map(([name, value]) => ({ name, value }));
-
+        // Formatting for top dimensions
         data.topDimensions = {
-            queries: getTop(dimensions.queries),
-            pages: getTop(dimensions.pages),
-            campaigns: getTop(dimensions.campaigns),
-            devices: getTop(dimensions.devices),
-            channels: getTop(dimensions.channels)
+            queries: Object.entries(dimensions.queries)
+                .sort((a,b) => b[1].clicks - a[1].clicks)
+                .slice(0, 10)
+                .map(([name, stats]) => ({ 
+                    name, 
+                    clicks: stats.clicks, 
+                    impressions: stats.impressions,
+                    ctr: stats.impressions > 0 ? ((stats.clicks / stats.impressions) * 100).toFixed(2) : 0,
+                    position: stats.count > 0 ? (stats.positionSum / stats.count).toFixed(1) : 'N/A'
+                })),
+            pages: Object.entries(dimensions.pages)
+                .sort((a,b) => (b[1].sessions + b[1].gscClicks) - (a[1].sessions + a[1].gscClicks))
+                .slice(0, 10)
+                .map(([name, stats]) => {
+                    // Extract top 3 keywords for this page
+                    const pageQueries = Object.entries(dimensions.pageQueryMap[name] || {})
+                        .sort((a, b) => b[1] - a[1])
+                        .slice(0, 3)
+                        .map(([q]) => q);
+
+                    return { 
+                        name, 
+                        sessions: stats.sessions, 
+                        bounceRate: stats.count > 0 ? (stats.bounceRateSum / stats.count).toFixed(2) : 'N/A',
+                        gscClicks: stats.gscClicks,
+                        gscImpressions: stats.gscImpressions,
+                        gscPosition: stats.gscCount > 0 ? (stats.gscPositionSum / stats.gscCount).toFixed(1) : 'N/A',
+                        topKeywords: pageQueries.join(', ')
+                    };
+                }),
+            campaigns: Object.entries(dimensions.campaigns)
+                .sort((a,b) => b[1] - a[1])
+                .slice(0, 10)
+                .map(([name, value]) => ({ name, value })),
+            devices: Object.entries(dimensions.devices)
+                .sort((a,b) => b[1] - a[1])
+                .map(([name, value]) => ({ name, value })),
+            channels: Object.entries(dimensions.channels)
+                .sort((a,b) => b[1] - a[1])
+                .map(([name, value]) => ({ name, value }))
         };
 
         // Format Daily Breakdown for AI with proper averaging for ratios
