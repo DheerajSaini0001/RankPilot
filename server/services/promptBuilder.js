@@ -37,12 +37,12 @@ class PromptBuilder {
 
         // Section 2: Aggregated Period Totals (Market-Intel Table)
         ctx += `### 🗓️ Period Performance & Profitability\n`;
-        ctx += `| Metric Group | Value | Platform | Efficiency / ROI |\n| :--- | :--- | :--- | :--- |\n`;
+        ctx += `| Metric Group | Value | Platform | Efficiency / Key Metrics |\n| :--- | :--- | :--- | :--- |\n`;
         
         if (data.ga4) {
-            ctx += `| Traffic | **${data.ga4.users}** Users | GA4 | ${safeRatio(data.ga4.sessions, data.ga4.users)} ses/user |\n`;
-            ctx += `| Revenue | **$${data.ga4.revenue || 0}** | GA4 | ${data.ga4.engagementRate}% Engaged |\n`;
-            ctx += `| Retention | **${data.ga4.avgSessionDuration}s** Avg | GA4 | ${data.ga4.bounceRate}% Bounce |\n`;
+            ctx += `| Traffic | **${data.ga4.users}** Users | GA4 | ${data.ga4.engagementRate}% Engaged |\n`;
+            ctx += `| Profits | **$${data.ga4.revenue || 0}** | GA4 | ${data.ga4.transactions} Trans. |\n`;
+            ctx += `| Retention | **${data.ga4.avgSessionDuration}s** Avg | GA4 | ${data.ga4.engagedSessions} Eng. Ses |\n`;
         }
         if (data.gsc) {
             ctx += `| Organic | **${data.gsc.clicks}** Clicks | GSC | ${data.gsc.ctr}% CTR |\n`;
@@ -50,18 +50,15 @@ class PromptBuilder {
         }
         if (data.googleAds) {
             const sym = data.googleAds.currencyCode || '$';
-            const cpc = safeRatio(data.googleAds.spend, data.googleAds.clicks, 1, sym);
-            const roas = safeRatio(data.googleAds.conversionValue, data.googleAds.spend, 1, '', 'x ROAS');
-            ctx += `| Search Ads | **${sym}${data.googleAds.spend}** Spend | Google Ads | ${cpc} CPC |\n`;
-            ctx += `| Profits | **${sym}${data.googleAds.conversionValue}** Val | Google Ads | ${roas} |\n`;
-            ctx += `| Conversions | **${data.googleAds.conversions}** Conv. | Google Ads | ${data.googleAds.clicks} Clicks |\n`;
+            ctx += `| Search Ads | **${sym}${data.googleAds.spend}** Spend | G.Ads | ${sym}${data.googleAds.cpc} CPC |\n`;
+            ctx += `| Profits | **${sym}${data.googleAds.conversionValue}** Val | G.Ads | ${data.googleAds.conversions} Conv. |\n`;
+            ctx += `| Audience | **${data.googleAds.impressions}** Impr. | G.Ads | ${data.googleAds.searchImpressionShare}% Impr. Share |\n`;
         }
         if (data.facebookAds) {
             const sym = data.facebookAds.currency || '$';
-            const cpc = safeRatio(data.facebookAds.spend, data.facebookAds.clicks, 1, sym);
-            const reach = data.facebookAds.reach || 0;
-            ctx += `| Meta Ads | **${sym}${data.facebookAds.spend}** Spend | Meta Ads | ${cpc} CPC |\n`;
-            ctx += `| Reach | **${reach}** People | Meta Ads | Conv: ${data.facebookAds.conversions} |\n`;
+            ctx += `| Meta Ads | **${sym}${data.facebookAds.spend}** Spend | Meta | ${sym}${data.facebookAds.cpc} CPC |\n`;
+            ctx += `| Audience | **${data.facebookAds.reach}** Reach | Meta | ${data.facebookAds.landingPageViews} LP Visits |\n`;
+            ctx += `| Engagement | **${data.facebookAds.linkClicks}** Clicks | Meta | ${data.facebookAds.conversions} Results |\n`;
         }
         ctx += `\n`;
 

@@ -94,8 +94,9 @@ const fetchPlatformData = async (userId, startDate, endDate, siteId, activeSourc
 
             // Daily Aggregation
             if (!aggregated[key]) {
-                aggregated[key] = { source, date: dateStr, metrics: { ...log.metrics } };
+                aggregated[key] = { source, date: dateStr, metrics: { ...log.metrics }, count: 1 };
             } else {
+                aggregated[key].count += 1;
                 Object.keys(log.metrics).forEach(m => {
                     if (typeof log.metrics[m] === 'number') {
                         aggregated[key].metrics[m] = (aggregated[key].metrics[m] || 0) + log.metrics[m];
@@ -140,10 +141,21 @@ const fetchPlatformData = async (userId, startDate, endDate, siteId, activeSourc
             channels: getTop(dimensions.channels)
         };
 
-        // Format Daily Breakdown for AI
+        // Format Daily Breakdown for AI with proper averaging for ratios
         data.dailyBreakdown = Object.values(aggregated).reduce((acc, item) => {
             if (!acc[item.source]) acc[item.source] = [];
-            acc[item.source].push({ date: item.date, metrics: item.metrics });
+            
+            // Average metrics that should not be summed
+            const avgMetrics = ['position', 'ctr', 'bounceRate', 'avgSessionDuration', 'engagementRate', 'frequency', 'cpc', 'cpm', 'searchImpressionShare'];
+            const finalMetrics = { ...item.metrics };
+            
+            avgMetrics.forEach(m => {
+                if (finalMetrics[m] !== undefined && typeof finalMetrics[m] === 'number') {
+                    finalMetrics[m] = parseFloat((finalMetrics[m] / item.count).toFixed(2));
+                }
+            });
+
+            acc[item.source].push({ date: item.date, metrics: finalMetrics });
             return acc;
         }, {});
 
@@ -155,9 +167,11 @@ const fetchPlatformData = async (userId, startDate, endDate, siteId, activeSourc
                 sessions: sourceTotals['ga4'].sessions || 0,
                 pageViews: sourceTotals['ga4'].pageViews || 0,
                 revenue: (sourceTotals['ga4'].revenue || 0).toFixed(2),
-                bounceRate: (sourceTotals['ga4'].bounceRate / count).toFixed(2),
-                avgSessionDuration: (sourceTotals['ga4'].avgSessionDuration / count).toFixed(1) || 0,
-                engagementRate: (sourceTotals['ga4'].engagementRate / count).toFixed(2) || 0
+                transactions: sourceTotals['ga4'].transactions || 0,
+                bounceRate: (sourceTotals['ga4'].bounceRate / count || 0).toFixed(2),
+                avgSessionDuration: (sourceTotals['ga4'].avgSessionDuration / count || 0).toFixed(1),
+                engagementRate: (sourceTotals['ga4'].engagementRate / count || 0).toFixed(2),
+                engagedSessions: sourceTotals['ga4'].engagedSessions || 0
             };
         }
         if (sourceTotals['gsc']) {
@@ -165,8 +179,8 @@ const fetchPlatformData = async (userId, startDate, endDate, siteId, activeSourc
             data.gsc = {
                 clicks: sourceTotals['gsc'].clicks || 0,
                 impressions: sourceTotals['gsc'].impressions || 0,
-                position: (sourceTotals['gsc'].position / count).toFixed(1),
-                ctr: (sourceTotals['gsc'].ctr / count).toFixed(2) || 0
+                position: (sourceTotals['gsc'].position / count || 0).toFixed(1),
+                ctr: (sourceTotals['gsc'].ctr / count || 0).toFixed(2)
             };
         }
         if (sourceTotals['google-ads']) {
@@ -176,7 +190,11 @@ const fetchPlatformData = async (userId, startDate, endDate, siteId, activeSourc
                 impressions: sourceTotals['google-ads'].impressions || 0,
                 clicks: sourceTotals['google-ads'].clicks || 0,
                 conversions: sourceTotals['google-ads'].conversions || 0,
-                conversionValue: (sourceTotals['google-ads'].conversionValue || 0).toFixed(2)
+                conversionValue: (sourceTotals['google-ads'].conversionValue || 0).toFixed(2),
+                cpc: (sourceTotals['google-ads'].cpc / count || 0).toFixed(2),
+                cpm: (sourceTotals['google-ads'].cpm / count || 0).toFixed(2),
+                ctr: (sourceTotals['google-ads'].ctr / count || 0).toFixed(2),
+                searchImpressionShare: (sourceTotals['google-ads'].searchImpressionShare / count || 0).toFixed(2)
             };
         }
         if (sourceTotals['facebook-ads']) {
@@ -186,7 +204,12 @@ const fetchPlatformData = async (userId, startDate, endDate, siteId, activeSourc
                 impressions: sourceTotals['facebook-ads'].impressions || 0,
                 clicks: sourceTotals['facebook-ads'].clicks || 0,
                 conversions: sourceTotals['facebook-ads'].conversions || 0,
-                reach: sourceTotals['facebook-ads'].reach || 0
+                reach: sourceTotals['facebook-ads'].reach || 0,
+                landingPageViews: sourceTotals['facebook-ads'].landing_page_views || 0,
+                linkClicks: sourceTotals['facebook-ads'].link_clicks || 0,
+                cpc: (sourceTotals['facebook-ads'].cpc / count || 0).toFixed(2),
+                cpm: (sourceTotals['facebook-ads'].cpm / count || 0).toFixed(2),
+                ctr: (sourceTotals['facebook-ads'].ctr / count || 0).toFixed(2)
             };
         }
     }

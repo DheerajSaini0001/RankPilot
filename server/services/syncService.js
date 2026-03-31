@@ -214,8 +214,8 @@ export const syncGa4 = async (acc, startDate, endDate) => {
     const userId = acc.userId;
 
     const report = await runGa4Report(userId, acc.ga4PropertyId, 'ultra_detail_sync', startDate, endDate,
-        ['date', 'sessionDefaultChannelGroup', 'sessionSourceMedium', 'deviceCategory', 'country', 'pagePath', 'pageTitle'],
-        ['activeUsers', 'sessions', 'bounceRate', 'screenPageViews', 'averageSessionDuration'],
+        ['date', 'sessionDefaultChannelGroup', 'sessionSourceMedium', 'deviceCategory', 'country', 'pagePath', 'landingPagePlusQueryString', 'pageTitle'],
+        ['activeUsers', 'newUsers', 'sessions', 'engagedSessions', 'screenPageViews', 'averageSessionDuration', 'engagementRate', 'totalRevenue', 'transactions', 'conversions'],
         acc.ga4TokenId
     );
 
@@ -235,16 +235,23 @@ export const syncGa4 = async (acc, startDate, endDate) => {
                         'metadata.dimensions.device': row.dimensionValues[3].value,
                         'metadata.dimensions.country': row.dimensionValues[4].value,
                         'metadata.dimensions.pagePath': row.dimensionValues[5].value,
-                        'metadata.dimensions.pageTitle': row.dimensionValues[6].value
+                        'metadata.dimensions.landingPage': row.dimensionValues[6].value,
+                        'metadata.dimensions.pageTitle': row.dimensionValues[7].value
                     },
                     update: {
                         $set: {
                             metrics: {
                                 users: parseFloat(row.metricValues[0].value || 0),
-                                sessions: parseFloat(row.metricValues[1].value || 0),
-                                bounceRate: parseFloat(row.metricValues[2].value || 0),
-                                pageViews: parseFloat(row.metricValues[3].value || 0),
-                                avgSessionDuration: parseFloat(row.metricValues[4].value || 0)
+                                newUsers: parseFloat(row.metricValues[1].value || 0),
+                                sessions: parseFloat(row.metricValues[2].value || 0),
+                                engagedSessions: parseFloat(row.metricValues[3].value || 0),
+                                pageViews: parseFloat(row.metricValues[4].value || 0),
+                                avgSessionDuration: parseFloat(row.metricValues[5].value || 0),
+                                engagementRate: parseFloat(row.metricValues[6].value || 0) * 100,
+                                bounceRate: (1 - parseFloat(row.metricValues[6].value || 0)) * 100, // Derived from engagementRate
+                                revenue: parseFloat(row.metricValues[7].value || 0),
+                                transactions: parseFloat(row.metricValues[8].value || 0),
+                                conversions: parseFloat(row.metricValues[9].value || 0)
                             },
                             syncedAt: new Date()
                         }
@@ -310,7 +317,7 @@ export const syncGoogleAds = async (acc, startDate, endDate) => {
     const userId = acc.userId;
 
     const query = `
-        SELECT segments.date, campaign.name, campaign.status, ad_group.name, ad_group.status, segments.device, segments.ad_network_type, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions
+        SELECT segments.date, campaign.name, campaign.status, ad_group.name, ad_group.status, segments.device, segments.ad_network_type, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions, metrics.conversions_value, metrics.all_conversions, metrics.view_through_conversions, metrics.search_impression_share, metrics.average_cpc, metrics.ctr, metrics.active_view_impressions
         FROM customer WHERE segments.date BETWEEN '${startDate}' AND '${endDate}'
     `;
     const res = await runGAdsQuery(userId, acc.googleAdsCustomerId, 'ultra_detail_sync', startDate, endDate, query, acc.googleAdsTokenId);
@@ -338,7 +345,14 @@ export const syncGoogleAds = async (acc, startDate, endDate) => {
                                 spend: parseFloat(row.metrics.costMicros || 0) / 1000000,
                                 impressions: parseFloat(row.metrics.impressions || 0),
                                 clicks: parseFloat(row.metrics.clicks || 0),
-                                conversions: parseFloat(row.metrics.conversions || 0)
+                                conversions: parseFloat(row.metrics.conversions || 0),
+                                conversionValue: parseFloat(row.metrics.conversionsValue || 0),
+                                allConversions: parseFloat(row.metrics.allConversions || 0),
+                                viewThroughConversions: parseFloat(row.metrics.viewThroughConversions || 0),
+                                searchImpressionShare: parseFloat(row.metrics.searchImpressionShare || 0),
+                                cpc: parseFloat(row.metrics.averageCpc || 0) / 1000000,
+                                ctr: parseFloat(row.metrics.ctr || 0) * 100,
+                                cpm: (parseFloat(row.metrics.costMicros || 0) / (parseFloat(row.metrics.impressions || 1) / 1000)) / 1000000
                             },
                             syncedAt: new Date()
                         }
@@ -385,10 +399,14 @@ export const syncFacebookAds = async (acc, startDate, endDate) => {
                                 impressions: parseFloat(row.impressions || 0),
                                 clicks: parseFloat(row.clicks || 0),
                                 reach: parseFloat(row.reach || 0),
-                                conversions: parseFloat(row.conversions?.[0]?.value || row.actions?.find(a => a.action_type === 'offsite_conversion.fb_pixel_purchase')?.value || 0),
-                                purchase_value: parseFloat(row.action_values?.find(a => a.action_type === 'offsite_conversion.fb_pixel_purchase')?.value || 0),
+                                conversions: parseFloat(row.conversions?.[0]?.value || row.actions?.find(a => a.action_type === 'offsite_conversion.fb_pixel_purchase')?.value || row.actions?.find(a => a.action_type === 'purchase')?.value || 0),
+                                purchase_value: parseFloat(row.action_values?.find(a => a.action_type === 'offsite_conversion.fb_pixel_purchase')?.value || row.action_values?.find(a => a.action_type === 'purchase')?.value || 0),
+                                landing_page_views: parseFloat(row.actions?.find(a => a.action_type === 'landing_page_view')?.value || 0),
+                                link_clicks: parseFloat(row.actions?.find(a => a.action_type === 'link_click')?.value || 0),
                                 frequency: parseFloat(row.frequency || 0),
+                                engagement: parseFloat(row.actions?.find(a => a.action_type === 'post_engagement')?.value || 0),
                                 cpc: parseFloat(row.cpc || 0),
+                                cpm: parseFloat(row.cpm || 0),
                                 ctr: parseFloat(row.ctr || 0)
                             },
                             syncedAt: new Date()
