@@ -25,13 +25,13 @@ const withRetry = async (fn, retries = 3, delay = 1000) => {
     }
 };
 
-// 7 days window for daily sync
+// 10 days window for daily sync
 const getSyncRange = () => {
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
     
     let start = new Date();
-    start.setDate(start.getDate() - 7);
+    start.setDate(start.getDate() - 10);
     
     const startDateStr = start.toISOString().split('T')[0];
     return { startDate: startDateStr, endDate: todayStr };

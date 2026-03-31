@@ -6,11 +6,18 @@ import { syncHistoricalData, syncGsc, syncGa4, syncGoogleAds, syncFacebookAds } 
 
 dotenv.config();
 
-const connection = new Redis({
-    host: process.env.REDIS_HOST || '127.0.0.1',
-    port: process.env.REDIS_PORT || 6379,
+const redisOptions = {
     maxRetriesPerRequest: null,
-});
+};
+
+const connection = process.env.REDIS_URL
+    ? new Redis(process.env.REDIS_URL, redisOptions)
+    : new Redis({
+        host: process.env.REDIS_HOST || '127.0.0.1',
+        port: process.env.REDIS_PORT || 6379,
+        password: process.env.REDIS_PASSWORD || undefined,
+        ...redisOptions
+    });
 
 connection.on('error', (err) => {
     console.error('[Redis Error]', err.message);
