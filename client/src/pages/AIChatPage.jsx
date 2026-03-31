@@ -435,7 +435,7 @@ const AIChatPage = () => {
     };
 
     return (
-        <DashboardLayout>
+        <DashboardLayout noScroll>
             <div className="flex-1 flex flex-col min-h-0 h-full w-full overflow-hidden bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700/60 rounded-2xl shadow-sm relative">
 
                 {/* 2. MOBILE HEADER — shrink-0 */}

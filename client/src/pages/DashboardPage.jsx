@@ -478,7 +478,7 @@ Give me a 3-part strategic review:
                       <h3 className="text-sm font-black text-neutral-900 dark:text-white">Google Analytics 4</h3>
                     </div>
                     <div className="flex items-center gap-2">
-                      {activeGa4PropertyId && <AiSectionChat sectionTitle="Overview - GA4 Summary" contextPrompt={`Quick GA4 summary: ${formatNumber(overviewData.ga4?.users)} users, ${formatNumber(overviewData.ga4?.sessions)} sessions, bounce rate ${formatPct((overviewData.ga4?.bounceRate||0)*100)}, avg session ${formatTime(overviewData.ga4?.avgSessionDuration)}. What are the key insights and opportunities?`} activeSources={['ga4']} />}
+                      {activeGa4PropertyId && <AiSectionChat sectionTitle="Overview - GA4 Summary" contextPrompt={`Quick GA4 summary: ${formatNumber(overviewData.ga4?.users)} users, ${formatNumber(overviewData.ga4?.sessions)} sessions, bounce rate ${formatPct(overviewData.ga4?.bounceRate||0)}, avg session ${formatTime(overviewData.ga4?.avgSessionDuration)}. What are the key insights and opportunities?`} activeSources={['ga4']} />}
                       <button onClick={() => navigate('/dashboard/ga4')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">View Full <ArrowRightIcon className="w-3 h-3" /></button>
                     </div>
                   </div>
@@ -489,7 +489,7 @@ Give me a 3-part strategic review:
                       {[
                         { label: 'Users', value: formatNumber(overviewData.ga4?.users) },
                         { label: 'Sessions', value: formatNumber(overviewData.ga4?.sessions) },
-                        { label: 'Bounce', value: formatPct((overviewData.ga4?.bounceRate || 0) * 100) },
+                        { label: 'Bounce', value: formatPct(overviewData.ga4?.bounceRate || 0) },
                         { label: 'Avg Time', value: formatTime(overviewData.ga4?.avgSessionDuration) },
                         { label: 'Page Views', value: formatNumber(overviewData.ga4?.pageViews) },
                         { label: 'Growth', value: `${(overviewData.ga4?.growth || 0) >= 0 ? '+' : ''}${(overviewData.ga4?.growth || 0).toFixed(1)}%` },

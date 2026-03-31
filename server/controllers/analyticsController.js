@@ -42,7 +42,6 @@ export const buildMatchFilter = async (userId, source, query) => {
     return filter;
 };
 
-
 export const getDashboardSummary = async (req, res) => {
     const { startDate, endDate } = req.query;
     const userId = req.user._id;
@@ -178,7 +177,7 @@ export const getDashboardSummary = async (req, res) => {
                 url: p._id || '/',
                 visitors: p.users,
                 views: p.views,
-                bounce: ((p.bounceRate || 0) * 100).toFixed(0) + '%',
+                bounce: (p.bounceRate || 0).toFixed(0) + '%',
                 share: ga4.pageViews > 0 ? Math.round((p.views / ga4.pageViews) * 100) : 0
             })),
             insights: insights.slice(0, 3)
@@ -256,7 +255,8 @@ export const getGa4Summary = async (req, res) => {
                 { $group: {
                     _id: { path: "$metadata.dimensions.pagePath", title: "$metadata.dimensions.pageTitle" },
                     views: { $sum: "$metrics.pageViews" },
-                    users: { $sum: "$metrics.users" }
+                    users: { $sum: "$metrics.users" },
+                    bounceRate: { $avg: "$metrics.bounceRate" }
                 }},
                 { $sort: { views: -1 } },
                 { $limit: 10 }
@@ -289,10 +289,10 @@ export const getGa4Summary = async (req, res) => {
                 sessions: d.sessions,
                 pageViews: d.pageViews || 0,
                 users: d.users || 0,
-                bounceRate: (d.bounceRate || 0) * 100 // Scale to pct
+                bounceRate: parseFloat((d.bounceRate || 0).toFixed(1)) // Already scaled in syncService
             })),
             traffic: traffic.map(d => ({ channel: d._id.channel, source: d._id.source, sessions: d.sessions, users: d.users })),
-            pages: pages.map(d => ({ path: d._id.path, title: d._id.title, views: d.views, users: d.users })),
+            pages: pages.map(d => ({ path: d._id.path, title: d._id.title, views: d.views, users: d.users, bounceRate: d.bounceRate })),
             breakdowns: {
                 devices: (ga4BreakdownsDevices || []).map(d => ({ name: d._id || 'unknown', value: d.value })),
                 locations: (ga4BreakdownsLocations || []).map(d => ({ name: d._id || 'unknown', value: d.value }))
@@ -302,7 +302,6 @@ export const getGa4Summary = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
-
 
 export const getGscSummary = async (req, res) => {
     const { startDate, endDate } = req.query;
@@ -405,7 +404,6 @@ export const getGscSummary = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
-
 
 export const getGoogleAdsSummary = async (req, res) => {
     const { startDate, endDate } = req.query;
@@ -667,6 +665,7 @@ export const getFacebookAdsSummary = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
 export const syncAccountData = async (req, res) => {
     const { siteId } = req.body;
     const userId = req.user._id;

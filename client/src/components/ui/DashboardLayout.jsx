@@ -25,7 +25,7 @@ import { useNotificationStore } from '../../store/notificationStore';
 import { useThemeStore } from '../../store/themeStore';
 import { listSites, getActiveAccounts } from '../../api/accountApi';
 
-const DashboardLayout = ({ children }) => {
+const DashboardLayout = ({ children, noScroll = false }) => {
     const { user, clearAuth } = useAuthStore();
     const { 
         userSites = [], 
@@ -695,8 +695,8 @@ const DashboardLayout = ({ children }) => {
                 </header>
 
                 {/* Content Area */}
-                <div className="flex-1 h-full overflow-hidden p-4 sm:p-5 md:p-7">
-                    <div className="h-full w-full relative z-10">
+                <div className={`flex-1 ${noScroll ? 'overflow-hidden h-full' : 'overflow-y-auto'} p-4 sm:p-5 md:p-7`}>
+                    <div className={`${noScroll ? 'h-full w-full' : ''} relative z-10`}>
                         {children}
                     </div>
                 </div>
