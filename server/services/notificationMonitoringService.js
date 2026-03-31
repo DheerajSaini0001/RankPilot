@@ -3,12 +3,11 @@ import FacebookToken from '../models/FacebookToken.js';
 import DailyMetric from '../models/DailyMetric.js';
 import UserAccounts from '../models/UserAccounts.js';
 import { createNotification } from '../utils/notification.js';
+import { generateWeeklyInsightInternal } from '../controllers/aiController.js';
 
-/**
- * Checks for Google and Facebook tokens that will expire within the next 3 days.
- */
+// Checks for Google and Facebook tokens that will expire within the next 3 days.
 export const checkExpiringTokens = async () => {
-    console.log('[Monitoring] Checking for expiring tokens...');
+    console.log('🔔 [Monitoring] Checking for expiring tokens...');
     const threeDaysFromNow = new Date();
     threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
 
@@ -47,11 +46,9 @@ export const checkExpiringTokens = async () => {
     }
 };
 
-/**
- * Weekly check for significant performance drops (comparing last 7 days with previous 7 days)
- */
+// Weekly check for significant performance drops (comparing last 7 days with previous 7 days)
 export const checkPerformanceDrops = async () => {
-    console.log('[Monitoring] Analyzing performance for significant drops...');
+    console.log('📉 [Monitoring] Analyzing performance for significant drops...');
     const now = new Date();
     const splitDate = new Date();
     splitDate.setDate(now.getDate() - 7);
@@ -95,9 +92,7 @@ export const checkPerformanceDrops = async () => {
     }
 };
 
-/**
- * Checks for sources with zero data for the last 3 days.
- */
+// Checks for sources with zero data for the last 3 days.
 export const checkInactiveSources = async () => {
     console.log('[Monitoring] Checking for inactive sources (Zero Data)...');
     const threeDaysAgo = new Date();
@@ -137,9 +132,7 @@ export const checkInactiveSources = async () => {
     }
 };
 
-/**
- * Monthly growth check (comparing last month vs previous month).
- */
+// Monthly growth check (comparing last month vs previous month).
 export const checkMonthlyGrowth = async () => {
     console.log('[Monitoring] Calculating monthly growth summary...');
     const now = new Date();
@@ -186,9 +179,7 @@ export const checkMonthlyGrowth = async () => {
     }
 };
 
-/**
- * Ad Spend Alert for sudden spikes.
- */
+// Ad Spend Alert for sudden spikes.
 export const checkAdSpendSpikes = async () => {
     console.log('[Monitoring] Checking for Ad spend spikes...');
     const yesterday = new Date();
@@ -234,12 +225,28 @@ export const checkAdSpendSpikes = async () => {
     }
 };
 
-/**
- * Sends a summary notification after a sync task completes (if needed)
- */
+// Sends a summary notification after a sync task completes
 export const sendDailySyncSummary = async (userId, siteId, syncResults) => {
     const { ga4, gsc, gads, fb } = syncResults;
     const sources = [ga4 && 'GA4', gsc && 'Search Console', gads && 'Google Ads', fb && 'Facebook Ads'].filter(Boolean).join(', ');
     if (!sources) return;
     await createNotification(userId, { type: 'success', title: 'Daily Sync Complete', message: `Today's performance data for ${sources} has been successfully updated.`, source: 'system', actionLabel: 'View Updates', actionPath: '/dashboard' });
+};
+
+// Generate weekly reports for ALL users.
+export const generateWeeklyInsightsForAllUsers = async () => {
+    console.log('🤖 [AI] Generating weekly insights for all active sites...');
+    try {
+        const accounts = await UserAccounts.find();
+        for (const acc of accounts) {
+            try {
+                console.log(`[AI] Processing Weekly Insight for site: ${acc.siteName} (User: ${acc.userId})`);
+                await generateWeeklyInsightInternal(acc.userId, acc._id);
+            } catch (err) {
+                console.error(`[AI] Failed to generate insight for ${acc.siteName}:`, err.message);
+            }
+        }
+    } catch (err) {
+        console.error('[AI] Weekly Insight Bulk Generation Error:', err.message);
+    }
 };

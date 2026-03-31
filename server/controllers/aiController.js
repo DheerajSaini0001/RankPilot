@@ -25,7 +25,7 @@ const getAiResponse = async (prompt) => {
     }
 };
 
-const fetchPlatformData = async (userId, startDate, endDate, siteId, activeSources = []) => {
+export const fetchPlatformData = async (userId, startDate, endDate, siteId, activeSources = []) => {
 
     if (!startDate || !endDate) {
         const tzOffset = (new Date()).getTimezoneOffset() * 60000;
@@ -411,9 +411,7 @@ export const getWeeklyInsight = async (req, res) => {
     res.status(404).json({ message: 'No insight found. Please refresh.' });
 };
 
-export const refreshWeeklyInsight = async (req, res) => {
-    const siteId = req.body.siteId || req.query.siteId;
-
+export const generateWeeklyInsightInternal = async (userId, siteId) => {
     const tzOffset = (new Date()).getTimezoneOffset() * 60000;
     const nowLocal = new Date(Date.now() - tzOffset);
     const dateRangeEnd = nowLocal.toISOString().split('T')[0];
@@ -422,7 +420,7 @@ export const refreshWeeklyInsight = async (req, res) => {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const dateRangeStart = sevenDaysAgo.toISOString().split('T')[0];
 
-    const data = await fetchPlatformData(req.user._id, dateRangeStart, dateRangeEnd, siteId, []);
+    const data = await fetchPlatformData(userId, dateRangeStart, dateRangeEnd, siteId, []);
 
     const prompt = promptBuilder.buildWeeklyInsightPrompt(data);
     
@@ -435,10 +433,10 @@ export const refreshWeeklyInsight = async (req, res) => {
         const sourceMap = { ga4: 'ga4', gsc: 'gsc', googleAds: 'google-ads', facebookAds: 'facebook-ads' };
         const discoveredSources = Object.keys(data).filter(k => sourceMap[k]).map(k => sourceMap[k]);
 
-        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
         const insight = await WeeklyInsight.findOneAndUpdate(
-            { userId: req.user._id, siteId: siteId || null },
+            { userId: userId, siteId: siteId || null },
             { 
                 content: cleanContent, 
                 sources: discoveredSources.length > 0 ? discoveredSources : ['ga4'],
@@ -448,7 +446,7 @@ export const refreshWeeklyInsight = async (req, res) => {
         );
 
         // Notify user about new AI Insight
-        await createNotification(req.user._id, {
+        await createNotification(userId, {
             type: 'info',
             title: 'Weekly AI Insight Ready',
             message: 'Your weekly performance analysis is ready. See what changed and what to optimize next.',
@@ -457,10 +455,19 @@ export const refreshWeeklyInsight = async (req, res) => {
             actionPath: '/dashboard/ai-chat'
         });
 
-        res.status(200).json(insight);
+        return insight;
 
     } catch (err) {
-        // Return 503 so frontend knows to show "Try again later"
+        throw err;
+    }
+};
+
+export const refreshWeeklyInsight = async (req, res) => {
+    try {
+        const siteId = req.body.siteId || req.query.siteId;
+        const insight = await generateWeeklyInsightInternal(req.user._id, siteId);
+        res.status(200).json(insight);
+    } catch (err) {
         res.status(err.statusCode || 503).json({ message: err.message });
     }
 };

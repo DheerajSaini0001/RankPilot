@@ -5,60 +5,60 @@ import {
     checkPerformanceDrops, 
     checkInactiveSources, 
     checkMonthlyGrowth, 
-    checkAdSpendSpikes 
+    checkAdSpendSpikes,
+    generateWeeklyInsightsForAllUsers
 } from './notificationMonitoringService.js';
 
 
 export const initCronJobs = () => {
+     // 🟢 SECTION 1: SYSTEM MONITORING & ALERTS
 
-    // Daily at 00:00 - Check for expiring tokens & Full Sync
+    // Daily Checks (Tokens, Inactivity, Ad Spikes) - Midnight at 12:00 AM
     cron.schedule('0 0 * * *', async () => {
         await checkExpiringTokens();
+        await checkInactiveSources();
+        await checkAdSpendSpikes();
+    }, { timezone: "Asia/Kolkata" });
+    
+    // Weekly Insight Reports - Every Monday at 1 AM
+    cron.schedule('0 1 * * 1', async () => {
+        await checkPerformanceDrops();
+        await generateWeeklyInsightsForAllUsers();
+    }, { timezone: "Asia/Kolkata" });
+
+    // Monthly Growth Summary - 1st of every month at 4 AM
+    cron.schedule('0 4 1 * *', async () => {
+        await checkMonthlyGrowth();
+    }, { timezone: "Asia/Kolkata" });
+    
+    // 🔵 SECTION 2: PLATFORM DATA SYNCHRONIZATION
+    
+    // Full System Sync - Every night at 2 AM
+    cron.schedule('0 2 * * *', async () => {
         await syncDailyForAllUsers();
     }, { timezone: "Asia/Kolkata" });
 
-    // Weekly at 01:00 on Monday - Check for performance drops
-    cron.schedule('0 1 * * 1', async () => {
-        await checkPerformanceDrops();
-    }, { timezone: "Asia/Kolkata" });
-
-    // Daily at 01:10 - Check for inactive (zero data) sources
-    cron.schedule('10 1 * * *', async () => {
-        await checkInactiveSources();
-    }, { timezone: "Asia/Kolkata" });
-
-    // Daily at 02:00 - Check for sudden Ad spend spikes
-    cron.schedule('0 2 * * *', async () => {
-        await checkAdSpendSpikes();
-    }, { timezone: "Asia/Kolkata" });
-
-    // Monthly at 03:00 on 1st - Send growth summary
-    cron.schedule('0 3 1 * *', async () => {
-        await checkMonthlyGrowth();
-    }, { timezone: "Asia/Kolkata" });
-
-
-
-
+    // Facebook Ads Sync every 30 minutes
     cron.schedule('*/30 * * * *', async () => {
         await syncAllFacebookAds();
     }, { timezone: "Asia/Kolkata" });
-
+    
+    // Google Ads Sync every hour
     cron.schedule('0 * * * *', async () => {
         await syncAllGoogleAds();
     }, { timezone: "Asia/Kolkata" });
-
-
+    
+    // GA4 Sync every 4 hours
     cron.schedule('0 */4 * * *', async () => {
         await syncAllGa4();
     }, { timezone: "Asia/Kolkata" });
-
-
+    
+    // GSC Sync every 12 hours
     cron.schedule('0 2,14 * * *', async () => {
         await syncAllGsc();
     }, { timezone: "Asia/Kolkata" });
-
-    console.log('⚡ [Cron] Sync Schedules Active: [FB: 30m] [GAds: 1h] [GA4: 4h] [GSC: 12h]');
+    
+    console.log('⚡ [Cron] Active');
 };
 
 export default { initCronJobs };
