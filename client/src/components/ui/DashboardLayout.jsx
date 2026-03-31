@@ -695,8 +695,8 @@ const DashboardLayout = ({ children }) => {
                 </header>
 
                 {/* Content Area */}
-                <div className="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-5 md:p-7">
-                    <div className="relative z-10">
+                <div className="flex-1 h-full overflow-hidden p-4 sm:p-5 md:p-7">
+                    <div className="h-full w-full relative z-10">
                         {children}
                     </div>
                 </div>
