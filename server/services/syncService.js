@@ -85,9 +85,9 @@ export const syncHistoricalData = async (accountId, source) => {
         return;
     }
 
-    const limits = { 'gsc': 1.5, 'ga4': 1.5, 'google-ads': 1.5, 'facebook-ads': 1.5 };
-    const years = limits[source] || 1.5;
-    console.log(`[Historical Sync] 🔄 Starting [${source.toUpperCase()}] for "${acc.siteName}" | Target: ${years} Years`);
+    const limits = { 'gsc': 1.0, 'ga4': 1.0, 'google-ads': 1.0, 'facebook-ads': 1.0 };
+    const years = limits[source] || 1.0;
+    console.log(`[Historical Sync] 🔄 Starting [${source.toUpperCase()}] for "${acc.siteName}" | Target: ${years} Year`);
 
     try {
         await UserAccounts.findByIdAndUpdate(accountId, { 
