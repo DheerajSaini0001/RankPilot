@@ -465,168 +465,90 @@ const DashboardLayout = ({ children, noScroll = false }) => {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center bg-neutral-100 dark:bg-dark-surface rounded-xl p-1 border border-neutral-200 dark:border-neutral-800">
-                            <button onClick={toggleDark} className="p-2 text-neutral-500 hover:text-brand-500 dark:text-neutral-400 dark:hover:text-brand-400 transition-colors">
-                                {isDark ? <SunIcon className="w-5 h-5" strokeWidth={2} /> : <MoonIcon className="w-5 h-5" strokeWidth={2} />}
+                    <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="relative">
+                            <button
+                                onClick={() => setIsNotifOpen(!isNotifOpen)}
+                                className="relative p-2 text-neutral-500 hover:text-brand-500 dark:text-neutral-400 dark:hover:text-brand-400 transition-colors rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                            >
+                                <BellIcon className="w-5 h-5" strokeWidth={2} />
+                                {unreadCount > 0 && (
+                                    <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-0.5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center leading-none border border-white dark:border-dark-surface">
+                                        {unreadCount > 9 ? '9+' : unreadCount}
+                                    </span>
+                                )}
                             </button>
-                            <div className="relative">
-                                <button
-                                    onClick={() => setIsNotifOpen(!isNotifOpen)}
-                                    className="relative p-2 text-neutral-500 hover:text-brand-500 dark:text-neutral-400 dark:hover:text-brand-400 transition-colors rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                                >
-                                    <BellIcon className="w-5 h-5" strokeWidth={2} />
-                                    {unreadCount > 0 && (
-                                        <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-0.5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center leading-none border border-white dark:border-dark-surface">
-                                            {unreadCount > 9 ? '9+' : unreadCount}
-                                        </span>
-                                    )}
-                                </button>
 
-                                {isNotifOpen && (
-                                    <>
-                                        {/* Backdrop */}
-                                        <div className="fixed inset-0 z-40" onClick={() => setIsNotifOpen(false)} />
-
-                                        {/* Dropdown - Fixed position on mobile, absolute on desktop */}
-                                        <div className="fixed inset-x-4 top-[64px] sm:absolute sm:top-auto sm:right-0 sm:mt-2 sm:w-96 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-
-                                            {/* Header */}
-                                            <div className="px-4 py-3.5 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between bg-neutral-50/50 dark:bg-neutral-800/30">
-                                                <div className="flex items-center gap-2.5">
-                                                    <h4 className="text-xs font-black uppercase tracking-widest text-neutral-900 dark:text-white">Notifications</h4>
-                                                    {unreadCount > 0 && (
-                                                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400">
-                                                            {unreadCount} new
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center gap-1">
-                                                    {unreadCount > 0 && (
-                                                        <button
-                                                            onClick={markAllRead}
-                                                            className="text-[10px] font-black text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 px-2 py-1 rounded-lg hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all"
-                                                        >
-                                                            Mark all read
-                                                        </button>
-                                                    )}
-                                                    {notifications.length > 0 && (
-                                                        <button
-                                                            onClick={clearAll}
-                                                            className="text-[10px] font-black text-neutral-400 hover:text-red-500 px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
-                                                        >
-                                                            Clear all
-                                                        </button>
-                                                    )}
-                                                </div>
+                            {isNotifOpen && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setIsNotifOpen(false)} />
+                                    <div className="fixed inset-x-4 top-[64px] sm:absolute sm:top-full sm:right-0 sm:left-auto sm:mt-4 sm:mb-10 sm:w-96 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 transition-all">
+                                        <div className="px-4 py-3.5 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between bg-neutral-50/50 dark:bg-neutral-800/30">
+                                            <div className="flex items-center gap-2.5">
+                                                <h4 className="text-xs font-black uppercase tracking-widest text-neutral-900 dark:text-white">Notifications</h4>
+                                                {unreadCount > 0 && (
+                                                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400">
+                                                        {unreadCount} new
+                                                    </span>
+                                                )}
                                             </div>
-
-                                            {/* Notifications list */}
-                                            <div className="max-h-[60vh] sm:max-h-[480px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                                                {notifications.length === 0 ? (
-                                                    <div className="flex flex-col items-center justify-center py-12 text-center px-6">
-                                                        <div className="w-12 h-12 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mb-3">
-                                                            <BellIcon className="w-6 h-6 text-neutral-400" />
-                                                        </div>
-                                                        <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400">No notifications yet</p>
-                                                        <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-1">You're all caught up!</p>
+                                            <div className="flex items-center gap-1">
+                                                {unreadCount > 0 && (
+                                                    <button onClick={markAllRead} className="text-[10px] font-black text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 px-2 py-1 rounded-lg hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all">Mark all read</button>
+                                                )}
+                                                {notifications.length > 0 && (
+                                                    <button onClick={clearAll} className="text-[10px] font-black text-neutral-400 hover:text-red-500 px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all">Clear all</button>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="max-h-[60vh] sm:max-h-[480px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                                            {notifications.length === 0 ? (
+                                                <div className="flex flex-col items-center justify-center py-12 text-center px-6">
+                                                    <div className="w-12 h-12 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mb-3">
+                                                        <BellIcon className="w-6 h-6 text-neutral-400" />
                                                     </div>
-                                                ) : (
-                                                    <div className="divide-y divide-neutral-50 dark:divide-neutral-800/50">
-                                                        {notifications.map((notif) => {
-                                                            const icon = getNotifIcon(notif.type);
-                                                            const timeAgo = getTimeAgo(notif.timestamp);
-                                                            const sourceLabel = getSourceLabel(notif.source);
-
-                                                            return (
-                                                                <div
-                                                                    key={notif.id}
-                                                                    className={`group relative px-4 py-3.5 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-all cursor-pointer ${!notif.isRead ? 'bg-brand-50/30 dark:bg-brand-500/5' : ''}`}
-                                                                    onClick={() => {
-                                                                        markAsRead(notif.id);
-                                                                        if (notif.actionPath) {
-                                                                            navigate(notif.actionPath);
-                                                                            setIsNotifOpen(false);
-                                                                        }
-                                                                    }}
-                                                                >
-                                                                    {/* Unread indicator */}
-                                                                    {!notif.isRead && (
-                                                                        <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-brand-500 rounded-r-full" />
-                                                                    )}
-
-                                                                    <div className="flex items-start gap-3">
-                                                                        {/* Type icon */}
-                                                                        <div className={`w-8 h-8 rounded-xl ${icon.bg} flex items-center justify-center flex-shrink-0 text-sm`}>
-                                                                            {icon.emoji}
+                                                    <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400">No notifications yet</p>
+                                                    <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-1">You're all caught up!</p>
+                                                </div>
+                                            ) : (
+                                                <div className="divide-y divide-neutral-50 dark:divide-neutral-800/50">
+                                                    {notifications.map((notif) => {
+                                                        const icon = getNotifIcon(notif.type);
+                                                        return (
+                                                            <div key={notif.id} className={`group relative px-4 py-3.5 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-all cursor-pointer ${!notif.isRead ? 'bg-brand-50/30 dark:bg-brand-500/5' : ''}`} onClick={() => { markAsRead(notif.id); if (notif.actionPath) { navigate(notif.actionPath); setIsNotifOpen(false); } }}>
+                                                                {!notif.isRead && <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-brand-500 rounded-r-full" />}
+                                                                <div className="flex items-start gap-3">
+                                                                    <div className={`w-8 h-8 rounded-xl ${icon.bg} flex items-center justify-center flex-shrink-0 text-sm`}>{icon.emoji}</div>
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <div className="flex items-start justify-between gap-2">
+                                                                            <p className={`text-xs font-black leading-tight ${!notif.isRead ? 'text-neutral-900 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}>{notif.title}</p>
+                                                                            <button onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }} className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 text-neutral-400 transition-all flex-shrink-0"><XMarkIcon className="w-3 h-3" /></button>
                                                                         </div>
-
-                                                                        {/* Content */}
-                                                                        <div className="flex-1 min-w-0">
-                                                                            <div className="flex items-start justify-between gap-2">
-                                                                                <p className={`text-xs font-black leading-tight ${!notif.isRead ? 'text-neutral-900 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}>
-                                                                                    {notif.title}
-                                                                                </p>
-                                                                                {/* Delete button */}
-                                                                                <button
-                                                                                    onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }}
-                                                                                    className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 text-neutral-400 transition-all flex-shrink-0"
-                                                                                >
-                                                                                    <XMarkIcon className="w-3 h-3" />
-                                                                                </button>
-                                                                            </div>
-
-                                                                            <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 leading-relaxed line-clamp-2">
-                                                                                {notif.message}
-                                                                            </p>
-
-                                                                            {/* Footer row */}
-                                                                            <div className="flex items-center justify-between mt-1.5 gap-2">
-                                                                                <div className="flex items-center gap-1.5">
-                                                                                    <span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500">{timeAgo}</span>
-                                                                                    {sourceLabel && (
-                                                                                        <>
-                                                                                            <span className="text-neutral-300 dark:text-neutral-700">·</span>
-                                                                                            <span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500">{sourceLabel}</span>
-                                                                                        </>
-                                                                                    )}
-                                                                                </div>
-                                                                                {notif.actionLabel && (
-                                                                                    <span className="text-[10px] font-black text-brand-600 dark:text-brand-400 hover:underline">
-                                                                                        {notif.actionLabel} →
-                                                                                    </span>
-                                                                                )}
-                                                                            </div>
+                                                                        <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 leading-relaxed line-clamp-2">{notif.message}</p>
+                                                                        <div className="flex items-center justify-between mt-1.5 gap-2">
+                                                                            <div className="flex items-center gap-1.5"><span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500">{getTimeAgo(notif.timestamp)}</span>{getSourceLabel(notif.source) && <><span className="text-neutral-300 dark:text-neutral-700">·</span><span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500">{getSourceLabel(notif.source)}</span></>}</div>
+                                                                            {notif.actionLabel && <span className="text-[10px] font-black text-brand-600 dark:text-brand-400 hover:underline">{notif.actionLabel} →</span>}
                                                                         </div>
                                                                     </div>
                                                                 </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Footer */}
-                                            {notifications.length > 0 && (
-                                                <div className="px-4 py-3 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/30 flex items-center justify-between">
-                                                    <p className="text-[10px] font-bold text-neutral-400">
-                                                        {notifications.length} total · {unreadCount} unread
-                                                    </p>
-                                                    <button
-                                                        onClick={() => { clearRead(); }}
-                                                        className="text-[10px] font-black text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors"
-                                                    >
-                                                        Clear read
-                                                    </button>
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
                                             )}
                                         </div>
-                                    </>
-                                )}
-                            </div>
+                                        {notifications.length > 0 && (
+                                            <div className="px-4 py-3 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/30 flex items-center justify-between">
+                                                <p className="text-[10px] font-bold text-neutral-400">{notifications.length} total · {unreadCount} unread</p>
+                                                <button onClick={clearRead} className="text-[10px] font-black text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors">Clear read</button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            )}
                         </div>
 
-                        <div className="h-8 w-[1px] bg-neutral-200 dark:bg-neutral-800 mx-2"></div>
+                        <div className="h-6 w-[1px] bg-neutral-200 dark:bg-neutral-800 mx-2"></div>
 
                         <div className="relative">
                             <button
@@ -671,6 +593,32 @@ const DashboardLayout = ({ children, noScroll = false }) => {
                                             >
                                                 <WrenchIcon className="w-4 h-4 mr-2.5 text-neutral-400" />
                                                 Settings
+                                            </button>
+                                            <button
+                                                onClick={() => toggleDark()}
+                                                className="w-full text-left px-4 py-2.5 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-all flex items-center justify-between group/theme"
+                                            >
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className="relative flex items-center justify-center">
+                                                        {isDark ? (
+                                                            <MoonIcon className="w-5 h-5 text-brand-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.4)]" strokeWidth={2.5} />
+                                                        ) : (
+                                                            <SunIcon className="w-5.5 h-5.5 text-amber-500 drop-shadow-[0_0_10px_rgba(251,191,36,0.6)]" strokeWidth={2.5} />
+                                                        )}
+                                                    </div>
+                                                    <span className="text-sm font-black text-neutral-900 dark:text-white tracking-tight whitespace-nowrap">
+                                                        {!isDark ? 'Light Mode' : 'Dark Mode'}
+                                                    </span>
+                                                </div>
+                                                <div className={`
+                                                    w-9 h-5 rounded-full p-1 transition-all duration-300 flex items-center
+                                                    ${!isDark ? 'bg-amber-900/40' : 'bg-neutral-200 dark:bg-neutral-800'}
+                                                `}>
+                                                    <div className={`
+                                                        w-3 h-3 rounded-full transition-transform duration-300 shadow-lg
+                                                        ${!isDark ? 'translate-x-4 bg-amber-400' : 'translate-x-0 bg-neutral-400 dark:bg-neutral-600'}
+                                                    `} />
+                                                </div>
                                             </button>
                                         </div>
                                         <div className="py-1 border-t border-neutral-100 dark:border-neutral-800/60 bg-neutral-50/50 dark:bg-dark-surface/50">
