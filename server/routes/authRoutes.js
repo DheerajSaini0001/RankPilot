@@ -16,14 +16,17 @@ import { protect, attachUserFromState } from '../middleware/auth.js';
 import { catchAsync } from '../utils/catchAsync.js';
 import { authLimiter, sensitiveActionLimiter } from '../middleware/rateLimiter.js';
 
+import { validate } from '../middleware/validate.js';
+import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from '../schemas/authSchema.js';
+
 const router = express.Router();
 
-router.post('/register', authLimiter, catchAsync(register));
+router.post('/register', authLimiter, validate(registerSchema), catchAsync(register));
 router.get('/verify-email/:token', catchAsync(verifyEmail));
-router.post('/login', authLimiter, catchAsync(login));
+router.post('/login', authLimiter, validate(loginSchema), catchAsync(login));
 router.post('/logout', protect, catchAsync(logout));
-router.post('/forgot-password', sensitiveActionLimiter, catchAsync(forgotPassword));
-router.post('/reset-password', sensitiveActionLimiter, catchAsync(resetPassword));
+router.post('/forgot-password', sensitiveActionLimiter, validate(forgotPasswordSchema), catchAsync(forgotPassword));
+router.post('/reset-password', sensitiveActionLimiter, validate(resetPasswordSchema), catchAsync(resetPassword));
 router.post('/resend-verification', sensitiveActionLimiter, catchAsync(resendVerification));
 
 // Google Auth

@@ -182,41 +182,52 @@ const App = () => {
 
 // Handle OAuth callback token in URL
 const AuthCallback = () => {
+  const navigate = useNavigate();
   const code = new URLSearchParams(window.location.search).get('token');
-  const { setAuth } = useAuthStore();
+  const { setAuth, clearAuth } = useAuthStore();
 
   React.useEffect(() => {
     if (code) {
-      // Optimistically set the token so the api interceptor can use it
-      setAuth(code, { name: 'Authenticating...', email: '...' });
+      // 1. Set the token only so axios interceptor can use it for the getMe call
+      setAuth(code, null);
 
       getMe()
         .then(res => {
+          // 2. Set full auth state after success
           setAuth(code, res.data.user);
-          // Sync connection status to accounts store
+          
+          // 3. Sync connection status to accounts store
           const { setAccounts } = useAccountsStore.getState();
           setAccounts({ connectedSources: res.data.connectedSources });
           
+          // 4. Client-side navigation (No page reload)
           if (res.data.connectedSources.length === 0) {
-            window.location.href = '/connect-accounts';
+            navigate('/connect-accounts', { replace: true });
           } else {
-            window.location.href = '/dashboard';
+            navigate('/dashboard', { replace: true });
           }
         })
         .catch(err => {
           console.error('OAuth getMe error:', err);
-          window.location.href = '/';
+          clearAuth();
+          navigate('/login', { replace: true });
         });
+    } else {
+      navigate('/login', { replace: true });
     }
-  }, [code, setAuth]);
+  }, [code, setAuth, clearAuth, navigate]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-neutral-50 dark:bg-dark-bg text-brand-600 dark:text-brand-400 font-sans">
-      <svg className="animate-spin -ml-1 mr-3 h-8 w-8 text-brand-600 dark:text-brand-400 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-      </svg>
-      <p className="font-medium text-lg">Authenticating safely...</p>
+      <div className="relative">
+        <div className="w-16 h-16 border-4 border-brand-200 dark:border-brand-900 rounded-full animate-pulse"></div>
+        <svg className="animate-spin absolute top-0 left-0 h-16 w-16 text-brand-600 dark:text-brand-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+      </div>
+      <p className="font-black text-xl mt-8 tracking-tight">Authenticating Safely...</p>
+      <p className="text-neutral-400 text-xs font-bold mt-2 uppercase tracking-widest">Finalizing your secure session</p>
     </div>
   );
 };

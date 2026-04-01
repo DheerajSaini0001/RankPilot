@@ -1,6 +1,24 @@
 import DailyMetric from '../models/DailyMetric.js';
 import UserAccounts from '../models/UserAccounts.js';
+import mongoose from 'mongoose';
 import { syncGsc, syncGa4, syncGoogleAds, syncFacebookAds } from '../services/syncService.js';
+import NodeCache from 'node-cache';
+
+// Initialize cache with 10-minute TTL
+const analyticsCache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
+
+// Helper to generate a unique cache key based on user, site, and filters
+const getAnalyticsCacheKey = (userId, prefix, query) => {
+    const { startDate, endDate, siteId, device, campaign, channel } = query;
+    return `${prefix}_${userId}_${siteId || 'any'}_${startDate}_${endDate}_${device || ''}_${campaign || ''}_${channel || ''}`;
+};
+
+// Helper to clear all cache for a specific user (used after sync)
+const clearUserCache = (userId) => {
+    const keys = analyticsCache.keys();
+    const userKeys = keys.filter(k => k.includes(`_${userId}_`));
+    if (userKeys.length > 0) analyticsCache.del(userKeys);
+};
 
 export const buildMatchFilter = async (userId, source, query) => {
     const { startDate, endDate, device, campaign, channel, siteId } = query;
@@ -8,23 +26,17 @@ export const buildMatchFilter = async (userId, source, query) => {
     // Crucial: Use metadata prefix for Timeseries partitioning/filtering
     const filter = { 
         'metadata.userId': userId, 
+        'metadata.siteId': siteId ? (typeof siteId === 'string' ? new mongoose.Types.ObjectId(siteId) : siteId) : undefined,
         date: { $gte: new Date(startDate), $lte: new Date(endDate) } 
     };
     
-    if (siteId) {
-        const acc = await UserAccounts.findOne({ _id: siteId, userId });
-        if (acc) {
-            if (source === 'ga4') filter['metadata.platformAccountId'] = acc.ga4PropertyId;
-            else if (source === 'gsc') filter['metadata.platformAccountId'] = acc.gscSiteUrl;
-            else if (source === 'google-ads') filter['metadata.platformAccountId'] = acc.googleAdsCustomerId;
-            else if (source === 'facebook-ads') filter['metadata.platformAccountId'] = acc.facebookAdAccountId;
-            else if (Array.isArray(source)) {
-                filter.$or = [
-                    { 'metadata.source': 'google-ads', 'metadata.platformAccountId': acc.googleAdsCustomerId },
-                    { 'metadata.source': 'facebook-ads', 'metadata.platformAccountId': acc.facebookAdAccountId }
-                ];
-            }
-        }
+    // Cleanup if siteId is undefined
+    if (!siteId) delete filter['metadata.siteId'];
+
+    if (source && !Array.isArray(source)) {
+        filter['metadata.source'] = source;
+    } else if (Array.isArray(source)) {
+        filter['metadata.source'] = { $in: source };
     }
 
     if (source && !filter.$or) {
@@ -45,6 +57,11 @@ export const buildMatchFilter = async (userId, source, query) => {
 export const getDashboardSummary = async (req, res) => {
     const { startDate, endDate } = req.query;
     const userId = req.user._id;
+
+    // 1. Check Cache
+    const cacheKey = getAnalyticsCacheKey(userId, 'dash', req.query);
+    const cachedData = analyticsCache.get(cacheKey);
+    if (cachedData) return res.status(200).json(cachedData);
 
     try {
         // Calculate previous period for growth comparison
@@ -163,7 +180,7 @@ export const getDashboardSummary = async (req, res) => {
             insights.push({ title: 'Node Sync', desc: 'All data streams are currently synchronized and reflecting real-time metrics.', color: 'neutral', icon: 'CloudArrowUpIcon' });
         }
 
-        res.status(200).json({
+        const result = {
             ga4: { ...ga4, growth: calculateGrowth(ga4.sessions, prevGa4.sessions) },
             gsc: { ...gsc, growth: calculateGrowth(gsc.clicks, prevGsc.clicks) },
             googleAds: { ...gAds, growth: calculateGrowth(gAds.conversions, prevGAds.conversions) },
@@ -177,7 +194,12 @@ export const getDashboardSummary = async (req, res) => {
                 share: ga4.pageViews > 0 ? Math.round((p.views / ga4.pageViews) * 100) : 0
             })),
             insights: insights.slice(0, 3)
-        });
+        };
+
+        // 2. Set Cache before sending
+        analyticsCache.set(cacheKey, result);
+
+        res.status(200).json(result);
     } catch (error) {
         console.error('Dashboard Summary Error:', error);
         res.status(500).json({ success: false, message: 'Failed to fetch dashboard summary' });
@@ -187,6 +209,10 @@ export const getDashboardSummary = async (req, res) => {
 export const getGa4Summary = async (req, res) => {
     const { startDate, endDate } = req.query;
     const userId = req.user._id;
+
+    const cacheKey = getAnalyticsCacheKey(userId, 'ga4', req.query);
+    const cachedData = analyticsCache.get(cacheKey);
+    if (cachedData) return res.status(200).json(cachedData);
 
     try {
         const filter = await buildMatchFilter(userId, 'ga4', req.query);
@@ -277,7 +303,7 @@ export const getGa4Summary = async (req, res) => {
         ]);
 
 
-        res.status(200).json({
+        const result = {
             overview: overview[0] || { users: 0, sessions: 0, bounceRate: 0, avgSessionDuration: 0, pageViews: 0 },
             priorOverview: priorOverview[0] || { users: 0, sessions: 0, bounceRate: 0, avgSessionDuration: 0, pageViews: 0 },
             timeseries: timeseries.map(d => ({ 
@@ -293,7 +319,10 @@ export const getGa4Summary = async (req, res) => {
                 devices: (ga4BreakdownsDevices || []).map(d => ({ name: d._id || 'unknown', value: d.value })),
                 locations: (ga4BreakdownsLocations || []).map(d => ({ name: d._id || 'unknown', value: d.value }))
             }
-        });
+        };
+
+        analyticsCache.set(cacheKey, result);
+        res.status(200).json(result);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -302,6 +331,10 @@ export const getGa4Summary = async (req, res) => {
 export const getGscSummary = async (req, res) => {
     const { startDate, endDate } = req.query;
     const userId = req.user._id;
+
+    const cacheKey = getAnalyticsCacheKey(userId, 'gsc', req.query);
+    const cachedData = analyticsCache.get(cacheKey);
+    if (cachedData) return res.status(200).json(cachedData);
 
     try {
         const filter = await buildMatchFilter(userId, 'gsc', req.query);
@@ -381,7 +414,7 @@ export const getGscSummary = async (req, res) => {
         const ov = overview[0] || { clicks: 0, impressions: 0, position: 0 };
         const pov = priorOverview[0] || { clicks: 0, impressions: 0, position: 0 };
 
-        res.status(200).json({
+        const result = {
             overview: { ...ov, ctr: ov.impressions > 0 ? ov.clicks / ov.impressions : 0 },
             priorOverview: { ...pov, ctr: pov.impressions > 0 ? pov.clicks / pov.impressions : 0 },
             timeseries: timeseries.map(d => ({ 
@@ -395,7 +428,10 @@ export const getGscSummary = async (req, res) => {
             pages: pages.map(d => ({ page: d._id, clicks: d.clicks, impressions: d.impressions, ctr: d.impressions > 0 ? d.clicks / d.impressions : 0, position: d.position })),
             devices: deviceBreakdown.map(d => ({ name: d._id || 'unknown', value: d.value })),
             countries: countryBreakdown.map(d => ({ name: d._id || 'unknown', value: d.value }))
-        });
+        };
+
+        analyticsCache.set(cacheKey, result);
+        res.status(200).json(result);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -404,6 +440,10 @@ export const getGscSummary = async (req, res) => {
 export const getGoogleAdsSummary = async (req, res) => {
     const { startDate, endDate } = req.query;
     const userId = req.user._id;
+
+    const cacheKey = getAnalyticsCacheKey(userId, 'gads', req.query);
+    const cachedData = analyticsCache.get(cacheKey);
+    if (cachedData) return res.status(200).json(cachedData);
 
     try {
         const start = new Date(startDate);
@@ -481,7 +521,7 @@ export const getGoogleAdsSummary = async (req, res) => {
         const ov = overview[0] || { cost: 0, impressions: 0, clicks: 0, conversions: 0 };
         const pov = priorOverview[0] || { cost: 0, impressions: 0, clicks: 0, conversions: 0 };
 
-        res.status(200).json({
+        const result = {
             overview: {
                 ...ov,
                 spend: ov.cost,
@@ -522,7 +562,10 @@ export const getGoogleAdsSummary = async (req, res) => {
                 ctr: d.impressions > 0 ? d.clicks / d.impressions : 0,
                 cpc: d.clicks > 0 ? d.cost / d.clicks : 0
             }))
-        });
+        };
+
+        analyticsCache.set(cacheKey, result);
+        res.status(200).json(result);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -531,6 +574,10 @@ export const getGoogleAdsSummary = async (req, res) => {
 export const getFacebookAdsSummary = async (req, res) => {
     const { startDate, endDate } = req.query;
     const userId = req.user._id;
+
+    const cacheKey = getAnalyticsCacheKey(userId, 'fbads', req.query);
+    const cachedData = analyticsCache.get(cacheKey);
+    if (cachedData) return res.status(200).json(cachedData);
 
     try {
         const start = new Date(startDate);
@@ -615,7 +662,7 @@ export const getFacebookAdsSummary = async (req, res) => {
         const ov = overview[0] || { spend: 0, impressions: 0, clicks: 0, conversions: 0, reach: 0, purchase_value: 0 };
         const pov = priorOverview[0] || { spend: 0, impressions: 0, clicks: 0, conversions: 0, reach: 0, purchase_value: 0 };
 
-        res.status(200).json({
+        const result = {
             overview: {
                 ...ov,
                 ctr: ov.impressions > 0 ? (ov.clicks / ov.impressions) * 100 : 0,
@@ -656,7 +703,10 @@ export const getFacebookAdsSummary = async (req, res) => {
                 ctr: d.impressions > 0 ? (d.clicks / d.impressions) * 100 : 0,
                 cpc: d.clicks > 0 ? d.spend / d.clicks : 0
             }))
-        });
+        };
+
+        analyticsCache.set(cacheKey, result);
+        res.status(200).json(result);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -711,6 +761,9 @@ export const syncAccountData = async (req, res) => {
             syncStatus: 'idle', 
             lastDailySyncAt: new Date() 
         });
+
+        // Clear cache for this user since data has changed
+        clearUserCache(userId);
 
         res.status(200).json({ 
             success: true, 

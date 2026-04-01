@@ -4,6 +4,7 @@ const dailyMetricSchema = new mongoose.Schema({
     // metadata: { userId, source, platformAccountId, dimensions }
     metadata: {
         userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+        siteId: { type: mongoose.Schema.Types.ObjectId, ref: 'UserAccounts', required: true },
         source: { type: String, required: true, enum: ['ga4', 'gsc', 'google-ads', 'facebook-ads'] },
         platformAccountId: { type: String, required: true },
         dimensions: { type: mongoose.Schema.Types.Mixed, default: {} }
@@ -23,8 +24,8 @@ const dailyMetricSchema = new mongoose.Schema({
     }
 });
 
-// Compound Index for fast lookups (Timeseries handles basic time indexing)
-dailyMetricSchema.index({ 'metadata.userId': 1, 'metadata.source': 1, date: 1 });
+// Compound Index for fast lookups across sites and sources (Timeseries automatically handles timeField)
+dailyMetricSchema.index({ 'metadata.userId': 1, 'metadata.siteId': 1, 'metadata.source': 1 });
 dailyMetricSchema.index({ 'metadata.platformAccountId': 1 });
 
 // Helper indexes for common dimension filters within metadata

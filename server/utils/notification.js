@@ -5,7 +5,7 @@ import Notification from '../models/Notification.js';
  * @param {string} userId - The ID of the user
  * @param {object} data - Notification data (type, title, message, source, actionLabel, actionPath)
  */
-export const createNotification = async (userId, { type = 'info', title, message, source = 'system', actionLabel = null, actionPath = null }) => {
+export const createNotification = async (userId, { type = 'info', title, message, source = 'system', actionLabel = null, actionPath = null, siteId = null }) => {
     try {
         await Notification.create({
             userId,
@@ -14,7 +14,8 @@ export const createNotification = async (userId, { type = 'info', title, message
             message,
             source,
             actionLabel,
-            actionPath
+            actionPath,
+            siteId
         });
         return true;
     } catch (error) {

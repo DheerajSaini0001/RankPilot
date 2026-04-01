@@ -142,7 +142,7 @@ export const syncHistoricalData = async (accountId, source) => {
         await createNotification(acc.userId, {
             type: 'success',
             title: `${prettyName} Historical Sync Ready`,
-            message: `Last 3 years of ${prettyName} data for "${acc.siteName}" has been successfully synced.`,
+            message: `Last 1 year of ${prettyName} data for "${acc.siteName}" has been successfully synced.`,
             source: source,
             actionLabel: 'View Dashboard',
             actionPath: '/dashboard'
@@ -227,6 +227,7 @@ export const syncGa4 = async (acc, startDate, endDate) => {
                 updateOne: {
                     filter: {
                         'metadata.userId': userId,
+                        'metadata.siteId': acc._id,
                         'metadata.source': 'ga4',
                         'metadata.platformAccountId': acc.ga4PropertyId,
                         date: formattedDate,
@@ -275,12 +276,13 @@ export const syncGsc = async (acc, startDate, endDate) => {
     const res = await runGscQuery(userId, acc.gscSiteUrl, 'ultra_detail_sync', startDate, endDate, ['date', 'page', 'query', 'device', 'country'], acc.gscTokenId);
 
     if (res.rows) {
-        const operations = res.rows.slice(0, 25000).map(row => {
+        const operations = res.rows.map(row => {
             const rowDate = new Date(row.keys[0]);
             return {
                 updateOne: {
                     filter: {
                         'metadata.userId': userId,
+                        'metadata.siteId': acc._id,
                         'metadata.source': 'gsc',
                         'metadata.platformAccountId': acc.gscSiteUrl,
                         date: rowDate,
@@ -329,6 +331,7 @@ export const syncGoogleAds = async (acc, startDate, endDate) => {
                 updateOne: {
                     filter: {
                         'metadata.userId': userId,
+                        'metadata.siteId': acc._id,
                         'metadata.source': 'google-ads',
                         'metadata.platformAccountId': acc.googleAdsCustomerId,
                         date: rowDate,
@@ -385,6 +388,7 @@ export const syncFacebookAds = async (acc, startDate, endDate) => {
                 updateOne: {
                     filter: {
                         'metadata.userId': userId,
+                        'metadata.siteId': acc._id,
                         'metadata.source': 'facebook-ads',
                         'metadata.platformAccountId': acc.facebookAdAccountId,
                         date: rowDate,
@@ -399,8 +403,25 @@ export const syncFacebookAds = async (acc, startDate, endDate) => {
                                 impressions: parseFloat(row.impressions || 0),
                                 clicks: parseFloat(row.clicks || 0),
                                 reach: parseFloat(row.reach || 0),
-                                conversions: parseFloat(row.conversions?.[0]?.value || row.actions?.find(a => a.action_type === 'offsite_conversion.fb_pixel_purchase')?.value || row.actions?.find(a => a.action_type === 'purchase')?.value || 0),
-                                purchase_value: parseFloat(row.action_values?.find(a => a.action_type === 'offsite_conversion.fb_pixel_purchase')?.value || row.action_values?.find(a => a.action_type === 'purchase')?.value || 0),
+                                conversions: parseFloat(
+                                    (row.actions || []).reduce((acc, action) => {
+                                        const convTypes = [
+                                            'offsite_conversion.fb_pixel_purchase',
+                                            'offsite_conversion.fb_pixel_lead',
+                                            'offsite_conversion.fb_pixel_complete_registration',
+                                            'offsite_conversion.fb_pixel_add_to_cart',
+                                            'offsite_conversion.fb_pixel_contact',
+                                            'offsite_conversion.fb_pixel_submit_application',
+                                            'purchase',
+                                            'lead'
+                                        ];
+                                        if (convTypes.includes(action.action_type)) {
+                                            return acc + parseFloat(action.value || 0);
+                                        }
+                                        return acc;
+                                    }, 0) || row.conversions?.[0]?.value || 0
+                                ),
+                                purchase_value: parseFloat(row.action_values?.find(a => a.action_type === 'offsite_conversion.fb_pixel_purchase' || a.action_type === 'purchase')?.value || 0),
                                 landing_page_views: parseFloat(row.actions?.find(a => a.action_type === 'landing_page_view')?.value || 0),
                                 link_clicks: parseFloat(row.actions?.find(a => a.action_type === 'link_click')?.value || 0),
                                 frequency: parseFloat(row.frequency || 0),

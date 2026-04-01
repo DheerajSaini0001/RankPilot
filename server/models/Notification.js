@@ -7,6 +7,12 @@ const notificationSchema = new mongoose.Schema({
         required: true,
         index: true
     },
+    siteId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'UserAccounts',
+        default: null,
+        index: true
+    },
     type: {
         type: String,
         enum: ['success', 'info', 'warning', 'error'],

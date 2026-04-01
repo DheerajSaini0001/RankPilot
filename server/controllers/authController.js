@@ -8,6 +8,10 @@ import GoogleToken from '../models/GoogleToken.js';
 import FacebookToken from '../models/FacebookToken.js';
 import UserAccounts from '../models/UserAccounts.js';
 import Conversation from '../models/Conversation.js';
+import DailyMetric from '../models/DailyMetric.js';
+import Message from '../models/Message.js';
+import Notification from '../models/Notification.js';
+import WeeklyInsight from '../models/WeeklyInsight.js';
 import { sendPasswordResetEmail, sendVerificationEmail } from '../utils/emailService.js';
 
 const generateToken = (userId, email) => {
@@ -24,7 +28,8 @@ export const register = async (req, res) => {
 
     const salt = await bcrypt.genSalt(12);
     const passwordHash = await bcrypt.hash(password, salt);
-    const emailVerifyToken = crypto.randomUUID();
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const emailVerifyToken = crypto.createHash('sha256').update(rawToken).digest('hex');
 
     const user = await User.create({
         displayName: name,
@@ -46,12 +51,12 @@ export const register = async (req, res) => {
 
 
     try {
-        await sendVerificationEmail(email, emailVerifyToken);
+        await sendVerificationEmail(email, rawToken);
     } catch (emailErr) {
         console.error('Verification email failed:', emailErr.message);
         console.log(`\n================================`);
         console.log(`✅ VERIFY EMAIL LINK (use this locally):`);
-        console.log(`${process.env.CLIENT_URL || 'http://localhost:5173'}/verify-email?token=${emailVerifyToken}`);
+        console.log(`${process.env.CLIENT_URL || 'http://localhost:5173'}/verify-email?token=${rawToken}`);
         console.log(`================================\n`);
     }
 
@@ -60,7 +65,8 @@ export const register = async (req, res) => {
 
 export const verifyEmail = async (req, res) => {
     const { token } = req.params;
-    const user = await User.findOne({ emailVerifyToken: token });
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const user = await User.findOne({ emailVerifyToken: hashedToken });
 
     if (!user) {
         return res.status(400).json({ success: false, code: 'TOKEN_INVALID', message: 'Invalid or already used verification link.' });
@@ -93,11 +99,12 @@ export const resendVerification = async (req, res) => {
     }
 
     // Generate fresh token
-    user.emailVerifyToken = crypto.randomUUID();
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    user.emailVerifyToken = crypto.createHash('sha256').update(rawToken).digest('hex');
     await user.save();
 
     try {
-        await sendVerificationEmail(user.email, user.emailVerifyToken);
+        await sendVerificationEmail(user.email, rawToken);
     } catch (emailErr) {
         console.error('Resend verification email failed:', emailErr.message);
     }
@@ -162,12 +169,13 @@ export const forgotPassword = async (req, res) => {
     const user = await User.findOne({ email });
 
     if (user) {
-        user.passwordResetToken = crypto.randomUUID();
+        const rawToken = crypto.randomBytes(32).toString('hex');
+        user.passwordResetToken = crypto.createHash('sha256').update(rawToken).digest('hex');
         user.passwordResetExp = Date.now() + 3600000; // 1 hour
         await user.save();
 
         try {
-            await sendPasswordResetEmail(user.email, user.passwordResetToken);
+            await sendPasswordResetEmail(user.email, rawToken);
         } catch (emailErr) {
             console.error('Email send failed:', emailErr.message);
         }
@@ -178,7 +186,8 @@ export const forgotPassword = async (req, res) => {
 
 export const resetPassword = async (req, res) => {
     const { token, newPassword } = req.body;
-    const user = await User.findOne({ passwordResetToken: token, passwordResetExp: { $gt: Date.now() } });
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const user = await User.findOne({ passwordResetToken: hashedToken, passwordResetExp: { $gt: Date.now() } });
 
     if (!user) {
         return res.status(400).json({ success: false, message: 'Invalid or expired token' });
@@ -222,11 +231,24 @@ export const getMe = async (req, res) => {
 };
 
 export const deleteMe = async (req, res) => {
-    await GoogleToken.deleteMany({ userId: req.user._id });
-    await FacebookToken.deleteMany({ userId: req.user._id });
-    await UserAccounts.deleteMany({ userId: req.user._id });
-    await Conversation.deleteMany({ userId: req.user._id });
-    await User.findByIdAndDelete(req.user._id);
+    const userId = req.user._id;
 
-    res.status(200).json({ message: 'Account deleted' });
+    // 1. Find all conversations for this user to delete their messages
+    const userConversations = await Conversation.find({ userId }).select('_id');
+    const convIds = userConversations.map(c => c._id);
+
+    // 2. Delete all related data
+    await Promise.all([
+        GoogleToken.deleteMany({ userId }),
+        FacebookToken.deleteMany({ userId }),
+        UserAccounts.deleteMany({ userId }),
+        DailyMetric.deleteMany({ 'metadata.userId': userId }),
+        Notification.deleteMany({ userId }),
+        WeeklyInsight.deleteMany({ userId }),
+        Message.deleteMany({ conversationId: { $in: convIds } }),
+        Conversation.deleteMany({ userId }),
+        User.findByIdAndDelete(userId)
+    ]);
+
+    res.status(200).json({ message: 'Account and all associated records deleted permanently.' });
 };

@@ -65,13 +65,12 @@ async function performSiteDelete(userId, siteId, account = null) {
         await Conversation.deleteMany({ _id: { $in: convIds } });
     }
 
-    // 3. Delete weekly insights
+    // 3. Delete weekly insights and notifications
     await WeeklyInsight.deleteMany({ siteId, userId });
+    await Notification.deleteMany({ siteId, userId });
 
-    // 4. Delete daily metrics
-    for (const pid of platformIds) {
-        await cleanupMetrics(userId, pid, siteId);
-    }
+    // 4. Delete all metrics associated with this specific site strictly by siteId
+    await DailyMetric.deleteMany({ 'metadata.siteId': siteId, 'metadata.userId': userId });
 
     // 5. Finally delete the site record
     await UserAccounts.deleteOne({ _id: siteId, userId });
