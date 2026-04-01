@@ -42,6 +42,6 @@ const notificationSchema = new mongoose.Schema({
 });
 
 // Index to automatically delete old notifications (optional, e.g., after 30 days)
-// notificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 2592000 });
+notificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 2592000 });
 
 export default mongoose.model('Notification', notificationSchema);
