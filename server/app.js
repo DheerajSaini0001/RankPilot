@@ -10,10 +10,6 @@ import { globalLimiter } from './middleware/rateLimiter.js';
 import authRoutes from './routes/authRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import accountRoutes from './routes/accountRoutes.js';
-import ga4Routes from './routes/ga4Routes.js';
-import gscRoutes from './routes/gscRoutes.js';
-import googleAdsRoutes from './routes/googleAdsRoutes.js';
-import facebookAdsRoutes from './routes/facebookAdsRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
@@ -48,13 +44,10 @@ app.get('/health', (req, res) => res.status(200).json({ status: 'ok', timestamp:
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/accounts', accountRoutes);
-app.use('/api/ga4', ga4Routes);
-app.use('/api/gsc', gscRoutes);
-app.use('/api/google-ads', googleAdsRoutes);
-app.use('/api/facebook-ads', facebookAdsRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/', (req, res) => res.send('RankPilot Backend is running'));
 
 app.use(errorHandler);
 

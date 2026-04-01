@@ -180,7 +180,7 @@ export const notify = {
             actionPath: '/connect-accounts',
         }),
 
-    aiInsightReady: (siteId) =>
+    aiInsightReady: () =>
         useNotificationStore.getState().addNotification({
             type: 'info',
             title: 'Weekly AI Insight Ready',

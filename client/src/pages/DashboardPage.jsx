@@ -16,11 +16,7 @@ import {
   GlobeAltIcon,
   ArrowRightIcon,
   SparklesIcon,
-  CommandLineIcon,
-  ClockIcon,
-  ChevronRightIcon,
-  QuestionMarkCircleIcon,
-  Cog6ToothIcon
+  ChevronRightIcon
 } from '@heroicons/react/24/outline';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import api from '../api';

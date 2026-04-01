@@ -57,17 +57,13 @@ export const getDashboardSummary = async (req, res) => {
         const prevEndDate = prevEnd.toISOString().split('T')[0];
 
         // Fetch everything in parallel
-        const [ga4Filter, gscFilter, adsFilter, tsGa4Filter, tsGscFilter, tsAdsFilter, prevGa4Filter, prevGscFilter, prevAdsFilter, topPagesFilter] = await Promise.all([
-            buildMatchFilter(userId, 'ga4', req.query),
-            buildMatchFilter(userId, 'gsc', req.query),
-            buildMatchFilter(userId, ['google-ads', 'facebook-ads'], req.query),
+        const [ga4Filter, gscFilter, adsFilter, prevGa4Filter, prevGscFilter, prevAdsFilter] = await Promise.all([
             buildMatchFilter(userId, 'ga4', req.query),
             buildMatchFilter(userId, 'gsc', req.query),
             buildMatchFilter(userId, ['google-ads', 'facebook-ads'], req.query),
             buildMatchFilter(userId, 'ga4', { ...req.query, startDate: prevStartDate, endDate: prevEndDate }),
             buildMatchFilter(userId, 'gsc', { ...req.query, startDate: prevStartDate, endDate: prevEndDate }),
-            buildMatchFilter(userId, ['google-ads', 'facebook-ads'], { ...req.query, startDate: prevStartDate, endDate: prevEndDate }),
-            buildMatchFilter(userId, 'ga4', req.query)
+            buildMatchFilter(userId, ['google-ads', 'facebook-ads'], { ...req.query, startDate: prevStartDate, endDate: prevEndDate })
         ]);
 
         const [ga4Data, gscData, adsData, ga4Ts, gscTs, adsTs, prevGa4Data, prevGscData, prevAdsData, topPages] = await Promise.all([
@@ -77,9 +73,9 @@ export const getDashboardSummary = async (req, res) => {
             DailyMetric.aggregate([ { $match: adsFilter }, { $group: { _id: "$metadata.source", spend: { $sum: "$metrics.spend" }, impressions: { $sum: "$metrics.impressions" }, clicks: { $sum: "$metrics.clicks" }, conversions: { $sum: "$metrics.conversions" }, reach: { $sum: "$metrics.reach" }, purchaseValue: { $sum: "$metrics.purchase_value" } }} ]),
             
             // Timeseries (Format Date to string for frontend compatibility)
-            DailyMetric.aggregate([ { $match: tsGa4Filter }, { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, sessions: { $sum: "$metrics.sessions" } }}, { $sort: { _id: 1 } } ]),
-            DailyMetric.aggregate([ { $match: tsGscFilter }, { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, clicks: { $sum: "$metrics.clicks" }, impressions: { $sum: "$metrics.impressions" } }}, { $sort: { _id: 1 } } ]),
-            DailyMetric.aggregate([ { $match: tsAdsFilter }, { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, spend: { $sum: "$metrics.spend" }, conversions: { $sum: "$metrics.conversions" } }}, { $sort: { _id: 1 } } ]),
+            DailyMetric.aggregate([ { $match: ga4Filter }, { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, sessions: { $sum: "$metrics.sessions" } }}, { $sort: { _id: 1 } } ]),
+            DailyMetric.aggregate([ { $match: gscFilter }, { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, clicks: { $sum: "$metrics.clicks" }, impressions: { $sum: "$metrics.impressions" } }}, { $sort: { _id: 1 } } ]),
+            DailyMetric.aggregate([ { $match: adsFilter }, { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, spend: { $sum: "$metrics.spend" }, conversions: { $sum: "$metrics.conversions" } }}, { $sort: { _id: 1 } } ]),
             
             // Previous Period (for growth)
             DailyMetric.aggregate([ { $match: prevGa4Filter }, { $group: { _id: null, sessions: { $sum: "$metrics.sessions" } }} ]),
@@ -88,7 +84,7 @@ export const getDashboardSummary = async (req, res) => {
 
             // Top Pages
             DailyMetric.aggregate([
-                { $match: topPagesFilter },
+                { $match: ga4Filter },
                 { $group: {
                     _id: "$metadata.dimensions.pagePath",
                     views: { $sum: "$metrics.pageViews" },
