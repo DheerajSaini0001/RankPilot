@@ -27,13 +27,54 @@ import {
 } from 'recharts';
 
 const ChartRenderer = ({ type, data }) => {
-  if (!data || !data.labels || !data.datasets) return null;
+  // Global Deep Search: Finds a key anywhere in the object tree
+  const deepFind = (obj, targetKeys) => {
+    if (!obj || typeof obj !== 'object') return null;
+    for (const key of targetKeys) { if (obj[key] !== undefined) return obj[key]; }
+    if (obj.data && !Array.isArray(obj.data)) { const found = deepFind(obj.data, targetKeys); if (found) return found; }
+    if (obj.chartData) { const found = deepFind(obj.chartData, targetKeys); if (found) return found; }
+    return null;
+  };
+
+  // Extract core components with smart fallback
+  let datasets = deepFind(data, ['datasets', 'dataset', 'series', 'values']);
+  let labels = deepFind(data, ['labels', 'label', 'x_axis', 'categories', 'names']);
+
+  // Handle "Recharts style" where data is the list of objects
+  if (!labels && Array.isArray(data?.data)) {
+    const xKey = data.x_axis_key || 'name' || 'date';
+    labels = data.data.map(item => item[xKey] || item.name || item.date || item.label);
+    
+    // If datasets is missing but series exist, use series
+    if (!datasets && data.series) {
+        datasets = data.series.map(s => ({
+            label: s.label || s.name || s,
+            data: data.data.map(item => item[s.key || s.dataKey || s.label || s])
+        }));
+    }
+  }
+
+  if (!labels || !datasets || !Array.isArray(labels) || !Array.isArray(datasets)) {
+    return (
+      <div className="my-4 p-5 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-2xl text-[11px] text-red-500 font-mono leading-relaxed shadow-sm">
+        <div className="font-black mb-1 opacity-60 uppercase tracking-widest flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+            Visualisation System Error
+        </div>
+        <div className="opacity-70">Structure mismatch. Received: {Object.keys(data || {}).join(', ')}</div>
+      </div>
+    );
+  }
+
+  const actualData = { labels, datasets, title: data?.title || data?.data?.title };
 
   // Reformat data for Recharts (array of objects)
-  const chartData = data.labels.map((label, index) => {
+  const chartData = actualData.labels.map((label, index) => {
     const entry = { name: label };
-    data.datasets.forEach(dataset => {
-      entry[dataset.label] = dataset.data[index] || 0;
+    actualData.datasets.forEach(dataset => {
+      const dataArray = Array.isArray(dataset) ? dataset : (dataset.data || dataset.values || []);
+      const dsLabel = dataset.label || dataset.name || "Value";
+      entry[dsLabel] = dataArray[index] !== undefined ? dataArray[index] : 0;
     });
     return entry;
   });
@@ -81,7 +122,7 @@ const ChartRenderer = ({ type, data }) => {
              }}
            />
           <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '20px' }} />
-          {data.datasets.map((ds, i) => (
+          {actualData.datasets.map((ds, i) => (
             <Line 
               key={ds.label} 
               type="monotone" 
@@ -123,7 +164,7 @@ const ChartRenderer = ({ type, data }) => {
             }}
           />
           <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '20px' }} />
-          {data.datasets.map((ds, i) => (
+          {actualData.datasets.map((ds, i) => (
             <Bar 
               key={ds.label} 
               dataKey={ds.label} 
@@ -139,7 +180,7 @@ const ChartRenderer = ({ type, data }) => {
       return (
         <AreaChart {...commonProps}>
           <defs>
-            {data.datasets.map((ds, i) => (
+            {actualData.datasets.map((ds, i) => (
               <linearGradient key={`grad-${i}`} id={`color-${i}`} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor={colors[i % colors.length]} stopOpacity={0.3} />
                 <stop offset="95%" stopColor={colors[i % colors.length]} stopOpacity={0} />
@@ -170,7 +211,7 @@ const ChartRenderer = ({ type, data }) => {
             }}
           />
           <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '20px' }} />
-          {data.datasets.map((ds, i) => (
+          {actualData.datasets.map((ds, i) => (
             <Area 
               key={ds.label} 
               type="monotone" 
@@ -187,9 +228,9 @@ const ChartRenderer = ({ type, data }) => {
 
     if (typeLower === 'pie' || typeLower === 'donut') {
       // For Pie/Donut, we usually use the first dataset
-      const pieData = data.labels.map((label, index) => ({
+      const pieData = actualData.labels.map((label, index) => ({
         name: label,
-        value: data.datasets[0].data[index] || 0
+        value: actualData.datasets[0].data[index] || 0
       }));
 
       return (
@@ -230,7 +271,7 @@ const ChartRenderer = ({ type, data }) => {
           <PolarGrid stroke={document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'} />
           <PolarAngleAxis dataKey="name" tick={{ fontSize: 10, fill: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280' }} />
           <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={{ fontSize: 10, fill: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280' }} />
-          {data.datasets.map((ds, i) => (
+          {actualData.datasets.map((ds, i) => (
             <Radar
               key={ds.label}
               name={ds.label}
@@ -284,7 +325,7 @@ const ChartRenderer = ({ type, data }) => {
             }} 
           />
           <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '20px' }} />
-          {data.datasets.map((ds, i) => (
+          {actualData.datasets.map((ds, i) => (
             <Scatter 
               key={ds.label} 
               name={ds.label} 
@@ -324,7 +365,7 @@ const ChartRenderer = ({ type, data }) => {
             }}
           />
           <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '20px' }} />
-          {data.datasets.map((ds, i) => {
+          {actualData.datasets.map((ds, i) => {
             if (i === 0) return <Bar key={ds.label} dataKey={ds.label} barSize={20} fill={colors[0]} radius={[4, 4, 0, 0]} />;
             if (i === 1) return <Line key={ds.label} type="monotone" dataKey={ds.label} stroke={colors[1]} strokeWidth={3} />;
             return <Area key={ds.label} type="monotone" dataKey={ds.label} fill={colors[i % colors.length]} stroke={colors[i % colors.length]} fillOpacity={0.2} />;
@@ -339,9 +380,9 @@ const ChartRenderer = ({ type, data }) => {
 
   return (
     <div className="w-full h-[320px] bg-white dark:bg-[#1a1a1a] border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 shadow-xl relative animate-in fade-in zoom-in duration-700">
-      {data.title && (
+      {actualData.title && (
         <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-500 mb-8 text-center bg-neutral-50 dark:bg-dark-bg/50 py-2 rounded-xl">
-          {data.title}
+          {actualData.title}
         </h4>
       )}
       <ResponsiveContainer width="100%" height="85%">

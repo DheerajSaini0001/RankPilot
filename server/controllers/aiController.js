@@ -1,31 +1,49 @@
-import { callGemini, callGeminiStream } from '../services/geminiService.js';
+import { startAgenticChat } from '../services/geminiService.js';
 import { createNotification } from '../utils/notification.js';
 
-import promptBuilder from '../services/promptBuilder.js';
 import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
 import WeeklyInsight from '../models/WeeklyInsight.js';
 import UserAccounts from '../models/UserAccounts.js';
 import DailyMetric from '../models/DailyMetric.js';
+import fs from 'fs';
+import path from 'path';
 
-const getAiResponse = async (prompt) => {
-    const start = Date.now();
-    try {
-        const result = await callGemini(prompt);
-        result.latencyMs = Date.now() - start;
-        return result;
-    } catch (err) {
-        console.error("Gemini AI Error:", err.message);
-        const isQuotaError = err.message.includes('429');
-        const error = new Error(isQuotaError 
-            ? 'Gemini Quota Exceeded (429). Your daily free tier limit has been reached. Please wait a minute.' 
-            : 'Gemini AI service is currently unavailable. Please try again later.');
-        error.statusCode = isQuotaError ? 429 : 503;
-        throw error;
+// Tools Configuration
+const aiTools = [
+    {
+        name: "get_market_data",
+        description: "Fetch comprehensive analytics (GA4), search performance (GSC), and PPC data (Google/Meta Ads). This tool provides Comparative Intelligence (Current vs Previous period) and starts multidimensional breakdowns for top queries, pages, and campaigns. Use it for performance audits, identifying growth/decline, and anomaly detection.",
+        parameters: {
+            type: "OBJECT",
+            properties: {
+                startDate: { type: "STRING", description: "Start date in YYYY-MM-DD format. Crucial for trend analysis." },
+                endDate: { type: "STRING", description: "End date in YYYY-MM-DD format." },
+                sources: { 
+                    type: "ARRAY", 
+                    items: { type: "STRING" }, 
+                    description: "List of sources: 'ga4', 'gsc', 'google-ads', 'facebook-ads'. If empty, fetches all available platforms for a holistic audit." 
+                }
+            },
+            required: ["startDate", "endDate"]
+        }
     }
+];
+
+// Tool Executor
+const executeTool = async (name, args, userId, siteId) => {
+    if (name === "get_market_data") {
+        return await fetchPlatformData(userId, args.startDate, args.endDate, siteId, args.sources || []);
+    }
+    return { error: "Unknown tool" };
 };
 
 export const fetchPlatformData = async (userId, startDate, endDate, siteId, activeSources = []) => {
+    // Safety: Handle if AI sends a single string instead of an array
+    const sourceList = Array.isArray(activeSources) ? activeSources : (activeSources ? [activeSources] : []);
+
+    // Normalizing sources for AI reliability (handles spaces, underscores, and casing)
+    const normalizedActiveSources = sourceList.map(s => String(s).toLowerCase().trim().replace(/[\s_]/g, '-'));
 
     if (!startDate || !endDate) {
         const tzOffset = (new Date()).getTimezoneOffset() * 60000;
@@ -43,21 +61,35 @@ export const fetchPlatformData = async (userId, startDate, endDate, siteId, acti
     const userAcc = await UserAccounts.findOne(query).sort({ updatedAt: -1 });
     if (!userAcc) return data;
 
+    // --- High-Level Intelligence: Calculate Comparison Range (Previous Period) ---
+    const currentStart = new Date(startDate);
+    const currentEnd = new Date(endDate);
+    const daysDiff = Math.ceil((currentEnd.getTime() - currentStart.getTime()) / (1000 * 3600 * 24)) + 1;
+    
+    const prevEnd = new Date(currentStart);
+    prevEnd.setDate(prevEnd.getDate() - 1);
+    const prevStart = new Date(prevEnd);
+    prevStart.setDate(prevStart.getDate() - daysDiff + 1);
+
+    const prevStartStr = prevStart.toISOString().split('T')[0];
+    const prevEndStr = prevEnd.toISOString().split('T')[0];
+    data.comparisonRange = { startDate: prevStartStr, endDate: prevEndStr };
+
     const sourceMap = {
         'ga4': ['ga4'],
         'gsc': ['gsc'],
         'google-ads': ['google-ads'],
         'facebook-ads': ['facebook-ads']
     };
-    const dbSources = activeSources.flatMap(s => sourceMap[s] || [s]);
+    const dbSources = normalizedActiveSources.flatMap(s => sourceMap[s] || [s]);
 
+    // Fetch BOTH current and previous period logs
     const dailyQuery = { 
         'metadata.userId': userId,
-        date: { $gte: new Date(startDate), $lte: new Date(endDate) }
+        date: { $gte: prevStart, $lte: currentEnd }
     };
     if (dbSources.length > 0) dailyQuery['metadata.source'] = { $in: dbSources };
     
-    // Site-specific platform filter
     const platformIds = [];
     if (userAcc.ga4PropertyId) platformIds.push(userAcc.ga4PropertyId);
     if (userAcc.gscSiteUrl) platformIds.push(userAcc.gscSiteUrl);
@@ -65,111 +97,83 @@ export const fetchPlatformData = async (userId, startDate, endDate, siteId, acti
     if (userAcc.facebookAdAccountId) platformIds.push(userAcc.facebookAdAccountId);
     if (platformIds.length > 0) dailyQuery['metadata.platformAccountId'] = { $in: platformIds };
 
-    const dailyLogs = await DailyMetric.find(dailyQuery).sort({ date: 1 });
+    const allLogs = await DailyMetric.find(dailyQuery).sort({ date: 1 });
 
-    if (dailyLogs.length > 0) {
+    if (allLogs.length > 0) {
         const aggregated = {};
-        const sourceTotals = {};
-        const sourceEntryCount = {};
+        const sourceTotals = { current: {}, previous: {} };
+        const sourceEntryCount = { current: {}, previous: {} };
         
-        // Dimension tracking
-        const dimensions = {
-            queries: {}, 
-            pages: {}, 
-            pageQueryMap: {}, // { pagePath: { query: count } }
-            campaigns: {},
-            devices: {},
-            channels: {}
-        };
+        // Dimension tracking (Current Period only for simplicity)
+        const dimensions = { queries: {}, pages: {}, pageQueryMap: {}, campaigns: {}, devices: {}, channels: {} };
 
-        dailyLogs.forEach(log => {
+        allLogs.forEach(log => {
+            const isCurrent = log.date >= currentStart;
+            const periodKey = isCurrent ? 'current' : 'previous';
             const source = log.metadata.source;
             const dateStr = log.date.toISOString().split('T')[0];
-            const key = `${source}_${dateStr}`;
+            const aggKey = `${source}_${dateStr}`;
             
-            if (!sourceTotals[source]) {
-                sourceTotals[source] = {};
-                sourceEntryCount[source] = 0;
+            if (!sourceTotals[periodKey][source]) {
+                sourceTotals[periodKey][source] = {};
+                sourceEntryCount[periodKey][source] = 0;
             }
-            sourceEntryCount[source] += 1;
+            sourceEntryCount[periodKey][source] += 1;
 
-            // Daily Aggregation
-            if (!aggregated[key]) {
-                aggregated[key] = { source, date: dateStr, metrics: { ...log.metrics }, count: 1 };
-            } else {
-                aggregated[key].count += 1;
-                Object.keys(log.metrics).forEach(m => {
-                    if (typeof log.metrics[m] === 'number') {
-                        aggregated[key].metrics[m] = (aggregated[key].metrics[m] || 0) + log.metrics[m];
-                    }
-                });
+            // Daily Breakdowns (Current only)
+            if (isCurrent) {
+                if (!aggregated[aggKey]) {
+                    aggregated[aggKey] = { source, date: dateStr, metrics: { ...log.metrics }, count: 1 };
+                } else {
+                    aggregated[aggKey].count += 1;
+                    Object.keys(log.metrics).forEach(m => {
+                        if (typeof log.metrics[m] === 'number') aggregated[aggKey].metrics[m] = (aggregated[aggKey].metrics[m] || 0) + log.metrics[m];
+                    });
+                }
             }
 
-            // Overall Range Totals
+            // Overall Range Totals (Both Periods)
             Object.keys(log.metrics).forEach(m => {
                 if (typeof log.metrics[m] === 'number') {
-                    sourceTotals[source][m] = (sourceTotals[source][m] || 0) + log.metrics[m];
+                    sourceTotals[periodKey][source][m] = (sourceTotals[periodKey][source][m] || 0) + log.metrics[m];
                 }
             });
 
-            // Dimension Aggregation (from metadata)
-            if (log.metadata && log.metadata.dimensions) {
+            // Dimension Aggregation (Current only)
+            if (isCurrent && log.metadata && log.metadata.dimensions) {
                 const d = log.metadata.dimensions;
                 const m = log.metrics;
-                
                 if (d.query) {
                     if (!dimensions.queries[d.query]) dimensions.queries[d.query] = { clicks: 0, impressions: 0, positionSum: 0, count: 0 };
                     dimensions.queries[d.query].clicks += (m.clicks || 0);
                     dimensions.queries[d.query].impressions += (m.impressions || 0);
-                    if (m.position !== undefined) {
-                      dimensions.queries[d.query].positionSum += m.position;
-                      dimensions.queries[d.query].count += 1;
-                    }
+                    if (m.position !== undefined) { dimensions.queries[d.query].positionSum += m.position; dimensions.queries[d.query].count += 1; }
                 }
-                
                 if (d.page || d.pagePath) {
                     let page = d.page || d.pagePath;
-                    
-                    // Normalize URL to Path (GSC often gives full URLs, GA4 gives relative paths)
-                    if (page.startsWith('http')) {
-                        try {
-                            const urlObj = new URL(page);
-                            page = urlObj.pathname || '/';
-                        } catch (e) {
-                            // If invalid URL, use as is or try to fallback
-                            if (page.includes('://')) page = '/' + page.split('://')[1].split('/').slice(1).join('/');
-                        }
-                    }
+                    if (page.startsWith('http')) { try { const u = new URL(page); page = u.pathname || '/'; } catch (e) {} }
                     if (page === '') page = '/';
-
                     if (!dimensions.pages[page]) dimensions.pages[page] = { sessions: 0, bounceRateSum: 0, gscClicks: 0, gscImpressions: 0, gscPositionSum: 0, gscCount: 0, count: 0 };
-                    
-                    // GA4 Side
                     dimensions.pages[page].sessions += (m.sessions || 0);
-                    if (m.bounceRate !== undefined) {
-                        dimensions.pages[page].bounceRateSum += m.bounceRate;
-                        dimensions.pages[page].count += 1;
-                    }
-                    // GSC Side
+                    if (m.bounceRate !== undefined) { dimensions.pages[page].bounceRateSum += m.bounceRate; dimensions.pages[page].count += 1; }
                     dimensions.pages[page].gscClicks += (m.clicks || 0);
                     dimensions.pages[page].gscImpressions += (m.impressions || 0);
-                    if (source === 'gsc' && m.position !== undefined) {
-                        dimensions.pages[page].gscPositionSum += m.position;
-                        dimensions.pages[page].gscCount += 1;
-                    }
-
-                    // Map Query to Normalized Page Path
+                    if (source === 'gsc' && m.position !== undefined) { dimensions.pages[page].gscPositionSum += m.position; dimensions.pages[page].gscCount += 1; }
                     if (d.query) {
                         if (!dimensions.pageQueryMap[page]) dimensions.pageQueryMap[page] = {};
                         dimensions.pageQueryMap[page][d.query] = (dimensions.pageQueryMap[page][d.query] || 0) + (m.clicks || m.impressions || 0);
                     }
                 }
-                
                 if (d.campaign) dimensions.campaigns[d.campaign] = (dimensions.campaigns[d.campaign] || 0) + (m.conversions || m.clicks || 0);
                 if (d.device) dimensions.devices[d.device] = (dimensions.devices[d.device] || 0) + (m.sessions || m.clicks || 0);
                 if (d.channel) dimensions.channels[d.channel] = (dimensions.channels[d.channel] || 0) + (m.sessions || 0);
             }
         });
+
+        const getGrowth = (curr, prev) => {
+            if (!prev || prev === 0) return curr > 0 ? "100.0" : "0.0";
+            return (((curr - prev) / prev) * 100).toFixed(1);
+        };
 
         // Formatting for top dimensions
         data.topDimensions = {
@@ -233,57 +237,64 @@ export const fetchPlatformData = async (userId, startDate, endDate, siteId, acti
             return acc;
         }, {});
 
-        // Build Totals with safe averaging
-        if (sourceTotals['ga4']) {
-            const count = sourceEntryCount['ga4'];
+        // Build Totals with Growth Comparison
+        if (sourceTotals.current['ga4']) {
+            const curr = sourceTotals.current['ga4'];
+            const prev = sourceTotals.previous['ga4'] || {};
+            const count = sourceEntryCount.current['ga4'];
             data.ga4 = {
-                users: sourceTotals['ga4'].users || 0,
-                sessions: sourceTotals['ga4'].sessions || 0,
-                pageViews: sourceTotals['ga4'].pageViews || 0,
-                revenue: (sourceTotals['ga4'].revenue || 0).toFixed(2),
-                transactions: sourceTotals['ga4'].transactions || 0,
-                bounceRate: (sourceTotals['ga4'].bounceRate / count || 0).toFixed(2),
-                avgSessionDuration: (sourceTotals['ga4'].avgSessionDuration / count || 0).toFixed(1),
-                engagementRate: (sourceTotals['ga4'].engagementRate / count || 0).toFixed(2),
-                engagedSessions: sourceTotals['ga4'].engagedSessions || 0
+                users: curr.users || 0,
+                usersGrowth: getGrowth(curr.users, prev.users),
+                sessions: curr.sessions || 0,
+                sessionsGrowth: getGrowth(curr.sessions, prev.sessions),
+                pageViews: curr.pageViews || 0,
+                revenue: (curr.revenue || 0).toFixed(2),
+                revenueGrowth: getGrowth(curr.revenue, prev.revenue),
+                transactions: curr.transactions || 0,
+                engagementRate: (curr.engagementRate / count || 0).toFixed(2),
+                bounceRate: (curr.bounceRate / count || 0).toFixed(2)
             };
         }
-        if (sourceTotals['gsc']) {
-            const count = sourceEntryCount['gsc'];
+        if (sourceTotals.current['gsc']) {
+            const curr = sourceTotals.current['gsc'];
+            const prev = sourceTotals.previous['gsc'] || {};
+            const count = sourceEntryCount.current['gsc'];
             data.gsc = {
-                clicks: sourceTotals['gsc'].clicks || 0,
-                impressions: sourceTotals['gsc'].impressions || 0,
-                position: (sourceTotals['gsc'].position / count || 0).toFixed(1),
-                ctr: (sourceTotals['gsc'].ctr / count || 0).toFixed(2)
+                clicks: curr.clicks || 0,
+                clicksGrowth: getGrowth(curr.clicks, prev.clicks),
+                impressions: curr.impressions || 0,
+                impressionsGrowth: getGrowth(curr.impressions, prev.impressions),
+                position: (curr.position / count || 0).toFixed(1),
+                ctr: (curr.ctr / count || 0).toFixed(2)
             };
         }
-        if (sourceTotals['google-ads']) {
+        if (sourceTotals.current['google-ads']) {
+            const curr = sourceTotals.current['google-ads'];
+            const prev = sourceTotals.previous['google-ads'] || {};
+            const count = sourceEntryCount.current['google-ads'];
             data.googleAds = {
-                currencyCode: userAcc.googleAdsCurrencyCode || '$',
-                spend: (sourceTotals['google-ads'].spend || 0).toFixed(2),
-                impressions: sourceTotals['google-ads'].impressions || 0,
-                clicks: sourceTotals['google-ads'].clicks || 0,
-                conversions: sourceTotals['google-ads'].conversions || 0,
-                conversionValue: (sourceTotals['google-ads'].conversionValue || 0).toFixed(2),
-                cpc: (sourceTotals['google-ads'].cpc / count || 0).toFixed(2),
-                cpm: (sourceTotals['google-ads'].cpm / count || 0).toFixed(2),
-                ctr: (sourceTotals['google-ads'].ctr / count || 0).toFixed(2),
-                searchImpressionShare: (sourceTotals['google-ads'].searchImpressionShare / count || 0).toFixed(2)
+                spend: (curr.spend || 0).toFixed(2),
+                spendGrowth: getGrowth(curr.spend, prev.spend),
+                clicks: curr.clicks || 0,
+                clicksGrowth: getGrowth(curr.clicks, prev.clicks),
+                conversions: curr.conversions || 0,
+                conversionsGrowth: getGrowth(curr.conversions, prev.conversions),
+                conversionValue: (curr.conversionValue || 0).toFixed(2),
+                ctr: (curr.ctr / count || 0).toFixed(2)
             };
         }
-        if (sourceTotals['facebook-ads']) {
+        if (sourceTotals.current['facebook-ads']) {
+            const curr = sourceTotals.current['facebook-ads'];
+            const prev = sourceTotals.previous['facebook-ads'] || {};
+            const count = sourceEntryCount.current['facebook-ads'];
             data.facebookAds = {
-                currency: userAcc.facebookAdCurrency || '$',
-                spend: (sourceTotals['facebook-ads'].spend || 0).toFixed(2),
-                impressions: sourceTotals['facebook-ads'].impressions || 0,
-                clicks: sourceTotals['facebook-ads'].clicks || 0,
-                conversions: sourceTotals['facebook-ads'].conversions || 0,
-                reach: sourceTotals['facebook-ads'].reach || 0,
-                landingPageViews: sourceTotals['facebook-ads'].landing_page_views || 0,
-                linkClicks: sourceTotals['facebook-ads'].link_clicks || 0,
-                cpc: (sourceTotals['facebook-ads'].cpc / count || 0).toFixed(2),
-                cpm: (sourceTotals['facebook-ads'].cpm / count || 0).toFixed(2),
-                ctr: (sourceTotals['facebook-ads'].ctr / count || 0).toFixed(2)
+                spend: (curr.spend || 0).toFixed(2),
+                spendGrowth: getGrowth(curr.spend, prev.spend),
+                clicks: curr.clicks || 0,
+                clicksGrowth: getGrowth(curr.clicks, prev.clicks),
+                conversions: curr.conversions || 0,
+                conversionsGrowth: getGrowth(curr.conversions, prev.conversions),
+                ctr: (curr.ctr / count || 0).toFixed(2)
             };
         }
     }
@@ -293,93 +304,132 @@ export const fetchPlatformData = async (userId, startDate, endDate, siteId, acti
 
 
 export const askAi = async (req, res) => {
-    let { question, conversationId, activeSources, siteId, history } = req.body;
+    let { question, conversationId, siteId, history } = req.body;
+    const userId = req.user._id;
 
-    // Sanitize history — keep last 10 turns max to avoid token overflow
-    const chatHistory = Array.isArray(history)
-        ? history.slice(-10)
-        : [];
+    // Prepare History for Gemini (role must be 'user' or 'model')
+    const chatHistory = (history || []).slice(-10).map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.content }]
+    }));
+
+    // Load System Instruction
+    let systemIns = "";
+    try {
+        systemIns = fs.readFileSync(path.join(process.cwd(), 'server', 'prompts', 'system.txt'), 'utf8');
+    } catch (e) {
+        systemIns = fs.readFileSync(path.join(process.cwd(), 'prompts', 'system.txt'), 'utf8');
+    }
 
     const tzOffset = (new Date()).getTimezoneOffset() * 60000;
-    const now = new Date(Date.now() - tzOffset);
-    const localISOTime = now.toISOString().slice(0, 10);
+    const nowLocal = new Date(Date.now() - tzOffset);
+    const todayStr = nowLocal.toISOString().split('T')[0];
+    const dateContext = `\n\n[REAL-TIME CONTEXT]: Today's date is ${todayStr}. Use this for all relative date calculations.`;
     
-    const defaultStart = new Date(now);
-    defaultStart.setDate(defaultStart.getDate() - 90);
-    const fallbackStart = defaultStart.toISOString().slice(0, 10);
-
-    const dateExtractionPrompt = `Extract the date range for this question: "${question}". Today is ${localISOTime}.
-    If the user mentions 'today', 'last 10 days', 'yesterday' etc., calculate the exact 'startDate' and 'endDate'.
-    IMPORTANT: If the user asks to "compare" with another period (e.g. "compare last 10 days to last month"), provide a wide 'startDate' that COVERS BOTH periods.
-    Return ONLY JSON: {"startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD"}.
-    Fallback if no date is mentioned: {"startDate": "${fallbackStart}", "endDate": "${localISOTime}"}`;
-
-    let startDate = fallbackStart;
-    let endDate = localISOTime;
-
-    try {
-        const extractionResult = await getAiResponse(dateExtractionPrompt);
-        const jsonMatch = extractionResult.content.match(/\{[\s\S]*\}/);
-        const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : extractionResult.content);
-        if (parsed.startDate && parsed.endDate) {
-            startDate = parsed.startDate;
-            endDate = parsed.endDate;
-        }
-    } catch (e) {
-        console.error("Date Extraction Failed:", e);
-    }
-
-    const userId = req.user._id;
-    const data = await fetchPlatformData(userId, startDate, endDate, siteId, activeSources);
-
-    const prompt = promptBuilder.buildAskPrompt(question, data, chatHistory);
-
-    let convId = conversationId;
-    if (!convId) {
-        const conv = await Conversation.create({
-            userId: req.user._id,
-            siteId: siteId || null,
-            title: question.substring(0, 60),
-            sources: activeSources
-        });
-        convId = conv._id;
-    }
-
-
-    await Message.create({ conversationId: convId, role: 'user', content: question });
-
-    // Enable SSE
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
+    let convId = conversationId;
 
-    let fullContent = "";
     try {
-        const streamResult = await callGeminiStream(prompt, (chunk) => {
-            fullContent += chunk;
-            res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
-        });
+        // 1. Ensure Conversation exists
+        if (!convId) {
+            const conv = await Conversation.create({
+                userId, siteId: siteId || null, title: question.substring(0, 60)
+            });
+            convId = conv._id;
+        }
 
-        const cleanContent = fullContent
+        // 2. Save User Message Immediately
+        await Message.create({ conversationId: convId, role: 'user', content: question });
+
+        const chat = await startAgenticChat(chatHistory, aiTools, systemIns + dateContext);
+        
+        let result = await chat.sendMessage(question);
+        let response = result.response;
+        
+        // Handle Tool Calls Loop 
+        let iteration = 0;
+        while (response.functionCalls()?.length > 0 && iteration < 5) {
+            iteration++;
+            const calls = response.functionCalls();
+            const toolResponses = [];
+            
+            for (const call of calls) {
+                const data = await executeTool(call.name, call.args, userId, siteId);
+                
+                toolResponses.push({
+                    functionResponse: {
+                        name: call.name,
+                        response: { content: data }
+                    }
+                });
+            }
+            
+            result = await chat.sendMessage(toolResponses);
+            response = result.response;
+        }
+
+        const finalContent = response.text()
             .replace(/(\r?\n)*.*response is advisory only.*/gi, '')
+            .replace(/\*/g, '') // THE NUCLEAR OPTION: Global Wipe out of ALL asterisks
             .trim();
 
+        // 3. Save Assistant Message Successfully
         const aiMsg = await Message.create({
             conversationId: convId,
             role: 'assistant',
-            content: cleanContent,
-            model: streamResult.model,
-            latencyMs: Date.now() - now
+            content: finalContent,
+            model: "gemini-2.5-flash",
+            latencyMs: Date.now() - nowLocal
         });
 
-        res.write(`data: ${JSON.stringify({ done: true, conversationId: convId, messageId: aiMsg._id, answer: cleanContent })}\n\n`);
+        // Send final response
+        res.write(`data: ${JSON.stringify({ chunk: finalContent })}\n\n`);
+        res.write(`data: ${JSON.stringify({ done: true, conversationId: convId, messageId: aiMsg._id, answer: finalContent })}\n\n`);
         res.end();
+
     } catch (err) {
-        console.error("Streaming AI Error:", err);
-        res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
+        console.error("Agentic AI Loop Error:", err);
+        
+        // Elite Error Cleaning: Turn technical jargon into human-friendly instructions
+        const getFriendlyError = (err) => {
+            const msg = err?.message || "";
+            if (msg.includes('429') || msg.includes('Quota')) {
+                return "The AI is currently catching its breath due to high demand. 🧘‍♂️ Please wait about **60 seconds** and try your question again.";
+            }
+            if (msg.includes('getaddrinfo') || msg.includes('ENOTFOUND') || msg.includes('redis') || msg.includes('connect')) {
+                return "The analytics engine is having a momentary connection glitch. 🔌 Our team has been notified. Please try again in 2-3 minutes.";
+            }
+            if (msg.includes('API_KEY_INVALID') || msg.includes('auth')) {
+                return "There's a configuration issue with the AI's credentials. 🔑 Please contact support to restore access.";
+            }
+            if (msg.includes('safety') || msg.includes('blocked')) {
+                return "This request falls outside our safety guidelines. 🛡️ Please rephrase your question to be more marketing-focused.";
+            }
+            return "Something unexpected happened in our AI engine. 🔧 A quick refresh of the page usually fix this!";
+        };
+
+        const friendlyMsg = getFriendlyError(err);
+        const errorMessage = `### 💌 A Quick Note\n\n${friendlyMsg}\n\n---\n*Technical ID: ${err?.message?.substring(0, 50) || "Unknown"}*`;
+        
+        if (convId) {
+            await Message.create({
+                conversationId: convId,
+                role: 'assistant',
+                content: errorMessage,
+                isError: true,
+                model: "system-error"
+            });
+        }
+
+        res.write(`data: ${JSON.stringify({ 
+            error: errorMessage, 
+            conversationId: convId 
+        })}\n\n`);
         res.end();
     }
-};
+}
 
 export const getConversations = async (req, res) => {
     const { siteId } = req.query;
@@ -414,42 +464,60 @@ export const getWeeklyInsight = async (req, res) => {
 export const generateWeeklyInsightInternal = async (userId, siteId) => {
     const tzOffset = (new Date()).getTimezoneOffset() * 60000;
     const nowLocal = new Date(Date.now() - tzOffset);
-    const dateRangeEnd = nowLocal.toISOString().split('T')[0];
+    const todayStr = nowLocal.toISOString().split('T')[0];
     
-    const sevenDaysAgo = new Date(nowLocal);
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const dateRangeStart = sevenDaysAgo.toISOString().split('T')[0];
+    // Load System and Insight Prompts
+    let systemIns = "";
+    let insightPrompt = "";
+    try {
+        systemIns = fs.readFileSync(path.join(process.cwd(), 'server', 'prompts', 'system.txt'), 'utf8');
+        insightPrompt = fs.readFileSync(path.join(process.cwd(), 'server', 'prompts', 'weekly-insight.txt'), 'utf8');
+    } catch (e) {
+        systemIns = fs.readFileSync(path.join(process.cwd(), 'prompts', 'system.txt'), 'utf8');
+        insightPrompt = fs.readFileSync(path.join(process.cwd(), 'prompts', 'weekly-insight.txt'), 'utf8');
+    }
 
-    const data = await fetchPlatformData(userId, dateRangeStart, dateRangeEnd, siteId, []);
-
-    const prompt = promptBuilder.buildWeeklyInsightPrompt(data);
+    const dateContext = `\n\n[REAL-TIME CONTEXT]: Today's date is ${todayStr}. Generate a performance insight for the LAST 7 DAYS.`;
     
     try {
-        const aiResult = await getAiResponse(prompt);
-        let cleanContent = aiResult.content
+        const chat = await startAgenticChat([], aiTools, systemIns + dateContext);
+        
+        // Initial command to start the analysis
+        let result = await chat.sendMessage(insightPrompt);
+        let response = result.response;
+
+        // Tool Loop for data
+        let iteration = 0;
+        while (response.functionCalls()?.length > 0 && iteration < 3) {
+            iteration++;
+            const calls = response.functionCalls();
+            const toolResponses = [];
+            for (const call of calls) {
+                const data = await executeTool(call.name, call.args, userId, siteId);
+                toolResponses.push({ functionResponse: { name: call.name, response: { content: data } } });
+            }
+            result = await chat.sendMessage(toolResponses);
+            response = result.response;
+        }
+
+        const finalContent = response.text()
             .replace(/(\r?\n)*.*response is advisory only.*/gi, '')
             .trim();
 
-        const sourceMap = { ga4: 'ga4', gsc: 'gsc', googleAds: 'google-ads', facebookAds: 'facebook-ads' };
-        const discoveredSources = Object.keys(data).filter(k => sourceMap[k]).map(k => sourceMap[k]);
-
+        // Discovered sources (optional logic if you want to track which sources AI used)
+        // For simplicity, we just save the general result
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-
         const insight = await WeeklyInsight.findOneAndUpdate(
             { userId: userId, siteId: siteId || null },
-            { 
-                content: cleanContent, 
-                sources: discoveredSources.length > 0 ? discoveredSources : ['ga4'],
-                expiresAt 
-            },
+            { content: finalContent, expiresAt },
             { upsert: true, returnDocument: 'after' }
         );
 
-        // Notify user about new AI Insight
+        // Notify user
         await createNotification(userId, {
             type: 'info',
             title: 'Weekly AI Insight Ready',
-            message: 'Your weekly performance analysis is ready. See what changed and what to optimize next.',
+            message: 'Your weekly performance analysis has been generated by AI.',
             source: 'ai',
             actionLabel: 'View Insight',
             actionPath: '/dashboard/ai-chat'
@@ -458,6 +526,7 @@ export const generateWeeklyInsightInternal = async (userId, siteId) => {
         return insight;
 
     } catch (err) {
+        console.error("Weekly Insight Internal Error:", err);
         throw err;
     }
 };
@@ -476,16 +545,39 @@ export const generateSuggestedQuestionsInternal = async (userId, siteId) => {
     try {
         const tzOffset = (new Date()).getTimezoneOffset() * 60000;
         const nowLocal = new Date(Date.now() - tzOffset);
-        const dateRangeEnd = nowLocal.toISOString().split('T')[0];
+        const todayStr = nowLocal.toISOString().split('T')[0];
+
+        // Load Prompts
+        let systemIns = "";
+        let suggestPrompt = "";
+        try {
+            systemIns = fs.readFileSync(path.join(process.cwd(), 'server', 'prompts', 'system.txt'), 'utf8');
+            suggestPrompt = fs.readFileSync(path.join(process.cwd(), 'server', 'prompts', 'suggested-questions.txt'), 'utf8');
+        } catch (e) {
+            systemIns = fs.readFileSync(path.join(process.cwd(), 'prompts', 'system.txt'), 'utf8');
+            suggestPrompt = fs.readFileSync(path.join(process.cwd(), 'prompts', 'suggested-questions.txt'), 'utf8');
+        }
+
+        const dateContext = `\n\n[REAL-TIME CONTEXT]: Today's date is ${todayStr}. suggestedQuestions must be a JSON array of 4 strings. Analyze the last 30 days of data and return ONLY the JSON array.`;
+
+        const chat = await startAgenticChat([], aiTools, systemIns + dateContext);
         
-        const thirtyDaysAgo = new Date(nowLocal);
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const dateRangeStart = thirtyDaysAgo.toISOString().split('T')[0];
+        let result = await chat.sendMessage(suggestPrompt);
+        let response = result.response;
 
-        const data = await fetchPlatformData(userId, dateRangeStart, dateRangeEnd, siteId, []); 
-
-        const prompt = promptBuilder.buildSuggestionsPrompt(data);
-        const aiResult = await getAiResponse(prompt);
+        // Tool Loop (AI might call metrics to find interesting trends)
+        let iteration = 0;
+        while (response.functionCalls()?.length > 0 && iteration < 3) {
+            iteration++;
+            const calls = response.functionCalls();
+            const toolResponses = [];
+            for (const call of calls) {
+                const data = await executeTool(call.name, call.args, userId, siteId);
+                toolResponses.push({ functionResponse: { name: call.name, response: { content: data } } });
+            }
+            result = await chat.sendMessage(toolResponses);
+            response = result.response;
+        }
 
         let questions = [];
         const fallbacks = [
@@ -496,7 +588,7 @@ export const generateSuggestedQuestionsInternal = async (userId, siteId) => {
         ];
 
         try {
-            const content = aiResult.content;
+            const content = response.text();
             const jsonMatch = content.match(/\[[\s\S]*\]/);
             const jsonStr = jsonMatch ? jsonMatch[0] : content;
             questions = JSON.parse(jsonStr);

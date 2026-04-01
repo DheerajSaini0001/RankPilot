@@ -37,23 +37,52 @@ import ChartRenderer from '../components/ai/ChartRenderer';
 const MarkdownComponents = {
     code({ inline, className, children, ...props }) {
         const match = /language-json-chart-(\w+)/.exec(className || '');
-        if (!inline && match) {
+        const isJson = /language-json/.test(className || '');
+        const text = String(children).trim();
+
+        if (!inline && (match || isJson)) {
             try {
-                const chartData = JSON.parse(String(children).replace(/\n$/, ''));
+                // Pre-process JSON text: Remove comments, strip leading/trailing non-JSON noise
+                const cleanedJson = text
+                    .replace(/\/\/.*/g, '') // Remove single line comments
+                    .replace(/\/\*[\s\S]*?\*\//g, '') // Remove multi-line comments
+                    .replace(/\n$/g, '') 
+                    .trim();
+
+                const chartData = JSON.parse(cleanedJson);
+                
+                // Catch common nested structures or alternate keys
+                const hasChartKeys = (obj) => {
+                    const keys = ['labels', 'label', 'datasets', 'dataset', 'chartType', 'series', 'categories'];
+                    const rootKeys = Object.keys(obj || {});
+                    const nestedKeys = (obj?.data) ? Object.keys(obj.data) : [];
+                    return keys.some(k => rootKeys.includes(k) || nestedKeys.includes(k));
+                };
+
+                if (!match && isJson && !hasChartKeys(chartData)) {
+                    return <code className={className} {...props}>{children}</code>;
+                }
+                
+                const finalType = match ? match[1] : (chartData.chartType || 'line');
+
                 return (
-                    <div className="my-10 w-full overflow-hidden animate-fade-in">
-                        <ChartRenderer type={match[1]} data={chartData} />
+                    <div className="my-6 w-full overflow-hidden">
+                        <ChartRenderer type={finalType} data={chartData} />
                     </div>
                 );
-            } catch {
-                return (
-                    <div className="my-4 p-4 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl flex items-center justify-center bg-neutral-50/50 dark:bg-neutral-900/50">
-                        <div className="flex items-center gap-3">
-                            <div className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />
-                            <span className="text-xs font-medium text-neutral-500 italic uppercase tracking-widest">Generating {match[1]} visualization...</span>
+            } catch (err) {
+                // While still streaming or small length, show the loading state
+                // If it's a known chart language block, show "Generating" 
+                if (match || (isJson && text.length > 20)) {
+                    return (
+                        <div className="my-6 p-6 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl flex flex-col items-center justify-center bg-neutral-50/50 dark:bg-neutral-800/20">
+                            <div className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-ping mb-3" />
+                            <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest leading-none">
+                                {text.endsWith('}') ? 'Rendering Visualisation...' : `Generating ${match ? match[1] : 'Graph'}...`}
+                            </span>
                         </div>
-                    </div>
-                );
+                    );
+                }
             }
         }
         return <code className={className} {...props}>{children}</code>;
@@ -79,7 +108,19 @@ const MarkdownComponents = {
     h1: ({ children }) => <h1 className="text-xl font-black !m-0 !mb-4 tracking-tight text-neutral-900 dark:text-white">{children}</h1>,
     h2: ({ children }) => <h2 className="text-lg font-extrabold !m-0 !mb-3 tracking-tight text-neutral-800 dark:text-neutral-100">{children}</h2>,
     h3: ({ children }) => <h3 className="text-base font-bold !m-0 !mb-2 text-neutral-800 dark:text-neutral-100">{children}</h3>,
-    strong: ({ children }) => <strong className="font-bold text-neutral-900 dark:text-white">{children}</strong>
+    strong: ({ children }) => <strong className="font-bold text-neutral-900 dark:text-white">{children}</strong>,
+    table: ({ children }) => (
+        <div className="my-6 w-full overflow-x-auto border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm">
+            <table className="w-full text-left border-collapse min-w-[500px]">
+                {children}
+            </table>
+        </div>
+    ),
+    thead: ({ children }) => <thead className="bg-neutral-50 dark:bg-neutral-800/50 border-b border-neutral-200 dark:border-neutral-800">{children}</thead>,
+    tbody: ({ children }) => <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">{children}</tbody>,
+    tr: ({ children }) => <tr className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors">{children}</tr>,
+    th: ({ children }) => <th className="px-5 py-3.5 text-[11px] font-black uppercase tracking-widest text-neutral-500 dark:text-neutral-400">{children}</th>,
+    td: ({ children }) => <td className="px-5 py-3.5 text-[13.5px] text-neutral-700 dark:text-neutral-200 font-medium">{children}</td>
 };
 
 const ChatMessage = React.memo(({ msg, userName }) => {
@@ -109,12 +150,12 @@ const ChatMessage = React.memo(({ msg, userName }) => {
                 <div className="flex-1 min-w-0">
                     {msg.isError ? (
                         <div className="px-4 py-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-800/30 rounded-xl text-sm text-red-600 dark:text-red-400">
-                            <ReactMarkdown
-                                remarkPlugins={[remarkGfm]}
+                                <ReactMarkdown
+                                    remarkPlugins={[remarkGfm]}
                                 components={MarkdownComponents}
-                            >
-                                {msg.content}
-                            </ReactMarkdown>
+                                >
+                                    {msg.content}
+                                </ReactMarkdown>
                         </div>
                     ) : (
                         <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed text-neutral-800 dark:text-neutral-200">
@@ -123,15 +164,7 @@ const ChatMessage = React.memo(({ msg, userName }) => {
                                     remarkPlugins={[remarkGfm]}
                                     components={MarkdownComponents}
                                 >
-                                    {msg.content
-                                        .replace(/^[•*]\s*$/gm, '')
-                                        .replace(/•\s*/g, '- ')
-                                        .replace(/^\s*[•*]\s*/gm, '- ')
-                                        .replace(/- \s*\n/g, '- ')
-                                        .replace(/(\n\d+\.)\s*[•*]\s*/g, '$1 ')
-                                        .replace(/([.!?])\s+(- \s*)/g, '$1\n$2')
-                                        .replace(/\n{3,}/g, '\n\n')
-                                    }
+                                    {msg.content}
                                 </ReactMarkdown>
                             ) : msg.isLoading ? (
                                 <div className="flex items-center space-x-2 py-2">
@@ -170,9 +203,6 @@ const AIChatPage = () => {
     const [suggestions, setSuggestions] = useState([]);
     const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
-    const [selectedSources, setSelectedSources] = useState([]);
-    const [isSourceMenuOpen, setIsSourceMenuOpen] = useState(false);
-
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [isInsightOpen, setIsInsightOpen] = useState(false);
     const [chatToDelete, setChatToDelete] = useState(null);
@@ -187,27 +217,7 @@ const AIChatPage = () => {
         }
     }, [query]);
 
-    useEffect(() => {
-        if (connectedSources.length > 0 && selectedSources.length === 0) {
-            const initial = connectedSources.flatMap(s => {
-                if (s === 'google-ads' || s === 'google_ads') return ['google-ads'];
-                if (s === 'facebook-ads' || s === 'facebook' || s === 'meta') return ['facebook-ads'];
-                if (['ga4', 'gsc'].includes(s)) return [s];
-                return [];
-            });
-            setSelectedSources([...new Set(initial)]);
-        }
-    }, [connectedSources]);
 
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (sourceMenuRef.current && !sourceMenuRef.current.contains(event.target)) {
-                setIsSourceMenuOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
 
     useEffect(() => {
         loadConversations();
@@ -331,9 +341,9 @@ const AIChatPage = () => {
                 },
                 body: JSON.stringify({
                     question: currentQuery,
-                    activeSources: selectedSources,
                     conversationId: activeConversationId,
-                    siteId: activeSiteId
+                    siteId: activeSiteId,
+                    history: messages.slice(-5).map(m => ({ role: m.role, content: m.content }))
                 })
             });
 
@@ -357,6 +367,30 @@ const AIChatPage = () => {
                     if (line.startsWith('data: ')) {
                         try {
                             const data = JSON.parse(line.slice(6));
+                            
+                            if (data.error) {
+                                // Sync conversation ID even on error to prevent duplicates
+                                if (!activeConversationId && data.conversationId) {
+                                    setActiveConversationId(data.conversationId);
+                                    loadConversations();
+                                }
+
+                                setMessages(prev => {
+                                    const updated = [...prev];
+                                    const lastMsg = updated[updated.length - 1];
+                                    if (lastMsg && lastMsg.role === 'assistant') {
+                                        updated[updated.length - 1] = { 
+                                            ...lastMsg, 
+                                            content: data.error, 
+                                            isLoading: false,
+                                            isError: true 
+                                        };
+                                    }
+                                    return updated;
+                                });
+                                break; 
+                            }
+
                             if (data.chunk) {
                                 accumulatedContent += data.chunk;
                                 setMessages(prev => {
@@ -369,14 +403,16 @@ const AIChatPage = () => {
                                 });
                                 scrollToEnd();
                             }
+
                             if (data.done) {
                                 if (!activeConversationId && data.conversationId) {
                                     setActiveConversationId(data.conversationId);
                                     loadConversations();
                                 }
                             }
-                            if (data.error) throw new Error(data.error);
-                        } catch {
+                        } catch (e) {
+                            // Only skip JSON parse errors in chunks
+                            console.error("SSE JSON Parse Error:", e);
                         }
                     }
                 }
@@ -457,74 +493,18 @@ const AIChatPage = () => {
                         <span className="text-sm font-black text-neutral-900 dark:text-white">RankPilot AI</span>
                     </div>
                     <div className="flex items-center gap-1">
-                        {/* Sources Dropdown in Header for Mobile */}
-                        <div className="relative" ref={sourceMenuRef}>
-                            <button type="button" onClick={() => setIsSourceMenuOpen(!isSourceMenuOpen)}
-                                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-xl text-[10px] font-black border transition-all ${isSourceMenuOpen || selectedSources.length > 0
-                                        ? 'bg-brand-50 dark:bg-brand-900/20 border-brand-200 dark:border-brand-800 text-brand-600 dark:text-brand-400'
-                                        : 'border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:border-neutral-300 dark:hover:border-neutral-600'
-                                    }`}>
-                                <ChartBarIcon className="w-3 h-3" />
-                                <span>{selectedSources.length > 0 ? selectedSources.length : ''}</span>
-                                <ChevronDownIcon className={`w-2.5 h-2.5 transition-transform ${isSourceMenuOpen ? 'rotate-180' : ''}`} />
-                            </button>
-
-                            {/* Sources dropdown - opens DOWN in header */}
-                            {isSourceMenuOpen && (
-                                <div className="absolute right-0 top-full mt-2 w-52 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-2xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                                    <div className="px-3 py-2.5 border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/30">
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Active Context Sources</p>
-                                    </div>
-                                    {connectedSources.length === 0 ? (
-                                        <div className="px-3 py-6 text-center">
-                                            <p className="text-xs text-neutral-400 italic">No platforms connected</p>
-                                        </div>
-                                    ) : (
-                                        <div className="p-1.5 space-y-0.5">
-                                            {['gsc', 'ga4', 'google-ads', 'facebook-ads']
-                                                .filter(id =>
-                                                    connectedSources.includes(id) ||
-                                                    (id === 'google-ads' && connectedSources.includes('google_ads')) ||
-                                                    (id === 'facebook-ads' && (connectedSources.includes('meta') || connectedSources.includes('facebook')))
-                                                )
-                                                .map(source => (
-                                                    <button key={source} type="button" onClick={() => toggleSource(source)}
-                                                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-all ${selectedSources.includes(source)
-                                                                ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-400'
-                                                                : 'hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
-                                                            }`}>
-                                                        <span>{sourceLabels[source] || source}</span>
-                                                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${selectedSources.includes(source)
-                                                                ? 'bg-brand-600 border-brand-600'
-                                                                : 'border-neutral-300 dark:border-neutral-600'
-                                                            }`}>
-                                                            {selectedSources.includes(source) && (
-                                                                <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                                                </svg>
-                                                            )}
-                                                        </div>
-                                                    </button>
-                                                ))
-                                            }
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
                         <button type="button" title="Weekly Insight"
-                            onClick={() => { setIsInsightOpen(!isInsightOpen); setIsHistoryOpen(false); setIsSourceMenuOpen(false); if (!isInsightOpen && !weeklyInsight) loadWeeklyInsight(); }}
+                            onClick={() => { setIsInsightOpen(!isInsightOpen); setIsHistoryOpen(false); if (!isInsightOpen && !weeklyInsight) loadWeeklyInsight(); }}
                             className={`w-8 h-8 flex items-center justify-center rounded-xl transition-all ${isInsightOpen ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20'}`}>
                             <InboxStackIcon className={`w-4 h-4 ${insightLoading ? 'animate-pulse' : ''}`} />
                         </button>
                         <button type="button" title="Chat History"
-                            onClick={() => { setIsHistoryOpen(!isHistoryOpen); setIsInsightOpen(false); setIsSourceMenuOpen(false); }}
+                            onClick={() => { setIsHistoryOpen(!isHistoryOpen); setIsInsightOpen(false); }}
                             className={`w-8 h-8 flex items-center justify-center rounded-xl transition-all ${isHistoryOpen ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20'}`}>
                             <ChatBubbleLeftRightIcon className="w-4 h-4" />
                         </button>
                         <button type="button" title="New Chat"
-                            onClick={() => { handleNewChat(); setIsHistoryOpen(false); setIsInsightOpen(false); setIsSourceMenuOpen(false); }}
+                            onClick={() => { handleNewChat(); setIsHistoryOpen(false); setIsInsightOpen(false); }}
                             className="w-8 h-8 flex items-center justify-center rounded-xl bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 transition-all active:scale-95">
                             <PlusIcon className="w-4 h-4" />
                         </button>
@@ -742,17 +722,6 @@ const AIChatPage = () => {
                                 </div>
                             </div>
 
-                            {/* Connected sources */}
-                            {selectedSources.length > 0 && (
-                                <div className="flex flex-wrap items-center justify-center gap-2 mb-2">
-                                    {selectedSources.map(s => (
-                                        <span key={s} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-50 dark:bg-brand-900/20 border border-brand-100 dark:border-brand-800/50 text-[11px] font-black text-brand-700 dark:text-brand-400">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
-                                            {sourceLabels[s] || s}
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
                         </div>
                     ) : (
                         /* 6. MESSAGES AREA — hidden scrollbar */
@@ -770,19 +739,6 @@ const AIChatPage = () => {
                 {/* 7. BOTTOM INPUT BAR — shrink-0, always at bottom */}
                 <div className="shrink-0 border-t border-neutral-100 dark:border-neutral-800 px-3 sm:px-4 py-4 bg-white dark:bg-dark-card w-full">
 
-                    {/* Active context strip */}
-                    {selectedSources.length > 0 && messages.length > 0 && (
-                        <div className="max-w-3xl mx-auto flex items-center gap-2 mb-2 px-1">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400 flex-shrink-0">Context:</span>
-                            <div className="flex items-center gap-1 flex-wrap">
-                                {selectedSources.map(s => (
-                                    <span key={s} className="text-[9px] font-black px-2 py-0.5 rounded-full bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 border border-brand-100 dark:border-brand-800">
-                                        {s === 'google-ads' ? 'G.Ads' : s === 'facebook-ads' ? 'Meta' : s.toUpperCase()}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-                    )}
 
                     {/* Input form */}
                     <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto">
@@ -817,71 +773,11 @@ const AIChatPage = () => {
                                 placeholder="Message RankPilot AI..."
                                 disabled={loading}
                                 rows={1}
-                                className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500 py-1.5 sm:py-2 min-w-0 resize-none max-h-40 leading-relaxed custom-scrollbar"
+                                className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500 py-1.5 sm:py-2 min-w-0 resize-none max-h-40 leading-relaxed [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
                             />
 
-                            {/* Right: Sources + Send */}
+                            {/* Right: Send */}
                             <div className="flex items-end gap-1.5 flex-shrink-0 pb-0.5">
-                                {/* Sources selector - Hidden on mobile, moved to header */}
-                                <div className="hidden sm:block relative" ref={sourceMenuRef}>
-                                    <button type="button" onClick={() => setIsSourceMenuOpen(!isSourceMenuOpen)}
-                                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px] font-black border transition-all ${isSourceMenuOpen || selectedSources.length > 0
-                                            ? 'bg-brand-50 dark:bg-brand-900/20 border-brand-200 dark:border-brand-800 text-brand-600 dark:text-brand-400'
-                                            : 'border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:border-neutral-300 dark:hover:border-neutral-600'
-                                            }`}>
-                                        <ChartBarIcon className="w-3 h-3" />
-                                        <span className="hidden sm:inline">{selectedSources.length > 0 ? `${selectedSources.length} Sources` : 'Sources'}</span>
-                                        <span className="sm:hidden">{selectedSources.length > 0 ? selectedSources.length : ''}</span>
-                                        <ChevronDownIcon className={`w-2.5 h-2.5 transition-transform ${isSourceMenuOpen ? 'rotate-180' : ''}`} />
-                                    </button>
-
-                                    {/* Sources dropdown */}
-                                    {isSourceMenuOpen && (
-                                        <div className="absolute right-0 bottom-full mb-2 w-52 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
-                                            <div className="px-3 py-2.5 border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/30">
-                                                <p className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Active Context Sources</p>
-                                            </div>
-                                            {connectedSources.length === 0 ? (
-                                                <div className="px-3 py-6 text-center">
-                                                    <p className="text-xs text-neutral-400 italic">No platforms connected</p>
-                                                </div>
-                                            ) : (
-                                                <div className="p-1.5 space-y-0.5">
-                                                    {['gsc', 'ga4', 'google-ads', 'facebook-ads']
-                                                        .filter(id =>
-                                                            connectedSources.includes(id) ||
-                                                            (id === 'google-ads' && connectedSources.includes('google_ads')) ||
-                                                            (id === 'facebook-ads' && (connectedSources.includes('meta') || connectedSources.includes('facebook')))
-                                                        )
-                                                        .map(source => (
-                                                            <button key={source} type="button" onClick={() => toggleSource(source)}
-                                                                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-all ${selectedSources.includes(source)
-                                                                    ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-400'
-                                                                    : 'hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
-                                                                    }`}>
-                                                                <span>{sourceLabels[source] || source}</span>
-                                                                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${selectedSources.includes(source)
-                                                                    ? 'bg-brand-600 border-brand-600'
-                                                                    : 'border-neutral-300 dark:border-neutral-600'
-                                                                    }`}>
-                                                                    {selectedSources.includes(source) && (
-                                                                        <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                                                        </svg>
-                                                                    )}
-                                                                </div>
-                                                            </button>
-                                                        ))
-                                                    }
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Divider */}
-                                <div className="w-px h-5 bg-neutral-200 dark:bg-neutral-700" />
-
                                 {/* Send button */}
                                 <button type="submit" disabled={!query.trim() || loading}
                                     className="w-9 h-9 flex items-center justify-center rounded-xl bg-brand-600 hover:bg-brand-700 text-white disabled:bg-neutral-200 dark:disabled:bg-neutral-700 disabled:text-neutral-400 transition-all shadow-md shadow-brand-500/20 active:scale-95">

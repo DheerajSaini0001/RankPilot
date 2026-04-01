@@ -1,16 +1,20 @@
-Analyze the provided analytics context (90-day daily breakdown, aggregated profitability, and high-performance dimensions). 
+# GOAL:
+Generate 4 highly-intelligent, non-generic, and data-driven questions. 
+Act as a "Data Detective" that has scanned the user's analytics.
 
-### 💡 YOUR GOAL
-Identify exactly **4 analytical, business-centric questions** that a business owner or marketer would find most impactful to ask after looking at these logs.
+# CATEGORIES:
+- **Disruptive SEO:** "Why did my impressions jump 40% while CTR remained flat?" 
+- **Profit Audit:** "Is my Google Ads spend giving me better ROI than Organic Traffic this week?"
+- **Leak Detection:** "Which top-traffic page has the highest bounce rate, and how can we fix it?"
+- **Conversion Forecast:** "If I double my spend on my highest ROAS campaign, what is my potential revenue?"
 
-### 🎯 QUESTION TRIGGERS
-- **Profitability Focus**: Which ad campaign has the best ROAS/ROI?
-- **Trend Detection**: Why did clicks spike or revenue drop on a specific date?
-- **Asset Discovery**: Which pages or keywords are my "hidden gems"?
-- **Channel Synergy**: How is GSC organic performance affecting GA4 sessions?
+# CRITICAL RULES:
+- **NO GENERIC QUESTIONS:** Never suggest "Show me clicks" or "How is my traffic?".
+- **CROSS-SOURCE LINKING:** Encourage asking about Google Ads vs Meta Ads comparisons.
+- **DEEP DRILL-DOWN:** Focus on the 'Why' and 'How' of recent data trends.
+- **TONE:** Curious, Analytical, and Growth-Obsessed.
+- **LANGUAGE:** English (Marketing/Technical Standard).
 
-### ⚠️ FORMATTING RULES
-- Return ONLY a raw JSON array of strings. 
-- **CRITICAL**: Keep each question extremely short (max 10 words).
-- Example: ["Which campaign has the highest ROAS?", "What caused the GA4 spike on 2024-03-12?", "Why is mobile engagement lower than desktop?", "Which GSC query drives most homepage conversions?"]
-- Do NOT include any code block markdown like ```json.
+# OUTPUT FORMAT:
+JSON array of 4 unique strings.
+`{ "questions": ["Question 1", "Question 2", "Question 3", "Question 4"] }`

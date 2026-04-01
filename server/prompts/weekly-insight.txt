@@ -1,34 +1,25 @@
-Analyze the following analytics logs and generate a professional, data-driven "90-Day Performance Strategy Report".
+# GOAL:
+Generate a High-Impact, Weekly Performance Audit and Strategic Roadmap for the business owner. 
 
-### 💡 THE MANDATORY STRUCTURE
+# STYLE & LANGUAGE:
+- **LANGUAGE:** Professional English (Standard for Executive Audits).
+- **METRICS:** Use English for "Sessions", "CTR", "Spend", "Conversions", etc.
+- **TONE:** Professional, Data-Backed, and CEO-level Executive Summary. 
+- Use Bold headings, bullet points, and Charts.
 
-#### 🚀 PLATFORM PERFORMANCE MOMENTUM (OVERALL DATA)
-Provide a 2-sentence high-level executive summary of the overall ecosystem. Are we generating **Growth**, **Stability**, or **Losses**?
+# MANDATORY AUDIT STEPS:
+1.  **Weekly Comparison:** Use 'get_market_data' for the current 7 days AND the previous 7 days. Report Growth/Decline.
+2.  **The "Big Wins":** Identify 2-3 areas where performance improved significantly.
+3.  **The "Critical Gaps":** Identify 2-3 areas (leaks, drops in CTR, high CPC) that need immediate fixing.
+4.  **Trend Visualization:** Create a `json-chart-line` showing cross-platform traffic trends for the week.
 
-#### 📈 PROFITABILITY & EFFICIENCY ANALYSIS (ROI/ROAS)
-Look at the "Period Performance & Profitability" table. Compare **Spend vs Revenue/Value**. Is our Google/Meta Ads strategy profitable? Mention **ROAS**, **CTR**, and **CPC** figures.
+# AUDIT STRUCTURE:
+1.  **Overall Score:** Rate the week (1-10) based on ROAS and Growth.
+2.  **Platform Breakdown:** 
+    - **SEO Audit:** Top keyword movements.
+    - **PPC Audit:** Spend vs Conversion efficiency.
+    - **Traffic Audit:** Engagement and Bounce Rate health.
+3.  **"Roadmap for Next Week":** 3 specific, non-generic actions to take (e.g., "Update Meta Title for /blog-page to boost CTR by 5%").
 
-#### 📈 HIGH-SIGNAL TRENDS & ANOMALIES (DAILY LOGS)
-Scan the "Historical Daily Logs" to identify specific spikes/drops. (e.g. "On [Date], Meta Ads impressions peaked, leading to a session growth of X% in GA4").
-
-#### 🏆 TOP WINNING ASSETS (DIMENSIONS)
-Use "Business Breakdown" to call out the top performers:
-- **SEO Momentum (GSC):** Which 2-3 keywords are driving the most organic clicks?
-- **High-Converting Channels:** Which pages or campaigns are currently having the highest ROI focus?
-
-#### 🎯 STRATEGIC GROWTH RECOMMENDATIONS
-Provide 3 high-impact, actionable steps for the user based on these logs.
-1.  **Stop/Scale**: Which campaign or channel needs more/less budget?
-2.  **Conversion Optimization**: Which page needs better design/content?
-3.  **Future Target**: Which high-potential keyword should we double down on?
-
----
-
-### ✍️ ANALYTICAL STYLE & RULES
-- **Summarized Format**: Everything must be presented in a highly summarized, easy-to-read format.
-- **Bullet-Heavy Structure**: Use bullet points (•) for all insights, observations, and recommendations. Avoid long, dense blocks of text.
-- **Visualization Approach (STRICTLY ON-DEMAND)**: Only include a visualization (chart) if the user's prompt explicitly asks for one (e.g., "provide a chart", "visualize this").
-- **Bold Metrics & Dates**: Use **Bold** for all numbers, critical metrics, and specific dates.
-- **CHART REGISTRY**: If (and only if) a visualization is requested, use: ```json-chart-line, -bar, -area, -pie/-donut, -radar, -scatter, or -composed.
-- **Data Grounding**: Keep observations grounded strictly in **Actual Logs** only.
-- **Zero Filler**: Do NOT include any introductory or concluding filler (e.g. "Here is your report").
+# CLOSING:
+A sharp, motivating summary that prepares the user to win the next week.
