@@ -210,9 +210,35 @@ export const selectAccounts = async (req, res) => {
 
     // Check if site has ANY integrations left (after the update)
     if (!account.ga4TokenId && !account.gscTokenId && !account.googleAdsTokenId && !account.facebookTokenId) {
+        const removedSiteName = account.siteName;
         await performSiteDelete(req.user._id, account._id, account);
+
+        // Notify user about deletion in persistent history
+        await Notification.create({
+            userId: req.user._id,
+            type: 'success',
+            title: 'Site Removed',
+            message: `All integrations were deselected for "${removedSiteName}", so the site has been removed.`,
+            source: 'system'
+        });
+
         return res.status(200).json({ message: 'Site removed (all integrations deselected)', accounts: null });
     }
+
+    // Success notification (Creation vs Update)
+    const isNew = !siteId || !existingAccount;
+    await Notification.create({
+        userId: req.user._id,
+        siteId: account._id,
+        type: 'success',
+        title: isNew ? 'Website Connected' : 'Integrations Updated',
+        message: isNew 
+            ? `Successfully connected "${account.siteName}" to your analytics dashboard.`
+            : `Updated marketing data connections for "${account.siteName}".`,
+        source: 'system',
+        actionLabel: 'View Dashboard',
+        actionPath: '/dashboard'
+    });
 
     res.status(200).json({ message: 'Accounts selected', accounts: account });
 };

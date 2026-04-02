@@ -195,7 +195,22 @@ const ConnectAccountsPage = () => {
             
             const res = await selectAccounts(data);
             const updatedAccount = res.data.accounts;
-            
+
+            if (!updatedAccount) {
+                // If all integrations unlinked, site was deleted from backend
+                setAccounts({
+                    activeSiteId: null,
+                    activeGscSite: null,
+                    activeGa4PropertyId: null,
+                    activeGoogleAdsCustomerId: null,
+                    activeFacebookAdAccountId: null,
+                });
+
+                toast.success('Integrations unlinked and site removed');
+                navigate('/sites');
+                return;
+            }
+
             setAccounts({
                 activeSiteId: updatedAccount._id,
                 activeGscSite: updatedAccount.gscSiteUrl || null,
@@ -203,18 +218,8 @@ const ConnectAccountsPage = () => {
                 activeGoogleAdsCustomerId: updatedAccount.googleAdsCustomerId || null,
                 activeFacebookAdAccountId: updatedAccount.facebookAdAccountId || null,
             });
+
             toast.success(isNew ? 'New website added!' : 'Integrations updated!');
-            
-            // Add to persistent notifications
-            const { addNotification } = useNotificationStore.getState();
-            addNotification({
-                type: 'success',
-                title: isNew ? 'Website Connected' : 'Integrations Updated',
-                message: isNew 
-                    ? `Successfully connected "${siteName}" to your analytics dashboard.`
-                    : `Updated marketing data connections for "${siteName}".`,
-            });
-            
             navigate('/dashboard');
         } catch {
             toast.error('Failed to link accounts');

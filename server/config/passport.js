@@ -40,6 +40,18 @@ export const configurePassport = async () => {
                                 avatar: profile.photos && profile.photos.length > 0 ? profile.photos[0].value : null,
                                 emailVerified: true
                             });
+
+                            // Create a Welcome Notification for OAuth users
+                            import('../utils/notification.js').then(({ createNotification }) => {
+                                createNotification(user._id, {
+                                    type: 'info',
+                                    title: 'Welcome to RankPilot! 🚀',
+                                    message: 'We are excited to help you grow your analytics. Start by connecting your Google or Meta accounts to see your data in action.',
+                                    source: 'system',
+                                    actionLabel: 'Connect Accounts',
+                                    actionPath: '/connect-accounts'
+                                });
+                            }).catch(err => console.error('OAuth Notification Error:', err));
                         }
                     }
                 } else {
@@ -101,14 +113,26 @@ export const configurePassport = async () => {
                             await user.save();
                         }
                     }
-                    if (!user) {
-                        user = await User.create({
-                            email: email || `${profile.id}@facebook.com`,
-                            displayName: profile.displayName,
-                            facebookId: profile.id,
-                            emailVerified: true
-                        });
-                    }
+                        if (!user) {
+                            user = await User.create({
+                                email: email || `${profile.id}@facebook.com`,
+                                displayName: profile.displayName,
+                                facebookId: profile.id,
+                                emailVerified: true
+                            });
+
+                            // Create a Welcome Notification for OAuth users
+                            import('../utils/notification.js').then(({ createNotification }) => {
+                                createNotification(user._id, {
+                                    type: 'info',
+                                    title: 'Welcome to RankPilot! 🚀',
+                                    message: 'We are excited to help you grow your analytics. Start by connecting your Google or Meta accounts to see your data in action.',
+                                    source: 'system',
+                                    actionLabel: 'Connect Accounts',
+                                    actionPath: '/connect-accounts'
+                                });
+                            }).catch(err => console.error('OAuth Notification Error:', err));
+                        }
                 } else {
                     user.facebookId = profile.id;
                     await user.save();
