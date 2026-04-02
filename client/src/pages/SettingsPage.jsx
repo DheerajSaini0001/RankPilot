@@ -204,12 +204,18 @@ const SettingsPage = () => {
                                    {googleAccounts.map(acc => (
                                        <div key={acc._id} className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800">
                                             <span className="text-[11px] font-bold text-neutral-500 truncate mr-2">{acc.email}</span>
-                                            <button 
-                                                onClick={() => handleGoogleDisconnect(acc._id)}
-                                                className="text-[10px] font-black text-red-500 hover:text-red-700 uppercase tracking-tighter"
-                                            >
-                                                Unlink
-                                            </button>
+                                             {acc.email === user.email ? (
+                                                <span className="text-[9px] font-black text-neutral-400 dark:text-neutral-500 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-md uppercase tracking-widest border border-neutral-200 dark:border-neutral-700">
+                                                    Primary
+                                                </span>
+                                            ) : (
+                                                <button 
+                                                    onClick={() => handleGoogleDisconnect(acc._id)}
+                                                     className="text-[10px] font-black text-red-500 hover:text-red-700 uppercase tracking-tighter"
+                                                >
+                                                    Unlink
+                                                </button>
+                                            )}
                                        </div>
                                    ))}
                                    <Button

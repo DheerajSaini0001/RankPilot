@@ -10,11 +10,13 @@ const defaultConfigs = [
     { key: 'PORT', label: 'Server Port', group: 'server', isSecret: false },
     { key: 'CLIENT_URL', label: 'Frontend Client URL', group: 'server', isSecret: false },
     { key: 'SUPER_ADMIN_EMAIL', label: 'Super Admin Email', group: 'server', isSecret: false },
+    { key: 'GCP_METADATA_TIMEOUT', label: 'GCP Metadata Timeout', group: 'server', isSecret: false },
 
     { key: 'MONGODB_URI', label: 'MongoDB Connection URI', group: 'database', isSecret: true },
 
     { key: 'JWT_SECRET', label: 'JWT Secret Key', group: 'security', isSecret: true },
     { key: 'JWT_EXPIRES_IN', label: 'JWT Expiry Duration', group: 'security', isSecret: false },
+    { key: 'ENCRYPTION_KEY', label: 'System Encryption Key', group: 'security', isSecret: true },
 
     { key: 'GOOGLE_CLIENT_ID', label: 'Google OAuth Client ID', group: 'google', isSecret: true },
     { key: 'GOOGLE_CLIENT_SECRET', label: 'Google OAuth Client Secret', group: 'google', isSecret: true },
@@ -29,15 +31,26 @@ const defaultConfigs = [
 
     { key: 'EMAIL_FROM', label: 'System Origin Email', group: 'other', isSecret: false },
     { key: 'GMAIL_APP_PASSWORD', label: 'Gmail SMTP App Password', group: 'other', isSecret: true },
-    { key: 'RESEND_API_KEY', label: 'Resend Email API Key', group: 'other', isSecret: true }
+    { key: 'RESEND_API_KEY', label: 'Resend Email API Key', group: 'other', isSecret: true },
+
+    { key: 'REDIS_URL', label: 'Redis Connection URL', group: 'redis', isSecret: true },
+    { key: 'REDIS_HOST', label: 'Redis Host', group: 'redis', isSecret: false },
+    { key: 'REDIS_PORT', label: 'Redis Port', group: 'redis', isSecret: false },
+    { key: 'REDIS_PASSWORD', label: 'Redis Password', group: 'redis', isSecret: true },
+    { key: 'QUEUE_CONCURRENCY', label: 'Queue Concurrency', group: 'redis', isSecret: false },
+
+    { key: 'SYNC_LIMIT_GSC', label: 'GSC Sync Months', group: 'sync', isSecret: false },
+    { key: 'SYNC_LIMIT_GA4', label: 'GA4 Sync Months', group: 'sync', isSecret: false },
+    { key: 'SYNC_LIMIT_GOOGLE_ADS', label: 'Google Ads Sync Months', group: 'sync', isSecret: false },
+    { key: 'SYNC_LIMIT_FACEBOOK_ADS', label: 'Facebook Ads Sync Months', group: 'sync', isSecret: false }
 ];
 
 export const initConfig = async () => {
     try {
-        const count = await PlatformConfig.countDocuments();
-        if (count === 0) {
-            console.log("Seeding initial PlatformConfig from environment variables...");
-            for (const item of defaultConfigs) {
+        console.log("Synchronizing PlatformConfig from environment variables...");
+        for (const item of defaultConfigs) {
+            const exists = await PlatformConfig.findOne({ key: item.key });
+            if (!exists) {
                 const envVal = process.env[item.key];
                 if (envVal) {
                     await PlatformConfig.create({
@@ -50,8 +63,8 @@ export const initConfig = async () => {
                     });
                 }
             }
-            console.log("Seeding complete.");
         }
+        console.log("Synchronization complete.");
         await refreshCache();
     } catch (err) {
         console.error("Error initializing config:", err);

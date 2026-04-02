@@ -129,7 +129,7 @@ export const fetchPlatformData = async (userId, startDate, endDate, siteId, acti
                                         as: "metricName",
                                         in: {
                                             k: "$$metricName",
-                                            v: { $sum: { $map: { input: "$metrics", as: "m", in: { $ifNull: ["$$m." + "$$metricName", 0] } } } }
+                                            v: { $sum: { $map: { input: "$metrics", as: "m", in: { $ifNull: [{ $getField: { field: "$$metricName", input: "$$m" } }, 0] } } } }
                                         }
                                     }
                                 }
@@ -166,8 +166,8 @@ export const fetchPlatformData = async (userId, startDate, endDate, siteId, acti
                                             v: {
                                                 $cond: [
                                                     { $in: ["$$metricName", ['position', 'ctr', 'bounceRate', 'avgSessionDuration', 'engagementRate', 'frequency', 'cpc', 'cpm', 'searchImpressionShare']] },
-                                                    { $divide: [{ $sum: { $map: { input: "$metrics", as: "m", in: { $ifNull: ["$$m." + "$$metricName", 0] } } } }, "$count"] },
-                                                    { $sum: { $map: { input: "$metrics", as: "m", in: { $ifNull: ["$$m." + "$$metricName", 0] } } } }
+                                                    { $divide: [{ $sum: { $map: { input: "$metrics", as: "m", in: { $ifNull: [{ $getField: { field: "$$metricName", input: "$$m" } }, 0] } } } }, "$count"] },
+                                                    { $sum: { $map: { input: "$metrics", as: "m", in: { $ifNull: [{ $getField: { field: "$$metricName", input: "$$m" } }, 0] } } } }
                                                 ]
                                             }
                                         }

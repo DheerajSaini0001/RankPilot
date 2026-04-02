@@ -107,11 +107,13 @@ const AdminPage = () => {
             case 'google': return <GlobeAltIcon className="w-5 h-5" />;
             case 'facebook': return <GlobeAltIcon className="w-5 h-5" />;
             case 'gemini': return <SparklesIcon className="w-5 h-5" />;
+            case 'redis': return <CommandLineIcon className="w-5 h-5" />;
+            case 'sync': return <AdjustmentsHorizontalIcon className="w-5 h-5" />;
             default: return <AdjustmentsHorizontalIcon className="w-5 h-5" />;
         }
     };
 
-    const groups = ['server', 'security', 'database', 'google', 'facebook', 'gemini', 'other'];
+    const groups = ['server', 'security', 'database', 'google', 'facebook', 'gemini', 'redis', 'sync', 'other'];
 
     return (
         <DashboardLayout>

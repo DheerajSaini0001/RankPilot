@@ -6,6 +6,7 @@ import { runQuery as runGAdsQuery } from './googleAdsService.js';
 import { getInsights as getFbInsights } from './facebookAdsService.js';
 import { createNotification } from '../utils/notification.js';
 import { addSyncJob } from './queueService.js';
+import { get as getConfig } from './configService.js';
 
 
 let isGscCronRunning = false;
@@ -85,9 +86,15 @@ export const syncHistoricalData = async (accountId, source) => {
         return;
     }
 
-    const limits = { 'gsc': 1.0, 'ga4': 1.0, 'google-ads': 1.0, 'facebook-ads': 1.0 };
-    const years = limits[source] || 1.0;
-    console.log(`[Historical Sync] 🔄 Starting [${source.toUpperCase()}] for "${acc.siteName}" | Target: ${years} Year`);
+    const limits = { 
+        'gsc': parseInt(await getConfig('SYNC_LIMIT_GSC') || 3), 
+        'ga4': parseInt(await getConfig('SYNC_LIMIT_GA4') || 3), 
+        'google-ads': parseInt(await getConfig('SYNC_LIMIT_GOOGLE_ADS') || 3), 
+        'facebook-ads': parseInt(await getConfig('SYNC_LIMIT_FACEBOOK_ADS') || 3) 
+    };
+    const targetMonths = limits[source] || 3;
+    const periodLabel = `${targetMonths} Month${targetMonths > 1 ? 's' : ''}`;
+    console.log(`[Historical Sync] 🔄 Starting [${source.toUpperCase()}] for "${acc.siteName}" | Target: ${periodLabel}`);
 
     try {
         await UserAccounts.findByIdAndUpdate(accountId, { 
@@ -97,17 +104,16 @@ export const syncHistoricalData = async (accountId, source) => {
         });
 
         const now = new Date();
-        const months = Math.ceil(years * 12);
         const startIndex = acc[indexField] || 0;
 
-        for (let i = startIndex; i < months; i++) {
+        for (let i = startIndex; i < targetMonths; i++) {
             const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
             const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
 
             const startDate = start.toISOString().split('T')[0];
             const endDate = (end > now ? now : end).toISOString().split('T')[0];
 
-            const progressNum = Math.round(((i + 1) / months) * 100);
+            const progressNum = Math.round(((i + 1) / targetMonths) * 100);
             console.log(`[Historical Sync] 📈 Progress [${source.toUpperCase()}] | "${acc.siteName}" | ${startDate} -> ${endDate} (${progressNum}%)`);
 
             switch (source) {
@@ -119,7 +125,7 @@ export const syncHistoricalData = async (accountId, source) => {
 
             // Update progress & last completed month
             const nextIndex = i + 1;
-            const progress = Math.round((nextIndex / months) * 100);
+            const progress = Math.round((nextIndex / targetMonths) * 100);
             await UserAccounts.findByIdAndUpdate(accountId, { 
                 [progressField]: progress,
                 [indexField]: nextIndex
@@ -142,13 +148,13 @@ export const syncHistoricalData = async (accountId, source) => {
         await createNotification(acc.userId, {
             type: 'success',
             title: `${prettyName} Historical Sync Ready`,
-            message: `Last 1 year of ${prettyName} data for "${acc.siteName}" has been successfully synced.`,
+            message: `Last ${periodLabel} of ${prettyName} data for "${acc.siteName}" has been successfully synced.`,
             source: source,
             actionLabel: 'View Dashboard',
             actionPath: '/dashboard'
         });
 
-        console.log(`[Historical Sync] ✅ Completed [${source.toUpperCase()}] for "${acc.siteName}" | Total Months: ${months}`);
+        console.log(`[Historical Sync] ✅ Completed [${source.toUpperCase()}] for "${acc.siteName}" | Total Months: ${targetMonths}`);
     } catch (err) {
         console.error(`[Historical Sync] ❌ Failed [${source.toUpperCase()}] for "${acc.siteName}" | Error: ${err.message}`);
         const updatedAcc = await UserAccounts.findByIdAndUpdate(accountId, { 

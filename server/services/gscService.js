@@ -23,7 +23,7 @@ export const runQuery = async (userId, siteUrl, reportType, startDate, endDate, 
             startDate,
             endDate,
             dimensions,
-            rowLimit: 100000
+            rowLimit: 50000
         }
     });
 

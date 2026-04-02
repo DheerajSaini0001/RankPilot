@@ -10,12 +10,24 @@ export const maskValue = (str, key) => {
         case 'EMAIL_FROM':
         case 'CLIENT_URL':
         case 'SUPER_ADMIN_EMAIL':
+        case 'GCP_METADATA_TIMEOUT':
+        case 'REDIS_HOST':
+        case 'REDIS_PORT':
+        case 'QUEUE_CONCURRENCY':
+        case 'SYNC_LIMIT_GSC':
+        case 'SYNC_LIMIT_GA4':
+        case 'SYNC_LIMIT_GOOGLE_ADS':
+        case 'SYNC_LIMIT_FACEBOOK_ADS':
             return str;
 
         // Special masks
         case 'MONGODB_URI':
+        case 'REDIS_URL':
             // Masks the password part of the connection string
             return str.replace(/(:\/\/[^:]+:)([^@]+)(@)/, '$1****$3');
+        
+        case 'REDIS_PASSWORD':
+            return '****';
         
         case 'ENCRYPTION_KEY':
             return str.replace(/^(.{4})(.*)(.{4})$/, '$1****$3');
