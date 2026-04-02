@@ -423,7 +423,6 @@ export const askAi = async (req, res) => {
         try {
             finalContent = response.text()
                 .replace(/(\r?\n)*.*response is advisory only.*/gi, '')
-                .replace(/\*/g, '') 
                 .trim();
         } catch (e) {
             console.error("Gemini response text error:", e);

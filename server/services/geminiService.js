@@ -56,7 +56,7 @@ export const startAgenticChat = async (history = [], tools = [], systemInstructi
     return model.startChat({
         history: history,
         generationConfig: {
-            maxOutputTokens: 2000,
+            maxOutputTokens: 8192,
         },
     });
 };
