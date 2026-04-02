@@ -67,19 +67,32 @@ export const syncHistoricalData = async (accountId, source) => {
     if (!acc[configField]) {
         console.log(`[Historical Sync] ⏭️ Skipping [${source.toUpperCase()}] for "${acc.siteName}" (Not Configured)`);
         if (acc[statusField] !== 'idle') {
-            const updatedAcc = await UserAccounts.findByIdAndUpdate(accountId, { [statusField]: 'idle' }, { new: true });
+            const updatedAcc = await UserAccounts.findByIdAndUpdate(accountId, { [statusField]: 'idle' }, { returnDocument: 'after' });
             await updateGlobalSyncStatus(updatedAcc);
         }
         await checkNextPendingSync(accountId);
         return;
     }
 
-    // Check if another source is already syncing for this account
     const syncStatusFields = ['ga4SyncStatus', 'gscSyncStatus', 'googleAdsSyncStatus', 'facebookAdsSyncStatus'];
-    const isAnythingSyncing = syncStatusFields.some(field => acc[field] === 'syncing');
+    const syncingCheck = await UserAccounts.findOneAndUpdate(
+        { 
+            _id: accountId, 
+            $and: syncStatusFields.map(field => ({ [field]: { $ne: 'syncing' } }))
+        },
+        { 
+            $set: { 
+                [statusField]: 'syncing',
+                [progressField]: acc[progressField] || 0,
+                syncStatus: 'syncing' 
+            } 
+        },
+        { returnDocument: 'after' }
+    );
 
-    if (isAnythingSyncing) {
-        if (acc[statusField] !== 'syncing') {
+    if (!syncingCheck) {
+        const freshAcc = await UserAccounts.findById(accountId);
+        if (freshAcc && freshAcc[statusField] !== 'syncing') {
             console.log(`[Historical Sync] ⏳ Queued [${source.toUpperCase()}] for "${acc.siteName}" | Waiting for other syncs...`);
             await UserAccounts.findByIdAndUpdate(accountId, { [statusField]: 'pending' });
         }
@@ -97,12 +110,6 @@ export const syncHistoricalData = async (accountId, source) => {
     console.log(`[Historical Sync] 🔄 Starting [${source.toUpperCase()}] for "${acc.siteName}" | Target: ${periodLabel}`);
 
     try {
-        await UserAccounts.findByIdAndUpdate(accountId, { 
-            [statusField]: 'syncing',
-            [progressField]: 0,
-            syncStatus: 'syncing' 
-        });
-
         const now = new Date();
         const startIndex = acc[indexField] || 0;
 
@@ -140,7 +147,7 @@ export const syncHistoricalData = async (accountId, source) => {
             lastDailySyncAt: new Date()
         };
 
-        const updatedAcc = await UserAccounts.findByIdAndUpdate(accountId, { $set: updateFields }, { new: true });
+        const updatedAcc = await UserAccounts.findByIdAndUpdate(accountId, { $set: updateFields }, { returnDocument: 'after' });
         await updateGlobalSyncStatus(updatedAcc);
 
         // Notify user about historical sync completion
@@ -159,7 +166,7 @@ export const syncHistoricalData = async (accountId, source) => {
         console.error(`[Historical Sync] ❌ Failed [${source.toUpperCase()}] for "${acc.siteName}" | Error: ${err.message}`);
         const updatedAcc = await UserAccounts.findByIdAndUpdate(accountId, { 
             [statusField]: 'error' 
-        }, { new: true });
+        }, { returnDocument: 'after' });
         await updateGlobalSyncStatus(updatedAcc);
 
         // Notify user about failure
@@ -192,7 +199,7 @@ const checkNextPendingSync = async (accountId) => {
     if (next) {
         if (!acc[next.config]) {
             console.log(`[Historical Sync] Clearing pending status for ${next.key} (not configured).`);
-            const updatedAcc = await UserAccounts.findByIdAndUpdate(accountId, { [next.status]: 'idle' }, { new: true });
+            const updatedAcc = await UserAccounts.findByIdAndUpdate(accountId, { [next.status]: 'idle' }, { returnDocument: 'after' });
             await updateGlobalSyncStatus(updatedAcc);
             return checkNextPendingSync(accountId); 
         }

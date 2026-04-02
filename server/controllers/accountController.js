@@ -7,6 +7,7 @@ import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
 import WeeklyInsight from '../models/WeeklyInsight.js';
 import User from '../models/User.js';
+import Notification from '../models/Notification.js';
 import { listProperties } from '../services/ga4Service.js';
 import { listSites as fetchGscSites } from '../services/gscService.js';
 import { listAccounts } from '../services/googleAdsService.js';
