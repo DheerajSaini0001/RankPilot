@@ -296,19 +296,19 @@ export const disconnectGoogle = async (req, res) => {
         await UserAccounts.updateMany({ userId: req.user._id, ga4TokenId: tokenId }, {
             $unset: { 
                 ga4PropertyId: "", ga4PropertyName: "", ga4AccountId: "", ga4TokenId: "",
-                ga4SyncStatus: "", ga4SyncProgress: "", ga4HistoricalComplete: "", ga4HistoricalMonthIndex: ""
+                ga4SyncStatus: "", ga4SyncProgress: "", ga4HistoricalComplete: "", ga4HistoricalChunkIndex: ""
             }
         });
         await UserAccounts.updateMany({ userId: req.user._id, gscTokenId: tokenId }, {
             $unset: { 
                 gscSiteUrl: "", gscPermission: "", gscTokenId: "",
-                gscSyncStatus: "", gscSyncProgress: "", gscHistoricalComplete: "", gscHistoricalMonthIndex: ""
+                gscSyncStatus: "", gscSyncProgress: "", gscHistoricalComplete: "", gscHistoricalChunkIndex: ""
             }
         });
         await UserAccounts.updateMany({ userId: req.user._id, googleAdsTokenId: tokenId }, {
             $unset: { 
                 googleAdsCustomerId: "", googleAdsAccountName: "", googleAdsCurrencyCode: "", googleAdsTokenId: "",
-                googleAdsSyncStatus: "", googleAdsSyncProgress: "", googleAdsHistoricalComplete: "", googleAdsHistoricalMonthIndex: ""
+                googleAdsSyncStatus: "", googleAdsSyncProgress: "", googleAdsHistoricalComplete: "", googleAdsHistoricalChunkIndex: ""
             }
         });
 
@@ -371,7 +371,7 @@ export const disconnectFacebook = async (req, res) => {
         await UserAccounts.updateMany({ userId: req.user._id, facebookTokenId: tokenId }, {
             $unset: { 
                 facebookAdAccountId: "", facebookAdAccountName: "", facebookAdCurrencyCode: "", facebookTokenId: "",
-                facebookAdsSyncStatus: "", facebookAdsSyncProgress: "", facebookAdsHistoricalComplete: "", facebookAdsHistoricalMonthIndex: ""
+                facebookAdsSyncStatus: "", facebookAdsSyncProgress: "", facebookAdsHistoricalComplete: "", facebookAdsHistoricalChunkIndex: ""
             }
         });
         for (const accData of affectedAccounts) {
@@ -388,7 +388,7 @@ export const disconnectFacebook = async (req, res) => {
         await UserAccounts.updateMany({ userId: req.user._id }, {
             $unset: { 
                 facebookAdAccountId: "", facebookAdAccountName: "", facebookAdCurrencyCode: "", facebookTokenId: "",
-                facebookAdsSyncStatus: "", facebookAdsSyncProgress: "", facebookAdsHistoricalComplete: "", facebookAdsHistoricalMonthIndex: ""
+                facebookAdsSyncStatus: "", facebookAdsSyncProgress: "", facebookAdsHistoricalComplete: "", facebookAdsHistoricalChunkIndex: ""
             }
         });
         for (const accData of affectedAccounts) {

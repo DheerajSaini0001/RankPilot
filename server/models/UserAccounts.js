@@ -37,11 +37,11 @@ const userAccountsSchema = new mongoose.Schema({
     facebookAdsSyncStatus: { type: String, enum: ['idle', 'syncing', 'error', 'pending'], default: 'idle' },
     facebookAdsSyncProgress: { type: Number, default: 0 },
     
-    // Resume logic for historical sync (tracks which months are already completed)
-    ga4HistoricalMonthIndex: { type: Number, default: 0 },
-    gscHistoricalMonthIndex: { type: Number, default: 0 },
-    googleAdsHistoricalMonthIndex: { type: Number, default: 0 },
-    facebookAdsHistoricalMonthIndex: { type: Number, default: 0 },
+    // Resume logic for historical sync (tracks which chunks are already completed)
+    ga4HistoricalChunkIndex: { type: Number, default: 0 },
+    gscHistoricalChunkIndex: { type: Number, default: 0 },
+    googleAdsHistoricalChunkIndex: { type: Number, default: 0 },
+    facebookAdsHistoricalChunkIndex: { type: Number, default: 0 },
 
     isHistoricalSyncComplete: { type: Boolean, default: false },
     lastDailySyncAt: { type: Date },

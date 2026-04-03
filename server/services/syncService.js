@@ -61,7 +61,7 @@ export const syncHistoricalData = async (accountId, source) => {
     const statusField = `${prefix}SyncStatus`;
     const progressField = `${prefix}SyncProgress`;
     const completeField = `${prefix}HistoricalComplete`;
-    const indexField = `${prefix}HistoricalMonthIndex`;
+    const indexField = `${prefix}HistoricalChunkIndex`;
 
     //If source is not configured, skip it and clear status
     if (!acc[configField]) {
@@ -112,15 +112,21 @@ export const syncHistoricalData = async (accountId, source) => {
     try {
         const now = new Date();
         const startIndex = acc[indexField] || 0;
+        
+        const targetDays = targetMonths * 30; 
+        const chunkSize = 7;
+        const totalChunks = Math.ceil(targetDays / chunkSize);
 
-        for (let i = startIndex; i < targetMonths; i++) {
-            const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+        for (let i = startIndex; i < totalChunks; i++) {
+            const end = new Date(now);
+            end.setDate(end.getDate() - (i * chunkSize));
+            const start = new Date(end);
+            start.setDate(start.getDate() - chunkSize + 1);
 
             const startDate = start.toISOString().split('T')[0];
             const endDate = (end > now ? now : end).toISOString().split('T')[0];
 
-            const progressNum = Math.round(((i + 1) / targetMonths) * 100);
+            const progressNum = Math.round(((i + 1) / totalChunks) * 100);
             console.log(`[Historical Sync] 📈 Progress [${source.toUpperCase()}] | "${acc.siteName}" | ${startDate} -> ${endDate} (${progressNum}%)`);
 
             switch (source) {
@@ -130,9 +136,9 @@ export const syncHistoricalData = async (accountId, source) => {
                 case 'facebook-ads': await withRetry(() => syncFacebookAds(acc, startDate, endDate)); break;
             }
 
-            // Update progress & last completed month
+            // Update progress & last completed chunk
             const nextIndex = i + 1;
-            const progress = Math.round((nextIndex / targetMonths) * 100);
+            const progress = Math.min(100, Math.round((nextIndex / totalChunks) * 100));
             await UserAccounts.findByIdAndUpdate(accountId, { 
                 [progressField]: progress,
                 [indexField]: nextIndex
@@ -219,7 +225,17 @@ async function updateGlobalSyncStatus(acc) {
         finalStatus = 'error';
     }
 
-    await UserAccounts.findByIdAndUpdate(acc._id, { syncStatus: finalStatus });
+    const isGa4Done = !acc.ga4PropertyId || acc.ga4HistoricalComplete;
+    const isGscDone = !acc.gscSiteUrl || acc.gscHistoricalComplete;
+    const isGAdsDone = !acc.googleAdsCustomerId || acc.googleAdsHistoricalComplete;
+    const isFbDone = !acc.facebookAdAccountId || acc.facebookAdsHistoricalComplete;
+
+    const isAllHistoricalDone = isGa4Done && isGscDone && isGAdsDone && isFbDone;
+
+    await UserAccounts.findByIdAndUpdate(acc._id, { 
+        syncStatus: finalStatus,
+        isHistoricalSyncComplete: isAllHistoricalDone
+    });
 }
 
 export const syncGa4 = async (acc, startDate, endDate) => {
