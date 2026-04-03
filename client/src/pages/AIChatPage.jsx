@@ -42,16 +42,14 @@ const MarkdownComponents = {
 
         if (!inline && (match || isJson)) {
             try {
-                // Pre-process JSON text: Remove comments, strip leading/trailing non-JSON noise
                 const cleanedJson = text
-                    .replace(/\/\/.*/g, '') // Remove single line comments
-                    .replace(/\/\*[\s\S]*?\*\//g, '') // Remove multi-line comments
+                    .replace(/\/\/.*/g, '') 
+                    .replace(/\/\*[\s\S]*?\*\//g, '') 
                     .replace(/\n$/g, '') 
                     .trim();
 
                 const chartData = JSON.parse(cleanedJson);
                 
-                // Catch common nested structures or alternate keys
                 const hasChartKeys = (obj) => {
                     const keys = ['labels', 'label', 'datasets', 'dataset', 'chartType', 'series', 'categories'];
                     const rootKeys = Object.keys(obj || {});
@@ -60,67 +58,80 @@ const MarkdownComponents = {
                 };
 
                 if (!match && isJson && !hasChartKeys(chartData)) {
-                    return <code className={className} {...props}>{children}</code>;
+                    return (
+                        <div className="my-6 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 shadow-sm bg-neutral-900 dark:bg-black/40 p-4">
+                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/5">
+                                <DocumentTextIcon className="w-3.5 h-3.5 text-neutral-400" />
+                                <span className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Raw Data / JSON</span>
+                            </div>
+                            <code className="text-[12px] font-mono text-neutral-300 block whitespace-pre overflow-x-auto" {...props}>{children}</code>
+                        </div>
+                    );
                 }
                 
                 const finalType = match ? match[1] : (chartData.chartType || 'line');
 
                 return (
-                    <div className="my-6 w-full overflow-hidden">
+                    <div className="my-10 w-full overflow-hidden">
                         <ChartRenderer type={finalType} data={chartData} />
                     </div>
                 );
             } catch (err) {
-                // While still streaming or small length, show the loading state
-                // If it's a known chart language block, show "Generating" 
                 if (match || (isJson && text.length > 20)) {
                     return (
-                        <div className="my-6 p-6 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl flex flex-col items-center justify-center bg-neutral-50/50 dark:bg-neutral-800/20">
-                            <div className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-ping mb-3" />
-                            <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest leading-none">
-                                {text.endsWith('}') ? 'Rendering Visualisation...' : `Generating ${match ? match[1] : 'Graph'}...`}
+                        <div className="my-6 p-8 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-3xl flex flex-col items-center justify-center bg-neutral-50/50 dark:bg-neutral-800/20 backdrop-blur-sm">
+                            <div className="w-2.5 h-2.5 rounded-full bg-brand-500 animate-ping mb-4" />
+                            <span className="text-[11px] font-black text-neutral-400 uppercase tracking-[0.2em] leading-none">
+                                {text.endsWith('}') ? 'Rendering Visualisation...' : `Generating ${match ? match[1] : 'Advanced Analytics'}...`}
                             </span>
                         </div>
                     );
                 }
             }
         }
-        return <code className={className} {...props}>{children}</code>;
+        return (
+            <code className="px-1.5 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-brand-600 dark:text-brand-400 font-bold text-[13px]" {...props}>
+                {children}
+            </code>
+        );
     },
-    ul: ({ children }) => <ul className="!list-none !p-0 !m-0 !pl-0 space-y-2 mb-4">{children}</ul>,
-    ol: ({ children }) => <ol className="!list-decimal !p-0 !m-0 !pl-5 mb-4 space-y-2 marker:text-brand-600 dark:marker:text-brand-400 marker:font-bold">{children}</ol>,
+    ul: ({ children }) => <ul className="!list-none !p-0 !m-0 !pl-0 space-y-3 mb-8">{children}</ul>,
+    ol: ({ children }) => <ol className="!list-decimal !p-0 !m-0 !pl-6 mb-8 space-y-3 marker:text-brand-600 dark:marker:text-brand-400 marker:font-black">{children}</ol>,
     li: ({ children, ordered }) => {
         if (ordered) {
             return (
-                <li className="list-item text-[15px] leading-relaxed text-neutral-700 dark:text-neutral-100/90 mb-2 !ml-0">
+                <li className="list-item text-[15.5px] leading-relaxed text-neutral-700 dark:text-neutral-100/90 mb-2 !ml-0 font-medium">
                     {children}
                 </li>
             );
         }
         return (
-            <li className="!list-none !p-0 !m-0 relative !pl-0 text-[15px] leading-relaxed text-neutral-700 dark:text-neutral-100/90 group mb-2">
-                <span className="absolute -left-5 top-[10px] h-1.5 w-1.5 rounded-full bg-brand-500 shadow-[0_0_8px_rgba(59,130,246,0.3)]" />
+            <li className="!list-none !p-0 !m-0 relative !pl-6 text-[15.5px] leading-relaxed text-neutral-750 dark:text-neutral-100 group mb-3 font-medium">
+                <span className="absolute left-0 top-[10px] h-2 w-2 rounded-full bg-brand-500 shadow-[0_0_12px_rgba(59,130,246,0.4)] group-hover:scale-125 transition-transform" />
                 <div className="!m-0 !p-0 inline-block w-full">{children}</div>
             </li>
         );
     },
-    p: ({ children }) => <p className="!m-0 !p-0 leading-relaxed text-neutral-800 dark:text-neutral-200">{children}</p>,
-    h1: ({ children }) => <h1 className="text-xl font-black !m-0 !mb-4 tracking-tight text-neutral-900 dark:text-white">{children}</h1>,
-    h2: ({ children }) => <h2 className="text-lg font-extrabold !m-0 !mb-3 tracking-tight text-neutral-800 dark:text-neutral-100">{children}</h2>,
-    h3: ({ children }) => <h3 className="text-base font-bold !m-0 !mb-2 text-neutral-800 dark:text-neutral-100">{children}</h3>,
-    strong: ({ children }) => <strong className="font-bold text-neutral-900 dark:text-white">{children}</strong>,
+    p: ({ children }) => <p className="mb-6 leading-relaxed text-[15.5px] text-neutral-800 dark:text-neutral-200 font-medium">{children}</p>,
+    h1: ({ children }) => <h1 className="text-3xl font-black !m-0 !mb-8 tracking-tight text-neutral-900 dark:text-white border-b-4 border-brand-500/10 pb-4">{children}</h1>,
+    h2: ({ children }) => <h2 className="text-xl font-extrabold !m-0 !mb-5 mt-10 tracking-tight text-neutral-800 dark:text-neutral-100 flex items-center gap-3">
+        <span className="w-1.5 h-6 bg-brand-500 rounded-full" />
+        {children}
+    </h2>,
+    h3: ({ children }) => <h3 className="text-lg font-bold !m-0 !mb-4 mt-8 text-neutral-800 dark:text-neutral-100 border-l-4 border-neutral-200 dark:border-neutral-700 pl-4">{children}</h3>,
+    strong: ({ children }) => <strong className="font-bold text-neutral-900 dark:text-white bg-brand-500/5 px-1 rounded">{children}</strong>,
     table: ({ children }) => (
-        <div className="my-6 w-full overflow-x-auto border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm">
-            <table className="w-full text-left border-collapse min-w-[500px]">
+        <div className="my-10 w-full overflow-x-auto border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-xl">
+            <table className="w-full text-left border-collapse min-w-[600px]">
                 {children}
             </table>
         </div>
     ),
-    thead: ({ children }) => <thead className="bg-neutral-50 dark:bg-neutral-800/50 border-b border-neutral-200 dark:border-neutral-800">{children}</thead>,
-    tbody: ({ children }) => <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">{children}</tbody>,
-    tr: ({ children }) => <tr className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors">{children}</tr>,
-    th: ({ children }) => <th className="px-5 py-3.5 text-[11px] font-black uppercase tracking-widest text-neutral-500 dark:text-neutral-400">{children}</th>,
-    td: ({ children }) => <td className="px-5 py-3.5 text-[13.5px] text-neutral-700 dark:text-neutral-200 font-medium">{children}</td>
+    thead: ({ children }) => <thead className="bg-neutral-50 dark:bg-neutral-800/80 border-b border-neutral-200 dark:border-neutral-700">{children}</thead>,
+    tbody: ({ children }) => <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/50 bg-white dark:bg-dark-card">{children}</tbody>,
+    tr: ({ children }) => <tr className="hover:bg-brand-50/30 dark:hover:bg-brand-900/5 transition-colors">{children}</tr>,
+    th: ({ children }) => <th className="px-6 py-5 text-[11px] font-black uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">{children}</th>,
+    td: ({ children }) => <td className="px-6 py-5 text-[14px] text-neutral-700 dark:text-neutral-100 font-bold">{children}</td>
 };
 
 const ChatMessage = React.memo(({ msg, userName }) => {
@@ -629,9 +640,15 @@ const AIChatPage = () => {
                                         <span className="text-neutral-300 dark:text-neutral-700">·</span>
                                         <span className="text-[10px] font-bold text-brand-600 dark:text-brand-400">AI Generated</span>
                                     </div>
-                                    <div className="bg-neutral-50 dark:bg-neutral-800/30 border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5">
-                                        <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:font-black prose-p:leading-relaxed prose-strong:text-brand-600 dark:prose-strong:text-brand-400">
-                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{weeklyInsight}</ReactMarkdown>
+                                    <div className="bg-white dark:bg-[#1a1a1a] border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-8 sm:p-12 shadow-2xl relative overflow-hidden group">
+                                        <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 blur-[120px] pointer-events-none group-hover:bg-brand-500/10 transition-all duration-1000" />
+                                        <div className="prose prose-md dark:prose-invert max-w-none prose-headings:tracking-tighter prose-p:text-neutral-700 dark:prose-p:text-neutral-300">
+                                            <ReactMarkdown 
+                                                remarkPlugins={[remarkGfm]}
+                                                components={MarkdownComponents}
+                                            >
+                                                {weeklyInsight}
+                                            </ReactMarkdown>
                                         </div>
                                     </div>
                                 </div>

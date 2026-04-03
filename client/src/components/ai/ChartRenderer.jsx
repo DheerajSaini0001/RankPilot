@@ -127,7 +127,7 @@ const ChartRenderer = ({ type, data }) => {
               key={ds.label} 
               type="monotone" 
               dataKey={ds.label} 
-              stroke={colors[i % colors.length]} 
+              stroke={ds.borderColor || ds.stroke || ds.backgroundColor || colors[i % colors.length]} 
               strokeWidth={3}
               dot={{ r: 4, strokeWidth: 2 }}
               activeDot={{ r: 6 }}
@@ -168,7 +168,7 @@ const ChartRenderer = ({ type, data }) => {
             <Bar 
               key={ds.label} 
               dataKey={ds.label} 
-              fill={colors[i % colors.length]} 
+              fill={ds.backgroundColor || ds.fill || ds.borderColor || colors[i % colors.length]} 
               radius={[4, 4, 0, 0]} 
             />
           ))}
@@ -216,7 +216,7 @@ const ChartRenderer = ({ type, data }) => {
               key={ds.label} 
               type="monotone" 
               dataKey={ds.label} 
-              stroke={colors[i % colors.length]} 
+              stroke={ds.borderColor || ds.stroke || colors[i % colors.length]} 
               fillOpacity={1} 
               fill={`url(#color-${i})`} 
               strokeWidth={3}
