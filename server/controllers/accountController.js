@@ -139,108 +139,114 @@ export const listFacebookAccounts = async (req, res) => {
 };
 
 export const selectAccounts = async (req, res) => {
-    const updates = {};
-    const fields = [
-        'ga4PropertyId', 'ga4PropertyName', 'ga4AccountId', 'ga4TokenId',
-        'gscSiteUrl', 'gscPermission', 'gscTokenId',
-        'googleAdsCustomerId', 'googleAdsAccountName', 'googleAdsCurrencyCode', 'googleAdsTokenId',
-        'facebookAdAccountId', 'facebookAdAccountName', 'facebookAdCurrencyCode', 'facebookTokenId',
-        'siteName'
-    ];
+    try {
+        const updates = {};
+        const fields = [
+            'ga4PropertyId', 'ga4PropertyName', 'ga4AccountId', 'ga4TokenId',
+            'gscSiteUrl', 'gscPermission', 'gscTokenId',
+            'googleAdsCustomerId', 'googleAdsAccountName', 'googleAdsCurrencyCode', 'googleAdsTokenId',
+            'facebookAdAccountId', 'facebookAdAccountName', 'facebookAdCurrencyCode', 'facebookTokenId',
+            'siteName'
+        ];
 
-    fields.forEach(field => {
-        if (req.body[field] !== undefined) {
-            let value = req.body[field];
-            if (['ga4TokenId', 'gscTokenId', 'googleAdsTokenId', 'facebookTokenId'].includes(field) && value === "") {
-                value = null;
+        // Clean up empty strings to null for consistent DB state
+        fields.forEach(field => {
+            if (req.body[field] !== undefined) {
+                let value = req.body[field];
+                if (value === "") value = null; 
+                updates[field] = value;
             }
-            updates[field] = value;
-        }
-    });
-
-    const siteId = req.body.siteId;
-    let existingAccount;
-
-    if (siteId && siteId.match(/^[0-9a-fA-F]{24}$/)) {
-        existingAccount = await UserAccounts.findOne({ _id: siteId, userId: req.user._id });
-    } else {
-        existingAccount = await UserAccounts.findOne({ 
-            userId: req.user._id, 
-            siteName: updates.siteName || 'My Website' 
         });
-    }
 
-    const account = await UserAccounts.findOneAndUpdate(
-        { userId: req.user._id, _id: existingAccount?._id || new mongoose.Types.ObjectId() },
-        { $set: updates },
-        { upsert: true, returnDocument: 'after' }
-    );
+        const siteId = req.body.siteId;
+        let existingAccount;
 
-    if (!account) return res.status(500).json({ message: 'Failed to create or update account' });
-    
-    // Check for changes to trigger cleanup and sync
-    const hasChanged = (field, currentVal) => {
-        return updates.hasOwnProperty(field) && updates[field] !== currentVal;
-    };
-
-    if (hasChanged('ga4PropertyId', existingAccount?.ga4PropertyId)) {
-        if (existingAccount?.ga4PropertyId) cleanupMetrics(req.user._id, existingAccount.ga4PropertyId);
-        if (updates.ga4PropertyId) {
-            addSyncJob('historical-sync', { accountId: account._id, accName: account.siteName, source: 'ga4' }, { priority: 20 }).catch(e => console.error('Queue GA4 Fail:', e));
+        if (siteId && siteId.match(/^[0-9a-fA-F]{24}$/)) {
+            existingAccount = await UserAccounts.findOne({ _id: siteId, userId: req.user._id });
+            if (!existingAccount) {
+                return res.status(404).json({ message: 'The specified site was not found. It might have been deleted or moved.' });
+            }
+            
+            // Check if they are renaming to a name that another site already uses
+            if (updates.siteName && updates.siteName !== existingAccount.siteName) {
+                const collision = await UserAccounts.findOne({ 
+                    userId: req.user._id, 
+                    siteName: updates.siteName, 
+                    _id: { $ne: existingAccount._id } 
+                });
+                if (collision) {
+                    return res.status(400).json({ message: `A site with the name "${updates.siteName}" already exists.` });
+                }
+            }
+        } else {
+            // New Site Creation: Check name collision
+            if (updates.siteName) {
+                const collision = await UserAccounts.findOne({ userId: req.user._id, siteName: updates.siteName });
+                if (collision) {
+                    return res.status(400).json({ message: `A site with the name "${updates.siteName}" already exists.` });
+                }
+            }
+            existingAccount = null;
         }
-    }
-    if (hasChanged('gscSiteUrl', existingAccount?.gscSiteUrl)) {
-        if (existingAccount?.gscSiteUrl) cleanupMetrics(req.user._id, existingAccount.gscSiteUrl);
-        if (updates.gscSiteUrl) {
-            addSyncJob('historical-sync', { accountId: account._id, accName: account.siteName, source: 'gsc' }, { priority: 20 }).catch(e => console.error('Queue GSC Fail:', e));
-        }
-    }
-    if (hasChanged('googleAdsCustomerId', existingAccount?.googleAdsCustomerId)) {
-        if (existingAccount?.googleAdsCustomerId) cleanupMetrics(req.user._id, existingAccount.googleAdsCustomerId);
-        if (updates.googleAdsCustomerId) {
-            addSyncJob('historical-sync', { accountId: account._id, accName: account.siteName, source: 'google-ads' }, { priority: 20 }).catch(e => console.error('Queue Google Ads Fail:', e));
-        }
-    }
-    if (hasChanged('facebookAdAccountId', existingAccount?.facebookAdAccountId)) {
-        if (existingAccount?.facebookAdAccountId) cleanupMetrics(req.user._id, existingAccount.facebookAdAccountId);
-        if (updates.facebookAdAccountId) {
-            addSyncJob('historical-sync', { accountId: account._id, accName: account.siteName, source: 'facebook-ads' }, { priority: 20 }).catch(e => console.error('Queue Facebook Ads Fail:', e));
-        }
-    }
 
-    // Check if site has ANY integrations left (after the update)
-    if (!account.ga4TokenId && !account.gscTokenId && !account.googleAdsTokenId && !account.facebookTokenId) {
-        const removedSiteName = account.siteName;
-        await performSiteDelete(req.user._id, account._id, account);
+        const account = await UserAccounts.findOneAndUpdate(
+            { userId: req.user._id, _id: existingAccount?._id || new mongoose.Types.ObjectId() },
+            { $set: updates },
+            { upsert: true, returnDocument: 'after' }
+        );
 
-        // Notify user about deletion in persistent history
+        if (!account) return res.status(500).json({ message: 'Failed to create or update account' });
+        
+        // Check for changes to trigger cleanup and sync
+        const hasChanged = (field, currentVal) => {
+            return updates.hasOwnProperty(field) && updates[field] !== currentVal;
+        };
+
+        if (hasChanged('ga4PropertyId', existingAccount?.ga4PropertyId)) {
+            if (existingAccount?.ga4PropertyId) cleanupMetrics(req.user._id, existingAccount.ga4PropertyId);
+            if (updates.ga4PropertyId) {
+                addSyncJob('historical-sync', { accountId: account._id, accName: account.siteName, source: 'ga4' }, { priority: 20 }).catch(e => console.error('Queue GA4 Fail:', e));
+            }
+        }
+        if (hasChanged('gscSiteUrl', existingAccount?.gscSiteUrl)) {
+            if (existingAccount?.gscSiteUrl) cleanupMetrics(req.user._id, existingAccount.gscSiteUrl);
+            if (updates.gscSiteUrl) {
+                addSyncJob('historical-sync', { accountId: account._id, accName: account.siteName, source: 'gsc' }, { priority: 20 }).catch(e => console.error('Queue GSC Fail:', e));
+            }
+        }
+        if (hasChanged('googleAdsCustomerId', existingAccount?.googleAdsCustomerId)) {
+            if (existingAccount?.googleAdsCustomerId) cleanupMetrics(req.user._id, existingAccount.googleAdsCustomerId);
+            if (updates.googleAdsCustomerId) {
+                addSyncJob('historical-sync', { accountId: account._id, accName: account.siteName, source: 'google-ads' }, { priority: 20 }).catch(e => console.error('Queue Google Ads Fail:', e));
+            }
+        }
+        if (hasChanged('facebookAdAccountId', existingAccount?.facebookAdAccountId)) {
+            if (existingAccount?.facebookAdAccountId) cleanupMetrics(req.user._id, existingAccount.facebookAdAccountId);
+            if (updates.facebookAdAccountId) {
+                addSyncJob('historical-sync', { accountId: account._id, accName: account.siteName, source: 'facebook-ads' }, { priority: 20 }).catch(e => console.error('Queue Facebook Ads Fail:', e));
+            }
+        }
+
+        // Success notification (Creation vs Update)
+        const isNew = !siteId || !existingAccount;
         await Notification.create({
             userId: req.user._id,
+            siteId: account._id,
             type: 'success',
-            title: 'Site Removed',
-            message: `All integrations were deselected for "${removedSiteName}", so the site has been removed.`,
-            source: 'system'
+            title: isNew ? 'Website Connected' : 'Integrations Updated',
+            message: isNew 
+                ? `Successfully connected "${account.siteName}" to your analytics dashboard.`
+                : `Updated marketing data connections for "${account.siteName}".`,
+            source: 'system',
+            actionLabel: 'View Dashboard',
+            actionPath: '/dashboard'
         });
 
-        return res.status(200).json({ message: 'Site removed (all integrations deselected)', accounts: null });
+        res.status(200).json({ message: 'Accounts selected', accounts: account });
+    } catch (error) {
+        console.error('Select Accounts Error:', error);
+        res.status(500).json({ success: false, message: error.message });
     }
-
-    // Success notification (Creation vs Update)
-    const isNew = !siteId || !existingAccount;
-    await Notification.create({
-        userId: req.user._id,
-        siteId: account._id,
-        type: 'success',
-        title: isNew ? 'Website Connected' : 'Integrations Updated',
-        message: isNew 
-            ? `Successfully connected "${account.siteName}" to your analytics dashboard.`
-            : `Updated marketing data connections for "${account.siteName}".`,
-        source: 'system',
-        actionLabel: 'View Dashboard',
-        actionPath: '/dashboard'
-    });
-
-    res.status(200).json({ message: 'Accounts selected', accounts: account });
 };
 
 export const getActiveAccounts = async (req, res) => {
