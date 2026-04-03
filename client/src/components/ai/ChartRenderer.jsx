@@ -36,23 +36,29 @@ const ChartRenderer = ({ type, data }) => {
     return null;
   };
 
-  // Extract core components with smart fallback
-  let datasets = deepFind(data, ['datasets', 'dataset', 'series', 'values']);
-  let labels = deepFind(data, ['labels', 'label', 'x_axis', 'categories', 'names']);
+  // Support "Axis-based" structures (xAxis: { dataKey: '...' })
+  const xAxisKey = data?.xAxis?.dataKey || data?.x_axis_key || (data?.data && data.data[0]?.date ? 'date' : (data?.data && data.data[0]?.name ? 'name' : 'name'));
 
-  // Handle "Recharts style" where data is the list of objects
-  if (!labels && Array.isArray(data?.data)) {
-    const xKey = data.x_axis_key || 'name' || 'date';
-    labels = data.data.map(item => item[xKey] || item.name || item.date || item.label);
+  // Handle "Recharts style" where data is a list of objects and series defines the keys
+  if (Array.isArray(data?.data)) {
+    labels = data.data.map(item => item[xAxisKey] || item.name || item.date || item.label);
     
-    // If datasets is missing but series exist, use series
-    if (!datasets && data.series) {
-        datasets = data.series.map(s => ({
-            label: s.label || s.name || s,
-            data: data.data.map(item => item[s.key || s.dataKey || s.label || s])
-        }));
+    if (data.series) {
+        datasets = data.series.map(s => {
+            const label = s.label || s.name || s.category || s;
+            const key = s.key || s.dataKey || s.category || label;
+            return {
+                label: label,
+                data: data.data.map(item => item[key] ?? 0),
+                stroke: s.color || s.stroke || s.borderColor
+            };
+        });
     }
   }
+
+  // Fallback to Deep Search if not found via structured lookup
+  if (!datasets) datasets = deepFind(data, ['datasets', 'dataset', 'values']);
+  if (!labels) labels = deepFind(data, ['labels', 'label', 'x_axis', 'categories', 'names']);
 
   if (!labels || !datasets || !Array.isArray(labels) || !Array.isArray(datasets)) {
     return (

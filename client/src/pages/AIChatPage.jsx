@@ -51,10 +51,11 @@ const MarkdownComponents = {
                 const chartData = JSON.parse(cleanedJson);
                 
                 const hasChartKeys = (obj) => {
-                    const keys = ['labels', 'label', 'datasets', 'dataset', 'chartType', 'series', 'categories'];
+                    const keys = ['labels', 'label', 'datasets', 'dataset', 'chartType', 'series', 'categories', 'xAxis', 'yAxis'];
                     const rootKeys = Object.keys(obj || {});
-                    const nestedKeys = (obj?.data) ? Object.keys(obj.data) : [];
-                    return keys.some(k => rootKeys.includes(k) || nestedKeys.includes(k));
+                    const nestedKeys = (obj?.data && !Array.isArray(obj.data)) ? Object.keys(obj.data) : [];
+                    const isDataArray = Array.isArray(obj?.data);
+                    return keys.some(k => rootKeys.includes(k) || nestedKeys.includes(k)) || (isDataArray && rootKeys.includes('series'));
                 };
 
                 if (!match && isJson && !hasChartKeys(chartData)) {

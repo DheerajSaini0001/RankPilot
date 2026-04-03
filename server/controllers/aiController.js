@@ -268,12 +268,25 @@ export const fetchPlatformData = async (userId, startDate, endDate, siteId, acti
             return (((curr - prev) / prev) * 100).toFixed(1);
         };
 
-        // Format Daily Breakdown
-        data.dailyBreakdown = results.dailyBreakdown.reduce((acc, item) => {
-            if (!acc[item.source]) acc[item.source] = [];
-            acc[item.source].push({ date: item.date, metrics: item.metrics });
-            return acc;
-        }, {});
+        // Format Daily Breakdown with Gap-Filling (Ensures all sources have same dates with 0-defaults)
+        const allDates = [...new Set(results.dailyBreakdown.map(d => d.date))].sort();
+        const sources = [...new Set(results.dailyBreakdown.map(d => d.source))];
+        
+        data.dailyBreakdown = {};
+        sources.forEach(source => {
+            const sourceData = results.dailyBreakdown.filter(d => d.source === source);
+            // Dynamic metric mapping: Find all unique metric keys for this source across the range
+            const allMetricKeys = [...new Set(sourceData.flatMap(d => Object.keys(d.metrics || {})))];
+            const defaultMetrics = allMetricKeys.reduce((acc, key) => ({ ...acc, [key]: 0 }), {});
+
+            data.dailyBreakdown[source] = allDates.map(date => {
+                const entry = sourceData.find(d => d.date === date);
+                return {
+                    date,
+                    metrics: entry ? entry.metrics : { ...defaultMetrics }
+                };
+            });
+        });
 
         // Format Dimensions with rounding
         data.topDimensions = {
