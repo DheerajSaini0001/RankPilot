@@ -89,6 +89,9 @@ const DashboardLayout = ({ children, noScroll = false }) => {
                     setAccounts({ userSites: sites });
                     if (!activeSiteId && sites.length > 0) {
                         setAccounts({ activeSiteId: sites[0]._id });
+                    } else if (activeSiteId && !sites.find(s => s._id === activeSiteId)) {
+                        // If activeSiteId is set but not found in the sites list, reset it
+                        setAccounts({ activeSiteId: sites.length > 0 ? sites[0]._id : null });
                     }
                 })
                 .catch(() => { });
@@ -96,6 +99,12 @@ const DashboardLayout = ({ children, noScroll = false }) => {
             getActiveAccounts(activeSiteId)
                 .then(res => {
                     const data = res.data || {};
+                    
+                    // If we requested a specific site but got an empty object back, it means site was not found
+                    if (activeSiteId && !data._id) {
+                        setAccounts({ activeSiteId: null });
+                    }
+
                     setAccounts({
                         activeGscSite: data.gscSiteUrl || '',
                         activeGa4PropertyId: data.ga4PropertyId || '',

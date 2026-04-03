@@ -74,8 +74,12 @@ const ConnectAccountsPage = () => {
 
                 if (!isNew) {
                     const active = await getActiveAccounts(activeSiteId);
-                    if (active.data) {
+                    if (active.data && active.data._id) {
+                        // Sync store with the actual ID returned (useful if it's the first site or a fallback)
+                        setAccounts({ activeSiteId: active.data._id });
+
                         const vals = {
+                            siteId: active.data._id,
                             siteName: active.data.siteName || '',
                             ga4: active.data.ga4PropertyId || '',
                             ga4TokenId: active.data.ga4TokenId || '',
@@ -104,6 +108,11 @@ const ConnectAccountsPage = () => {
                         if (vals.googleAdsTokenId) setGoogleAdsTokenId(vals.googleAdsTokenId);
                         if (vals.fbAds) setSelectedFbAds(vals.fbAds);
                         if (vals.facebookTokenId) setFacebookTokenId(vals.facebookTokenId);
+                    } else {
+                        // No site found, clear any stale ID and initialize defaults
+                        if (activeSiteId) setAccounts({ activeSiteId: null });
+                        setInitialValues({});
+                        setSiteName('My Website');
                     }
                 } else {
                     setInitialValues({});
@@ -165,11 +174,14 @@ const ConnectAccountsPage = () => {
         }
     }, [facebookTokenId]);
 
-    const handleSave = async () => {
+    const handleSave = async (e) => {
+        if (e) e.preventDefault();
+        
         if (!siteName.trim()) {
             toast.error('Please enter a website name');
             return;
         }
+
         setSaving(true);
         try {
             const selectedGa4Obj = ga4Props.find(p => p.id === selectedGa4);
@@ -196,33 +208,26 @@ const ConnectAccountsPage = () => {
             const res = await selectAccounts(data);
             const updatedAccount = res.data.accounts;
 
-            if (!updatedAccount) {
-                // If all integrations unlinked, site was deleted from backend
-                setAccounts({
-                    activeSiteId: null,
-                    activeGscSite: null,
-                    activeGa4PropertyId: null,
-                    activeGoogleAdsCustomerId: null,
-                    activeFacebookAdAccountId: null,
-                });
-
-                toast.success('Integrations unlinked and site removed');
-                navigate('/sites');
-                return;
-            }
-
+            // Sync all updated details into the store
             setAccounts({
                 activeSiteId: updatedAccount._id,
-                activeGscSite: updatedAccount.gscSiteUrl || null,
-                activeGa4PropertyId: updatedAccount.ga4PropertyId || null,
-                activeGoogleAdsCustomerId: updatedAccount.googleAdsCustomerId || null,
-                activeFacebookAdAccountId: updatedAccount.facebookAdAccountId || null,
+                activeGscSite: updatedAccount.gscSiteUrl || '',
+                activeGa4PropertyId: updatedAccount.ga4PropertyId || '',
+                activeGoogleAdsCustomerId: updatedAccount.googleAdsCustomerId || '',
+                activeFacebookAdAccountId: updatedAccount.facebookAdAccountId || '',
+                syncMetadata: {
+                    isHistoricalSyncComplete: updatedAccount.isHistoricalSyncComplete || false,
+                    lastDailySyncAt: updatedAccount.lastDailySyncAt || null,
+                    syncStatus: updatedAccount.syncStatus || 'idle'
+                }
             });
 
             toast.success(isNew ? 'New website added!' : 'Integrations updated!');
             navigate('/dashboard');
-        } catch {
-            toast.error('Failed to link accounts');
+        } catch (err) {
+            console.error('Save Accounts Error:', err);
+            const message = err.response?.data?.message || 'Failed to link accounts';
+            toast.error(message);
         } finally {
             setSaving(false);
         }
