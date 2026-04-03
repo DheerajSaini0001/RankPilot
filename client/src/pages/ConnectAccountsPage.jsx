@@ -189,7 +189,7 @@ const ConnectAccountsPage = () => {
             const selectedFbAdsObj = fbAdAccounts.find(f => f.id === selectedFbAds);
 
             const data = {
-                siteId: isNew ? undefined : activeSiteId,
+                siteId: (isNew || !activeSiteId) ? undefined : activeSiteId,
                 siteName: siteName,
                 ga4PropertyId: selectedGa4,
                 ga4PropertyName: selectedGa4Obj?.name || '',
