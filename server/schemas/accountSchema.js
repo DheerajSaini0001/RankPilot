@@ -2,16 +2,27 @@ import { z } from 'zod';
 
 export const selectAccountsSchema = z.object({
   body: z.object({
-    siteId: z.string().optional(),
+    siteId: z.string().nullable().optional(),
     siteName: z.string().min(1, "Site name is required").optional(),
-    ga4PropertyId: z.string().optional(),
-    ga4TokenId: z.string().optional(),
-    gscSiteUrl: z.string().optional(),
-    gscTokenId: z.string().optional(),
-    googleAdsCustomerId: z.string().optional(),
-    googleAdsTokenId: z.string().optional(),
-    facebookAdAccountId: z.string().optional(),
-    facebookTokenId: z.string().optional(),
+    // GA4
+    ga4PropertyId: z.string().nullable().optional(),
+    ga4PropertyName: z.string().nullable().optional(),
+    ga4AccountId: z.string().nullable().optional(),
+    ga4TokenId: z.string().nullable().optional(),
+    // GSC
+    gscSiteUrl: z.string().nullable().optional(),
+    gscPermission: z.string().nullable().optional(),
+    gscTokenId: z.string().nullable().optional(),
+    // Google Ads
+    googleAdsCustomerId: z.string().nullable().optional(),
+    googleAdsAccountName: z.string().nullable().optional(),
+    googleAdsCurrencyCode: z.string().nullable().optional(),
+    googleAdsTokenId: z.string().nullable().optional(),
+    // Facebook
+    facebookAdAccountId: z.string().nullable().optional(),
+    facebookAdAccountName: z.string().nullable().optional(),
+    facebookAdCurrencyCode: z.string().nullable().optional(),
+    facebookTokenId: z.string().nullable().optional(),
   }),
 });
 
