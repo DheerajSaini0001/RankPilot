@@ -39,6 +39,9 @@ const ChartRenderer = ({ type, data }) => {
   // Support "Axis-based" structures (xAxis: { dataKey: '...' })
   const xAxisKey = data?.xAxis?.dataKey || data?.x_axis_key || (data?.data && data.data[0]?.date ? 'date' : (data?.data && data.data[0]?.name ? 'name' : 'name'));
 
+  let labels = null;
+  let datasets = null;
+
   // Handle "Recharts style" where data is a list of objects and series defines the keys
   if (Array.isArray(data?.data)) {
     labels = data.data.map(item => item[xAxisKey] || item.name || item.date || item.label);

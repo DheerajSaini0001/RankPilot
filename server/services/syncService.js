@@ -114,7 +114,7 @@ export const syncHistoricalData = async (accountId, source) => {
         const startIndex = acc[indexField] || 0;
         
         const targetDays = targetMonths * 30; 
-        const chunkSize = 7;
+        const chunkSize = 1;
         const totalChunks = Math.ceil(targetDays / chunkSize);
 
         for (let i = startIndex; i < totalChunks; i++) {
