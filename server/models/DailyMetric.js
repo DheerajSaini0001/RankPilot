@@ -28,6 +28,18 @@ const dailyMetricSchema = new mongoose.Schema({
 dailyMetricSchema.index({ 'metadata.userId': 1, 'metadata.siteId': 1, 'metadata.source': 1 });
 dailyMetricSchema.index({ 'metadata.platformAccountId': 1 });
 
+// ULTRA-FAST SYNC INDEX: Covers all unique dimensions used in GSC/GA4 upserts
+dailyMetricSchema.index({ 
+    'metadata.userId': 1, 
+    'metadata.siteId': 1, 
+    'metadata.source': 1, 
+    'metadata.platformAccountId': 1, 
+    'date': 1,
+    'metadata.dimensions.page': 1,
+    'metadata.dimensions.pagePath': 1,
+    'metadata.dimensions.query': 1
+});
+
 // Helper indexes for common dimension filters within metadata
 dailyMetricSchema.index({ 'metadata.dimensions.campaign': 1 }, { sparse: true });
 dailyMetricSchema.index({ 'metadata.dimensions.query': 1 }, { sparse: true });
