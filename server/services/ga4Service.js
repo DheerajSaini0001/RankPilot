@@ -21,22 +21,38 @@ export const listProperties = async (userId, tokenId = null) => {
 
 // Implements other ga4 queries...
 export const runReport = async (userId, propertyId, reportType, startDate, endDate, dimensions, metrics, tokenId = null) => {
-    // We no longer find the account here. Caller must provide the propertyId.
     if (!propertyId) throw new Error('GA4_PROPERTY_ID_MISSING');
 
     const auth = await getValidGoogleToken(userId, tokenId);
     const analyticsdata = google.analyticsdata({ version: 'v1beta', auth });
 
-    const res = await analyticsdata.properties.runReport({
-        property: propertyId,
-        requestBody: {
-            dateRanges: [{ startDate, endDate }],
-            dimensions: dimensions.map(d => ({ name: d })),
-            metrics: metrics.map(m => ({ name: m })),
-            limit: 100000
-        }
-    });
+    let allRows = [];
+    let offset = 0;
+    const limit = 50000;
 
-    return res.data;
+    while (true) {
+        const res = await analyticsdata.properties.runReport({
+            property: propertyId,
+            requestBody: {
+                dateRanges: [{ startDate, endDate }],
+                dimensions: dimensions.map(d => ({ name: d })),
+                metrics: metrics.map(m => ({ name: m })),
+                limit: limit,
+                offset: offset
+            }
+        });
+
+        const rows = res.data.rows || [];
+        allRows = allRows.concat(rows);
+
+        if (rows.length < limit || allRows.length >= 100000) {
+            break;
+        }
+
+        offset += limit;
+    }
+
+    return { rows: allRows };
 };
+
 

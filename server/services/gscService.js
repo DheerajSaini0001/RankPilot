@@ -17,17 +17,38 @@ export const runQuery = async (userId, siteUrl, reportType, startDate, endDate, 
     const auth = await getValidGoogleToken(userId, tokenId);
     const searchconsole = google.webmasters({ version: 'v3', auth });
 
-    const res = await searchconsole.searchanalytics.query({
-        siteUrl: siteUrl,
-        requestBody: {
-            startDate,
-            endDate,
-            dimensions,
-            rowLimit: 25000,
-            dataState: 'all'
-        }
-    });
+    let allRows = [];
+    let startRow = 0;
+    const rowLimit = 25000;
 
-    return res.data;
+    while (true) {
+        const res = await searchconsole.searchanalytics.query({
+            siteUrl: siteUrl,
+            requestBody: {
+                startDate,
+                endDate,
+                dimensions,
+                rowLimit: rowLimit,
+                startRow: startRow,
+                dataState: 'all'
+            }
+        });
+
+        const rows = res.data.rows || [];
+        allRows = allRows.concat(rows);
+
+        if (rows.length < rowLimit) {
+            break;
+        }
+
+        startRow += rowLimit;
+
+        if (startRow >= 100000) {
+            break;
+        }
+    }
+
+    return { rows: allRows };
 };
+
 
