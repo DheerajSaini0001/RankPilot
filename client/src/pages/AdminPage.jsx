@@ -20,10 +20,6 @@ const AdminPage = () => {
     const [savingMsg, setSavingMsg] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
 
-    useEffect(() => {
-        loadConfigs();
-    }, [loadConfigs]);
-
     const loadConfigs = useCallback(async () => {
         setLoading(true);
         try {
@@ -35,6 +31,10 @@ const AdminPage = () => {
             setLoading(false);
         }
     }, []);
+
+    useEffect(() => {
+        loadConfigs();
+    }, [loadConfigs]);
 
     const handleConfigChange = (idx, value) => {
         const newConfigs = [...configs];
