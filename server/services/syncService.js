@@ -323,11 +323,12 @@ export const syncGsc = async (acc, startDate, endDate) => {
                     update: {
                         $set: {
                             metrics: {
-                                clicks: row.clicks,
-                                impressions: row.impressions,
-                                ctr: row.ctr,
-                                position: row.position
+                                clicks: parseFloat(row.clicks || 0),
+                                impressions: parseFloat(row.impressions || 0),
+                                ctr: parseFloat(row.ctr || 0) * 100,
+                                position: parseFloat(row.position || 0)
                             },
+
                             syncedAt: new Date()
                         }
                     },
