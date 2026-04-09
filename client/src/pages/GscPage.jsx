@@ -16,7 +16,8 @@ import {
     InformationCircleIcon,
     SparklesIcon,
     GlobeAltIcon,
-    ArrowDownTrayIcon
+    ArrowDownTrayIcon,
+    UserCircleIcon
 } from '@heroicons/react/24/outline';
 import { exportToPdf } from '../utils/reportExport';
 import { 
@@ -250,36 +251,110 @@ const GscPage = () => {
         <DashboardLayout>
             <div id="gsc-report" className="flex flex-col space-y-8">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-dark-card p-6 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-sm relative overflow-hidden group">
-                     <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 rounded-full blur-3xl -mr-32 -mt-32 group-hover:bg-brand-500/10 transition-colors duration-700"></div>
-                     <div className="relative z-10">
-                        <h1 className="text-2xl lg:text-3xl font-black text-neutral-900 dark:text-white tracking-tight">Search Console Performance</h1>
-                        <p className="text-sm font-bold text-neutral-500 dark:text-neutral-400 mt-1">Analytics for <span className="text-brand-600 dark:text-brand-400 font-black">{activeGscSite.replace('https://', '')}</span></p>
-                     </div>
-                     <div className="relative z-10 flex items-center gap-3">
-                        <button 
-                            onClick={() => exportToPdf('gsc-report', `RankPilot-GSC-${activeGscSite?.replace('https://', '')}`)}
-                            className="px-4 py-2.5 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 rounded-2xl text-xs font-black flex items-center gap-2 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all shadow-sm active:scale-95"
-                        >
-                            <ArrowDownTrayIcon className="w-4 h-4" />
-                            Download PDF Report
-                        </button>
-                        <AiSectionChat 
-                            label="Get AI Summary"
-                            sectionTitle="GSC Performance Summary"
-                            activeSources={['gsc']}
-                            contextPrompt={`Analyze this Search Console dashboard for ${startDate} to ${endDate}. 
-- Clicks: ${formatNumber(overview?.clicks || 0)} (Change: ${calculateChange(overview?.clicks, priorOverview?.clicks)}%)
-- Impressions: ${formatNumber(overview?.impressions || 0)} (Change: ${calculateChange(overview?.impressions, priorOverview?.impressions)}%)
-- Avg Position: ${(overview?.position || 0).toFixed(1)}
+                <div className="bg-white dark:bg-[#111111] p-5 md:p-6 rounded-[2.5rem] border border-neutral-200 dark:border-neutral-800 shadow-xl shadow-neutral-200/20 dark:shadow-none relative overflow-hidden group transition-all duration-300">
+                    <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/[0.015] dark:bg-blue-500/5 rounded-full blur-[100px] -mr-40 -mt-40 pointer-events-none"></div>
+                    
+                    <div className="relative z-10 flex flex-col lg:flex-row lg:items-center gap-8">
+                        
+                        {/* 1. Logo & Main Identity Section */}
+                        <div className="flex items-center gap-6 shrink-0">
+                            <div className="w-16 h-16 md:w-20 md:h-20 bg-white dark:bg-neutral-900 rounded-[1.5rem] flex items-center justify-center shrink-0 shadow-sm border border-neutral-100 dark:border-neutral-800 relative overflow-hidden transition-transform group-hover:scale-105 duration-500">
+                                <div className="absolute inset-0 bg-gradient-to-tr from-neutral-50 to-white dark:from-neutral-900 dark:to-neutral-800 opacity-40"></div>
+                                <MagnifyingGlassIcon className="w-8 h-8 md:w-10 md:h-10 text-brand-600 dark:text-brand-400 group-hover:scale-110 transition-transform duration-500" />
+                            </div>
+                            <div className="flex flex-col">
+                                <div className="flex items-center gap-3">
+                                    <h1 className="text-2xl md:text-3xl font-black text-neutral-900 dark:text-white tracking-tight leading-none">Search Console</h1>
+                                    {activeSiteId && (
+                                        <div className="px-3 py-1.5 bg-[#0a0a0b] text-white rounded-full text-[10px] font-black uppercase tracking-[0.15rem] flex items-center gap-2 shadow-lg border border-white/10">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+                                            {userSites?.find(s => s._id === activeSiteId)?.siteName || 'ACTIVE WEBSITE'}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="mt-3.5 flex items-center gap-4">
+                                    <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20 shadow-sm">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]"></div>
+                                        <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-500 uppercase tracking-widest">LIVE DATA ACTIVE</span>
+                                    </div>
+                                    <div className="text-[11px] text-neutral-400 font-bold flex items-center gap-2">
+                                        <span className="uppercase text-[10px] tracking-tight opacity-60">Synced:</span>
+                                        <span className="text-neutral-700 dark:text-neutral-300 font-black tabular-nums">{syncMetadata?.lastDailySyncAt ? new Date(syncMetadata.lastDailySyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '12:01 PM'}</span>
+                                        <button onClick={handleManualRefresh} className="p-1 hover:text-brand-500 transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg active:rotate-180 duration-500">
+                                            <ArrowPathIcon className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-Top Queries: ${queries.slice(0, 5).map(q => q.query).join(', ')}
+                        {/* 2. Divider (Desktop) */}
+                        <div className="hidden lg:block w-[1px] h-14 bg-neutral-100 dark:bg-neutral-800 self-center"></div>
 
-Please provide: 
-1. Performance Score (1-100)
-2. One specific thing I should do right now to increase clicks.`}
-                        />
-                     </div>
+                        {/* 3. Info Grid Section */}
+                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8">
+                            <div className="flex items-center gap-4 group/item">
+                                <div className="w-11 h-11 rounded-full bg-neutral-50 dark:bg-neutral-800/80 flex items-center justify-center border border-neutral-100 dark:border-neutral-700/50 shrink-0 transition-all group-hover/item:border-brand-500/30 group-hover/item:shadow-sm">
+                                    <GlobeAltIcon className="w-5 h-5 text-neutral-400 group-hover/item:text-brand-500 transition-colors" />
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                    <span className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest leading-none">Property URL</span>
+                                    <span className="text-sm font-black text-neutral-800 dark:text-neutral-200 mt-1.5 truncate uppercase tracking-tight">{activeGscSite?.replace('https://', '').replace('http://', '') || 'website.com'}</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4 group/item">
+                                <div className="w-11 h-11 rounded-full bg-neutral-50 dark:bg-neutral-800/80 flex items-center justify-center border border-neutral-100 dark:border-neutral-700/50 shrink-0 transition-all group-hover/item:border-brand-500/30 group-hover/item:shadow-sm">
+                                    <span className="font-black text-[11px] text-neutral-400 group-hover/item:text-brand-500 transition-colors">SC</span>
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                    <span className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest leading-none">Console Status</span>
+                                    <span className="text-sm font-black text-neutral-800 dark:text-neutral-200 mt-1.5 tabular-nums tracking-tight">Verified</span>
+                                </div>
+                            </div>
+                            <div className="hidden xl:flex items-center gap-4 group/item">
+                                <div className="w-11 h-11 rounded-full bg-neutral-50 dark:bg-neutral-800/80 flex items-center justify-center border border-neutral-100 dark:border-neutral-700/50 shrink-0 transition-all group-hover/item:border-brand-500/30 group-hover/item:shadow-sm">
+                                    <UserCircleIcon className="w-5 h-5 text-neutral-400 group-hover/item:text-brand-500 transition-colors" />
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                    <span className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest leading-none">Sync Account</span>
+                                    <span className="text-sm font-black text-neutral-800 dark:text-neutral-200 mt-1.5 truncate tracking-tight">{userSites?.find(s => s._id === activeSiteId)?.gscTokenId?.email || 'seo@slt.work'}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 4. Actions Section */}
+                        <div className="flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0 w-full lg:w-auto min-w-[240px]">
+                            <AiSectionChat 
+                                label="GET AI SUMMARY"
+                                sectionTitle="GSC Performance Summary"
+                                activeSources={['gsc']}
+                                contextPrompt={`Analyze my Search Console performance for ${startDate} to ${endDate}. 
+                                Clicks: ${formatNumber(overview?.clicks || 0)}, Impressions: ${formatNumber(overview?.impressions || 0)}`}
+                                customTrigger={(open) => (
+                                    <button 
+                                        onClick={open}
+                                        className="w-full h-12 px-6 bg-[#edf2ff] hover:bg-[#e0e7ff] text-[#4f46e5] rounded-xl text-[11px] font-black tracking-widest flex items-center justify-between transition-all active:scale-[0.98] group shadow-sm"
+                                    >
+                                        <span className="flex items-center gap-3">
+                                            <SparklesIcon className="w-4 h-4 text-[#4f46e5]" />
+                                            GET AI SUMMARY
+                                        </span>
+                                        <ChevronRightIcon className="w-4 h-4 text-[#4f46e5]/40 group-hover:translate-x-1 transition-transform" />
+                                    </button>
+                                )}
+                            />
+                            <button
+                                onClick={() => exportToPdf('gsc-report', `RankPilot-GSC-${activeGscSite?.replace('https://', '')}`)}
+                                className="w-full h-12 px-6 border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#111111] text-neutral-800 dark:text-neutral-200 rounded-xl text-[11px] font-black tracking-widest flex items-center justify-between hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all active:scale-[0.98] group shadow-sm"
+                            >
+                                <span className="flex items-center gap-3">
+                                    <ArrowDownTrayIcon className="w-4 h-4 text-neutral-400 group-hover:text-neutral-700 dark:group-hover:text-white transition-colors" />
+                                    PDF REPORT
+                                </span>
+                                <ChevronRightIcon className="w-4 h-4 text-neutral-300 dark:text-neutral-700 group-hover:translate-x-1 transition-transform" />
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <FilterBar onRefresh={handleManualRefresh} loading={loading} />

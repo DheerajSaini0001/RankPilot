@@ -281,7 +281,7 @@ const Ga4Page = () => {
                                 <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium leading-none mt-1.5 selection:bg-brand-500/20">
                                     Understand your visitors in real-time and get AI-powered insights to grow your site.
                                 </p>
-                                
+
                                 <div className="mt-2.5 flex items-center gap-3">
                                     <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/5 rounded-full border border-emerald-500/10">
                                         <div className="w-1 h-1 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]"></div>

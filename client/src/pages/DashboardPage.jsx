@@ -6,6 +6,9 @@ import KpiCard from '../components/dashboard/KpiCard';
 import { useDateRangeStore } from '../store/dateRangeStore';
 import { useAccountsStore } from '../store/accountsStore';
 import {
+  FunnelIcon,
+  DevicePhoneMobileIcon,
+  DeviceTabletIcon,
   UsersIcon,
   CursorArrowRaysIcon,
   ChatBubbleLeftRightIcon,
@@ -16,7 +19,9 @@ import {
   GlobeAltIcon,
   ArrowRightIcon,
   SparklesIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  ChevronDownIcon,
+  PlusIcon
 } from '@heroicons/react/24/outline';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import api from '../api';
@@ -26,7 +31,7 @@ import { useFilterStore } from '../store/filterStore';
 import { useAuthStore } from '../store/authStore';
 import DataTable from '../components/dashboard/DataTable';
 import { exportToPdf } from '../utils/reportExport';
-import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { ArrowDownTrayIcon, ArrowPathIcon, CalendarIcon, ComputerDesktopIcon } from '@heroicons/react/24/outline';
 
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
 const formatCurrency = (num) => `$${Number(num || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -41,10 +46,26 @@ const EmptyState = ({ message = 'No data', sub = 'Try a wider date range' }) => 
   </div>
 );
 
+const Ga4Logo = ({ className = "w-5 h-5" }) => (
+  <img src="https://www.vectorlogo.zone/logos/google_analytics/google_analytics-icon.svg" alt="GA4" className={`${className} object-contain`} />
+);
+
+const GscLogo = ({ className = "w-5 h-5" }) => (
+  <img src="https://www.gstatic.com/images/branding/product/2x/search_console_64dp.png" alt="GSC" className={`${className} object-contain`} />
+);
+
+const GoogleAdsLogo = ({ className = "w-5 h-5" }) => (
+  <img src="https://www.vectorlogo.zone/logos/google_ads/google_ads-icon.svg" alt="Google Ads" className={`${className} object-contain`} />
+);
+
+const FacebookAdsLogo = ({ className = "w-5 h-5" }) => (
+  <img src="https://www.vectorlogo.zone/logos/facebook/facebook-icon.svg" alt="Meta Ads" className={`${className} object-contain`} />
+);
+
 const DashboardPage = () => {
   const navigate = useNavigate();
-  const { startDate, endDate } = useDateRangeStore();
-  const { device, campaign, channel, searchQuery } = useFilterStore();
+  const { preset, startDate, endDate, setPreset } = useDateRangeStore();
+  const { device, campaign, channel, searchQuery, setFilters } = useFilterStore();
   const {
     connectedSources,
     activeGscSite,
@@ -63,6 +84,11 @@ const DashboardPage = () => {
   const [timeseriesData, setTimeseriesData] = useState([]);
   const [topPages, setTopPages] = useState([]);
   const [selectedMetric, setSelectedMetric] = useState('Sessions');
+  const [isDateMenuOpen, setIsDateMenuOpen] = useState(false);
+  const [isDeviceMenuOpen, setIsDeviceMenuOpen] = useState(false);
+  const [isSiteDropdownOpen, setIsSiteDropdownOpen] = useState(false);
+  const [isCustomDateMode, setIsCustomDateMode] = useState(false);
+  const [tempDateRange, setTempDateRange] = useState({ start: startDate, end: endDate });
 
   const downloadCSV = () => {
     if (!topPages.length) return;
@@ -107,16 +133,48 @@ const DashboardPage = () => {
     }
   }, [startDate, endDate, device, campaign, channel, activeSiteId]);
 
+  const handleDatePresetSelect = (p) => {
+    if (p.value === 'custom') {
+      setIsCustomDateMode(true);
+      return;
+    }
+    const fmt = (d) => {
+      const date = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
+      return date.toISOString().split('T')[0];
+    };
+    let start = new Date();
+    let end = new Date();
+    if (p.value === 'yesterday') {
+      start.setDate(start.getDate() - 1);
+      end.setDate(end.getDate() - 1);
+    } else if (p.value !== 'today') {
+      start.setDate(start.getDate() - p.days);
+    }
+    setPreset(p.value, fmt(start), fmt(end));
+    setIsDateMenuOpen(false);
+    setIsCustomDateMode(false);
+  };
+
+  const handleApplyCustomDate = () => {
+    setPreset('custom', tempDateRange.start, tempDateRange.end);
+    setIsDateMenuOpen(false);
+    setIsCustomDateMode(false);
+  };
+
+  const handleDeviceSelect = (val) => {
+    setFilters({ device: val });
+    setIsDeviceMenuOpen(false);
+  };
+
   const handleManualRefresh = async () => {
     if (!activeSiteId) return;
     setLoading(true);
-    // 1. Set status to syncing in store
     setAccounts({ syncStatus: 'syncing' });
-    
+
     try {
       // 2. Perform sync
       await api.post('/analytics/sync', { siteId: activeSiteId });
-      
+
       // 3. Update store with latest metadata (time, status)
       const res = await getActiveAccounts(activeSiteId);
       const data = res.data || {};
@@ -181,11 +239,11 @@ const DashboardPage = () => {
     let interval;
     if (isSyncingHistorical) {
       interval = setInterval(async () => {
-         try {
-           const res = await api.get('/accounts/sites'); 
-           if (res.data && Array.isArray(res.data)) setUserSites(res.data);
-         } catch (e) { console.error("Polling error", e); }
-      }, 60000); 
+        try {
+          const res = await api.get('/accounts/sites');
+          if (res.data && Array.isArray(res.data)) setUserSites(res.data);
+        } catch (e) { console.error("Polling error", e); }
+      }, 60000);
     }
     return () => clearInterval(interval);
   }, [isSyncingHistorical, setUserSites]);
@@ -287,66 +345,315 @@ const DashboardPage = () => {
               </p>
             </div>
             <div className="flex flex-col items-center md:items-end gap-2 shrink-0">
-               <div className="text-sm font-black text-brand-600 dark:text-brand-400 flex items-center gap-2">
-                 <span className="tabular-nums font-black">{getOverallProgress()}%</span>
-                 <div className="w-24 h-2 bg-brand-200 dark:bg-brand-900/50 rounded-full overflow-hidden">
-                    <div className="h-full bg-brand-600 rounded-full transition-all duration-500" style={{ width: `${getOverallProgress()}%` }}></div>
-                 </div>
-               </div>
-               <div className="flex items-center gap-3">
-                  {activeSite.ga4PropertyId && <span className={`w-2 h-2 rounded-full ${activeSite.ga4HistoricalComplete ? 'bg-semantic-green' : 'bg-brand-400 animate-pulse'}`} title="GA4" />}
-                  {activeSite.gscSiteUrl && <span className={`w-2 h-2 rounded-full ${activeSite.gscHistoricalComplete ? 'bg-semantic-green' : 'bg-brand-400 animate-pulse'}`} title="GSC" />}
-                  {activeSite.googleAdsCustomerId && <span className={`w-2 h-2 rounded-full ${activeSite.googleAdsHistoricalComplete ? 'bg-semantic-green' : 'bg-brand-400 animate-pulse'}`} title="Google Ads" />}
-                  {activeSite.facebookAdAccountId && <span className={`w-2 h-2 rounded-full ${activeSite.facebookAdsHistoricalComplete ? 'bg-semantic-green' : 'bg-brand-400 animate-pulse'}`} title="Meta Ads" />}
-               </div>
+              <div className="text-sm font-black text-brand-600 dark:text-brand-400 flex items-center gap-2">
+                <span className="tabular-nums font-black">{getOverallProgress()}%</span>
+                <div className="w-24 h-2 bg-brand-200 dark:bg-brand-900/50 rounded-full overflow-hidden">
+                  <div className="h-full bg-brand-600 rounded-full transition-all duration-500" style={{ width: `${getOverallProgress()}%` }}></div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {activeSite.ga4PropertyId && <span className={`w-2 h-2 rounded-full ${activeSite.ga4HistoricalComplete ? 'bg-semantic-green' : 'bg-brand-400 animate-pulse'}`} title="GA4" />}
+                {activeSite.gscSiteUrl && <span className={`w-2 h-2 rounded-full ${activeSite.gscHistoricalComplete ? 'bg-semantic-green' : 'bg-brand-400 animate-pulse'}`} title="GSC" />}
+                {activeSite.googleAdsCustomerId && <span className={`w-2 h-2 rounded-full ${activeSite.googleAdsHistoricalComplete ? 'bg-semantic-green' : 'bg-brand-400 animate-pulse'}`} title="Google Ads" />}
+                {activeSite.facebookAdAccountId && <span className={`w-2 h-2 rounded-full ${activeSite.facebookAdsHistoricalComplete ? 'bg-semantic-green' : 'bg-brand-400 animate-pulse'}`} title="Meta Ads" />}
+              </div>
             </div>
           </div>
         )}
 
         <div id="dashboard-report" className="flex flex-col space-y-8 min-w-0">
-          {/* SECTION 1 — Greeting Card */}
-          <div className="bg-white/60 dark:bg-dark-card/60 backdrop-blur-xl border border-neutral-200/60 dark:border-neutral-800/60 rounded-[2rem] p-6 shadow-sm relative overflow-hidden group flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-brand-500/10 transition-colors pointer-events-none"></div>
-            <div className="relative z-10">
-              <h1 className="text-xl lg:text-3xl font-black tracking-tight text-neutral-900 dark:text-white leading-none">
-                Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'},
-                <span className="ml-2 bg-gradient-to-r from-brand-600 to-accent-500 bg-clip-text text-transparent capitalize">
-                  {user?.name || 'Pilot'}
-                </span>
-              </h1>
-              <p className="mt-2 text-xs font-bold text-neutral-500 dark:text-neutral-400">
-                Track your performance and optimize your digital growth points in real-time.
-              </p>
+          {/* CONSOLIDATED COMMAND CENTER — SECTION 1 + 1.5 */}
+          <div className={`bg-white/60 dark:bg-dark-card/60 backdrop-blur-xl border border-neutral-200/60 dark:border-neutral-800/60 rounded-[2.5rem] shadow-sm relative group flex flex-col animate-in fade-in slide-in-from-bottom-5 duration-1000 ${(isSiteDropdownOpen || isDateMenuOpen || isDeviceMenuOpen) ? 'z-40' : 'z-10'}`}>
+            {/* Background Decorations (Clipped) */}
+            <div className="absolute inset-x-0 top-0 h-32 rounded-t-[2.5rem] overflow-hidden pointer-events-none">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 rounded-full blur-[100px] -mr-32 -mt-32 group-hover:bg-brand-500/10 transition-colors"></div>
             </div>
 
-            <div className="relative z-10 shrink-0 flex items-center gap-3">
-               <button 
-                  onClick={() => exportToPdf('dashboard-report', `RankPilot-Dashboard-${activeSite?.siteName || 'Report'}`)}
-                  className="px-4 py-2.5 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 rounded-2xl text-xs font-black flex items-center gap-2 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all shadow-sm active:scale-95"
-               >
-                  <ArrowDownTrayIcon className="w-4 h-4" />
-                  Download PDF Report
-               </button>
-               <AiSectionChat 
-                  label="Generate Total Brand Summary"
-                  sectionTitle="Total Dashboard Summary"
-                  activeSources={['ga4', 'gsc', 'google-ads', 'facebook-ads']}
-                  contextPrompt={`Analyze my complete brand dashboard for ${startDate} to ${endDate}. 
-                  - Total Web Traffic (GA4 Sessions): ${formatNumber(totalTraffic || 0)}
-                  - Total Organic Clicks (GSC): ${formatNumber(searchClicks || 0)}
-                  - Total Ad Spend (Meta + Google): ${formatCurrency(totalAdSpend || 0)}
-                  - Total Ad Conversions: ${formatNumber(totalConversions || 0)}
-                  - Overall Health Score: ${healthScore}/100
+            {/* CONSOLIDATED DASHBOARD SUMMARY */}
+            <div className="p-4 md:py-5 md:px-8 relative z-10">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+                {/* Left Part: Greeting & Brand Info */}
+                <div className="flex-1 space-y-4">
+                  <div className="space-y-0.5">
+                    <h1 className="text-xl lg:text-4xl font-black tracking-tight text-neutral-900 dark:text-white leading-none">
+                      Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'},
+                      <span className="ml-2 bg-gradient-to-r from-brand-600 to-accent-500 bg-clip-text text-transparent capitalize">
+                        {user?.name || 'Pilot'}
+                      </span>
+                    </h1>
+                  </div>
 
-                  Give me a 3-part strategic review:
-                  1. Brand Performance Analysis (Organic vs Paid)
-                  2. Most Efficient Channel this week
-                  3. One high-level strategy for the next 7 days for maximum ROI.`}
-               />
+                  <div className="space-y-1.5 border-l-2 border-brand-500/20 pl-4">
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-600 dark:text-brand-400 shrink-0">Website Summary</p>
+                    <h2 className="text-2xl lg:text-3xl font-black text-neutral-900 dark:text-white tracking-tight leading-none">{activeSite?.siteName || 'RankPilot'}</h2>
+                    <p className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-sm mt-2">
+                      Monitoring {activeSite?.siteName} across {
+                        [activeGa4PropertyId && 'Analytics', activeGscSite && 'Search', (activeGoogleAdsCustomerId || activeFacebookAdAccountId) && 'Paid Media'].filter(Boolean).join(', ') || 'your marketing channels'
+                      }. {healthScore >= 80 ? 'Exceptional performance with strong growth.' :
+                        healthScore >= 60 ? 'Stable performance with steady improvements.' :
+                          'Analyzing data for optimization opportunities.'}
+                    </p>
+                  </div>
+
+                  {/* Status & Quick Filter Row */}
+                  <div className="flex flex-wrap items-center gap-3 pt-2">
+                    {/* Sync Status */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-500/10 rounded-full border border-emerald-100/50 dark:border-emerald-500/20">
+                        <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></div>
+                        <span className="text-[8px] font-black text-emerald-600 uppercase tracking-wider">Active</span>
+                      </div>
+                      <div className="flex items-center gap-2 border-l border-neutral-200 dark:border-neutral-800 pl-3">
+                        <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Synced:</span>
+                        <span className="text-[9px] font-black text-neutral-600 dark:text-neutral-300 uppercase">{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <button onClick={handleManualRefresh} className="hover:rotate-180 transition-all duration-700 bg-neutral-100 dark:bg-neutral-800 p-1 rounded-lg">
+                          <ArrowPathIcon className="w-3 h-3 text-neutral-500" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-800 mx-1 hidden sm:block"></div>
+
+                    {/* Quick Date Indicator */}
+                    <div className="relative">
+                      <button
+                        onClick={() => { setIsDateMenuOpen(!isDateMenuOpen); setIsDeviceMenuOpen(false); }}
+                        className={`flex items-center gap-2 px-2.5 py-1 transition-all active:scale-95 group/date rounded-full border shadow-sm ${isDateMenuOpen
+                            ? 'bg-brand-600 border-brand-500 text-white'
+                            : 'bg-white/50 dark:bg-dark-surface/50 border-neutral-200/50 dark:border-neutral-800'
+                          }`}
+                      >
+                        <CalendarIcon className={`w-3.5 h-3.5 ${isDateMenuOpen ? 'text-white' : 'text-brand-600'}`} />
+                        <span className={`text-[9px] font-black uppercase tracking-widest ${isDateMenuOpen ? 'text-white' : 'text-neutral-600 dark:text-neutral-300'}`}>
+                          {preset === 'custom' ? 'Range' : preset}
+                        </span>
+                        <ChevronDownIcon className={`w-3 h-3 transition-transform ${isDateMenuOpen ? 'rotate-180 opacity-100' : 'opacity-40'}`} />
+                      </button>
+
+                      {isDateMenuOpen && (
+                        <div className="absolute top-full left-0 mt-2 z-[100] bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl p-1.5 min-w-[160px] animate-in fade-in zoom-in-95 duration-200">
+                          {!isCustomDateMode ? (
+                            <>
+                              {[
+                                { label: 'Today', value: 'today', days: 0 },
+                                { label: 'Yesterday', value: 'yesterday', days: 1 },
+                                { label: 'Last 7 Days', value: '7d', days: 7 },
+                                { label: 'Last 28 Days', value: '28d', days: 28 },
+                                { label: 'Last 90 Days', value: '90d', days: 90 },
+                                { label: 'Last Year', value: '1y', days: 365 },
+                                { label: 'Custom Range', value: 'custom', icon: CalendarIcon },
+                              ].map((p) => (
+                                <button
+                                  key={p.value}
+                                  onClick={() => handleDatePresetSelect(p)}
+                                  className={`w-full text-left px-3 py-2 rounded-xl text-[10px] font-bold transition-all flex items-center justify-between ${preset === p.value
+                                      ? 'bg-brand-600 text-white shadow-lg shadow-brand-500/20'
+                                      : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                                    }`}
+                                >
+                                  {p.label}
+                                  {p.value === 'custom' && <ChevronRightIcon className="w-3 h-3 opacity-50" />}
+                                </button>
+                              ))}
+                            </>
+                          ) : (
+                            <div className="p-2 space-y-3">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-black uppercase text-neutral-400">Custom</span>
+                                <button onClick={() => setIsCustomDateMode(false)} className="text-[10px] font-bold text-brand-600 hover:underline">Back</button>
+                              </div>
+                              <div className="space-y-2">
+                                <div>
+                                  <label className="text-[8px] font-black text-neutral-400 uppercase ml-1">Start</label>
+                                  <input
+                                    type="date"
+                                    value={tempDateRange.start}
+                                    onChange={(e) => setTempDateRange({ ...tempDateRange, start: e.target.value })}
+                                    className="w-full bg-neutral-100 dark:bg-neutral-800 border-none rounded-lg px-2 py-1.5 text-[10px] font-bold outline-none"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[8px] font-black text-neutral-400 uppercase ml-1">End</label>
+                                  <input
+                                    type="date"
+                                    value={tempDateRange.end}
+                                    onChange={(e) => setTempDateRange({ ...tempDateRange, end: e.target.value })}
+                                    className="w-full bg-neutral-100 dark:bg-neutral-800 border-none rounded-lg px-2 py-1.5 text-[10px] font-bold outline-none"
+                                  />
+                                </div>
+                              </div>
+                              <button
+                                onClick={handleApplyCustomDate}
+                                className="w-full py-2 bg-brand-600 text-white text-[10px] font-black rounded-lg shadow-lg shadow-brand-500/20 active:scale-95 transition-all"
+                              >
+                                APPLY RANGE
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="h-4 w-px bg-neutral-200 dark:border-neutral-800 mx-1 hidden sm:block"></div>
+
+                    {/* Quick Device Indicator */}
+                    <div className="relative">
+                      <button
+                        onClick={() => { setIsDeviceMenuOpen(!isDeviceMenuOpen); setIsDateMenuOpen(false); }}
+                        className={`flex items-center gap-2 px-2.5 py-1 transition-all active:scale-95 group/device rounded-full border shadow-sm ${isDeviceMenuOpen
+                            ? 'bg-amber-500 border-amber-400 text-white'
+                            : 'bg-white/50 dark:bg-dark-surface/50 border-neutral-200/50 dark:border-neutral-800'
+                          }`}
+                      >
+                        <ComputerDesktopIcon className={`w-3.5 h-3.5 ${isDeviceMenuOpen ? 'text-white' : 'text-amber-500'}`} />
+                        <span className={`text-[9px] font-black uppercase tracking-widest ${isDeviceMenuOpen ? 'text-white' : 'text-neutral-600 dark:text-neutral-300'}`}>
+                          {device || 'All'}
+                        </span>
+                        <ChevronDownIcon className={`w-3 h-3 transition-transform ${isDeviceMenuOpen ? 'rotate-180 opacity-100' : 'opacity-40'}`} />
+                      </button>
+
+                      {isDeviceMenuOpen && (
+                        <div className="absolute top-full left-0 mt-2 z-[100] bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl p-1.5 min-w-[120px] animate-in fade-in zoom-in-95 duration-200">
+                          {[
+                            { label: 'All Devices', value: '', icon: FunnelIcon },
+                            { label: 'Mobile', value: 'mobile', icon: DevicePhoneMobileIcon },
+                            { label: 'Desktop', value: 'desktop', icon: ComputerDesktopIcon },
+                            { label: 'Tablet', value: 'tablet', icon: DeviceTabletIcon },
+                          ].map((d) => (
+                            <button
+                              key={d.value}
+                              onClick={() => handleDeviceSelect(d.value)}
+                              className={`w-full text-left px-3 py-2 rounded-xl text-[10px] font-bold transition-all flex items-center gap-2 ${(device || '') === d.value
+                                  ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20'
+                                  : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                                }`}
+                            >
+                              <d.icon className="w-3 h-3" />
+                              {d.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+
+                {/* Right Part: Metrics & Actions */}
+                <div className="flex flex-col md:flex-row gap-6 lg:items-center">
+                  {/* Metrics Grid (2x2) */}
+                  <div className="grid grid-cols-2 gap-3 shrink-0">
+                    {[
+                      {
+                        id: 'ga4',
+                        active: !!activeGa4PropertyId,
+                        label: 'GA4 Analytics',
+                        value: (overviewData.ga4?.sessions) ? formatNumber(overviewData.ga4.sessions) : 'NOT CONNECTED',
+                        sublabel: 'Sessions',
+                        logo: <Ga4Logo className="w-5 h-5" />,
+                        color: 'bg-orange-50'
+                      },
+                      {
+                        id: 'google-ads',
+                        active: !!activeGoogleAdsCustomerId,
+                        label: 'Google Ads',
+                        value: (overviewData.googleAds?.clicks) ? formatNumber(overviewData.googleAds.clicks) : 'NOT CONNECTED',
+                        sublabel: 'Clicks',
+                        logo: <GoogleAdsLogo className="w-5 h-5" />,
+                        color: 'bg-amber-50'
+                      },
+                      {
+                        id: 'gsc',
+                        active: !!activeGscSite,
+                        label: 'Search Console',
+                        value: (overviewData.gsc?.impressions) ? formatNumber(overviewData.gsc.impressions) : 'NOT CONNECTED',
+                        sublabel: 'Impressions',
+                        logo: <GscLogo className="w-5 h-5" />,
+                        color: 'bg-blue-50'
+                      },
+                      {
+                        id: 'facebook',
+                        active: !!activeFacebookAdAccountId,
+                        label: 'Facebook Ads',
+                        value: (overviewData.facebookAds?.reach) ? formatNumber(overviewData.facebookAds.reach) : 'NOT CONNECTED',
+                        sublabel: 'Reach',
+                        logo: <FacebookAdsLogo className="w-5 h-5" />,
+                        color: 'bg-blue-50'
+                      }
+                    ].map((card) => (
+                      <div
+                        key={card.id}
+                        className="flex flex-col gap-1.5 p-3 bg-white dark:bg-dark-surface border border-neutral-100 dark:border-neutral-800 rounded-2xl w-40 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className={`w-8 h-8 rounded-xl ${card.color} dark:bg-opacity-10 flex items-center justify-center shrink-0`}>
+                            {card.logo}
+                          </div>
+                          {card.active && (
+                            <div className="px-2 py-0.5 rounded-full text-[7px] font-black uppercase tracking-tighter bg-green-100 text-green-600 dark:bg-green-500/10">
+                              Connected
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-black uppercase tracking-widest text-neutral-400 leading-none">{card.label}</p>
+                          <p className={`font-black text-neutral-900 dark:text-white tabular-nums leading-none tracking-tight mt-1 ${card.value === 'NOT CONNECTED' ? 'text-[10px]' : 'text-xl'}`}>{card.value}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Vertical Actions Column */}
+                  <div className="flex flex-col gap-2 min-w-[200px]">
+                    <AiSectionChat
+                      label="AI Brand Summary"
+                      sectionTitle="Total Dashboard Summary"
+                      activeSources={['ga4', 'gsc', 'google-ads', 'facebook-ads']}
+                      contextPrompt={`Analyze my complete brand dashboard for ${startDate} to ${endDate}. 
+                        - Total Web Traffic (GA4 Sessions): ${formatNumber(totalTraffic || 0)}
+                        - Total Organic Clicks (GSC): ${formatNumber(searchClicks || 0)}
+                        - Total Ad Spend (Meta + Google): ${formatCurrency(totalAdSpend || 0)}
+                        - Total Ad Conversions: ${formatNumber(totalConversions || 0)}
+                        - Overall Health Score: ${healthScore}/100
+
+                        Give me a 3-part strategic review:
+                        1. Brand Performance Analysis (Organic vs Paid)
+                        2. Most Efficient Channel this week
+                        3. One high-level strategy for the next 7 days for maximum ROI.`}
+                    />
+                    <button
+                      onClick={() => exportToPdf('dashboard-report', `RankPilot-Dashboard-${activeSite?.siteName || 'Report'}`)}
+                      className="px-4 py-2 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 rounded-2xl text-[10px] font-black flex items-center justify-center gap-2 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all shadow-sm active:scale-95 w-full uppercase tracking-wider"
+                    >
+                      <ArrowDownTrayIcon className="w-4 h-4" />
+                      Download PDF
+                    </button>
+                    <div className="flex flex-col gap-2.5 p-3.5 bg-brand-50/30 dark:bg-brand-500/5 border border-brand-100/50 dark:border-brand-500/20 rounded-2xl shadow-sm relative overflow-hidden group">
+                      <div className="flex items-center justify-between relative z-10">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded-xl bg-brand-500 flex items-center justify-center text-white shadow-lg shadow-brand-500/20 font-black text-xs">H</div>
+                          <div className="space-y-0.5">
+                            <p className="text-[9px] font-black uppercase text-brand-600 dark:text-brand-400 tracking-widest leading-none">Audit Score</p>
+                            <div className={`px-1.5 py-0.5 rounded text-[6px] font-black uppercase tracking-tighter ${healthScore >= 80 ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'} w-fit`}>
+                              {healthScore >= 80 ? 'Optimal' : 'Needs Review'}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-black text-brand-600 dark:text-brand-400 tracking-tighter leading-none">
+                            {healthScore}<span className="text-[8px] text-neutral-400 ml-0.5 font-bold">/100</span>
+                          </div>
+                        </div>
+                      </div>
+                      {/* Subtle Background Accent */}
+                      <div className="absolute -bottom-6 -right-6 w-16 h-16 bg-brand-500/5 rounded-full blur-xl"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* SECTION 2 — Empty/Not-Connected State */}
           {!activeGscSite && !activeGa4PropertyId && !activeGoogleAdsCustomerId && !activeFacebookAdAccountId && !loading ? (
             <div className="flex flex-col items-center justify-center p-12 py-24 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-800 rounded-[3rem] text-center shadow-2xl relative overflow-hidden group/empty">
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-brand-500/5 rounded-full blur-[100px] pointer-events-none"></div>
@@ -360,34 +667,83 @@ const DashboardPage = () => {
             </div>
           ) : (
             <>
-              {/* SECTION 3 — FilterBar */}
-              <FilterBar loading={loading} onRefresh={handleManualRefresh} />
 
-              {/* SECTION 4 — Platform Status Bar (4 cards) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* SECTION 4 — Platform Insight Grid (Redesigned) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8 mt-4">
                 {[
-                  { label: 'Google Analytics 4', icon: '📊', connected: !!activeGa4PropertyId, metric: overviewData.ga4 ? formatNumber(overviewData.ga4.users) : '—', metricLabel: 'Users', path: '/dashboard/ga4' },
-                  { label: 'Search Console', icon: '🔍', connected: !!activeGscSite, metric: overviewData.gsc ? formatNumber(overviewData.gsc.clicks) : '—', metricLabel: 'Clicks', path: '/dashboard/gsc' },
-                  { label: 'Google Ads', icon: '📢', connected: !!activeGoogleAdsCustomerId, metric: overviewData.googleAds ? formatCurrency(overviewData.googleAds.spend) : '—', metricLabel: 'Spend', path: '/dashboard/google-ads' },
-                  { label: 'Facebook Ads', icon: '📘', connected: !!activeFacebookAdAccountId, metric: overviewData.facebookAds ? formatCurrency(overviewData.facebookAds.spend) : '—', metricLabel: 'Spend', path: '/dashboard/facebook-ads' },
-                ].map((src, i) => (
-                  <div key={i} onClick={() => navigate(src.path)} className={`bg-white dark:bg-dark-card border rounded-2xl p-4 cursor-pointer hover:shadow-md transition-all group ${src.connected ? 'border-neutral-200 dark:border-neutral-700 hover:border-brand-300 dark:hover:border-brand-700' : 'border-dashed border-neutral-300 dark:border-neutral-700 opacity-60 grayscale blur-[0.5px]'}`}>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-lg transition-all ${!src.connected && 'grayscale'}`}>{src.icon}</span>
-                        <span className="text-xs font-black text-neutral-600 dark:text-neutral-300">{src.label}</span>
-                      </div>
-                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${src.connected ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-neutral-100/50 text-neutral-400 dark:bg-neutral-800/50'}`}>{src.connected ? '● Live' : '○ Off'}</span>
+                  {
+                    label: 'GA4 Source',
+                    title: 'Traffic + Trends',
+                    metric: activeGa4PropertyId ? (overviewData.ga4 ? formatNumber(overviewData.ga4.sessions) : '0') : '—',
+                    desc: activeGa4PropertyId
+                      ? `Analyzing ${overviewData.ga4?.sessions > 10000 ? 'high-volume' : 'steady'} traffic across engagement.`
+                      : 'Link your GA4 property to track trends.',
+                    icon: <Ga4Logo className="w-3.5 h-3.5" />,
+                    color: activeGa4PropertyId ? 'bg-green-50 text-green-700' : 'bg-neutral-100 text-neutral-400',
+                    active: !!activeGa4PropertyId,
+                    path: '/dashboard/ga4'
+                  },
+                  {
+                    label: 'Search Console',
+                    title: 'Organic Visibility',
+                    metric: activeGscSite ? (overviewData.gsc ? formatNumber(overviewData.gsc.impressions) : '0') : '—',
+                    desc: activeGscSite
+                      ? `${overviewData.gsc?.impressions > 0 ? 'Strong' : 'Detecting'} visibility on keywords.`
+                      : 'Connect GSC to monitor SEO.',
+                    icon: <GscLogo className="w-3.5 h-3.5" />,
+                    color: activeGscSite ? 'bg-blue-50 text-blue-700' : 'bg-neutral-100 text-neutral-400',
+                    active: !!activeGscSite,
+                    path: '/dashboard/gsc'
+                  },
+                  {
+                    label: 'Google Ads',
+                    title: 'Ad Performance',
+                    metric: activeGoogleAdsCustomerId ? (overviewData.googleAds ? formatNumber(overviewData.googleAds.clicks || 0) : '0') : '—',
+                    desc: activeGoogleAdsCustomerId
+                      ? `Monitoring ${overviewData.googleAds?.clicks > 1000 ? 'high-impact' : 'active'} ad campaigns.`
+                      : 'Activate Google Ads to track spend.',
+                    icon: <GoogleAdsLogo className="w-3.5 h-3.5" />,
+                    color: activeGoogleAdsCustomerId ? 'bg-amber-50 text-amber-700' : 'bg-neutral-100 text-neutral-400',
+                    active: !!activeGoogleAdsCustomerId,
+                    path: '/dashboard/google-ads'
+                  },
+                  {
+                    label: 'Facebook Ads',
+                    title: 'Ad Reach',
+                    metric: activeFacebookAdAccountId ? (overviewData.facebookAds ? formatNumber(overviewData.facebookAds.reach || 0) : '0') : '—',
+                    desc: activeFacebookAdAccountId
+                      ? 'Reach from paid Facebook ad campaigns.'
+                      : 'Link Facebook Ads to track reach.',
+                    icon: <FacebookAdsLogo className="w-3.5 h-3.5" />,
+                    color: activeFacebookAdAccountId ? 'bg-pink-50 text-pink-700' : 'bg-neutral-100 text-neutral-400',
+                    active: !!activeFacebookAdAccountId,
+                    path: '/dashboard/facebook-ads'
+                  },
+                  {
+                    label: 'Site Health',
+                    title: 'Audit Score',
+                    metric: healthScore,
+                    desc: healthScore >= 80 ? 'Exceptional health score optimized.' : 'Optimization required for technical issues.',
+                    icon: <span className="text-[10px] font-black">H</span>,
+                    color: healthScore >= 80 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700',
+                    active: true,
+                    path: '/dashboard/site-audit'
+                  }
+                ].map((card, i) => (
+                  <div
+                    key={i}
+                    onClick={() => navigate(card.path)}
+                    className={`bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-800/60 rounded-[2.5rem] p-7 shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl group cursor-pointer ${!card.active && 'opacity-60 grayscale'}`}
+                  >
+                    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${card.color} text-[10px] font-black mb-6`}>
+                      {card.icon}
+                      {card.label}
                     </div>
-                    {loading ? (
-                      <div className="h-7 w-20 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse mb-1" />
-                    ) : (
-                      <div className="text-2xl font-black text-neutral-900 dark:text-white tabular-nums">{src.metric}</div>
-                    )}
-                    <div className="text-xs text-neutral-400 mt-0.5 flex items-center justify-between">
-                      <span>{src.metricLabel} this period</span>
-                      <ChevronRightIcon className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
+                    <h3 className="text-lg font-black text-neutral-900 dark:text-white mb-2">{card.title}</h3>
+                    <div className="text-4xl font-black text-neutral-900 dark:text-white tabular-nums mb-4">{card.metric}</div>
+                    <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                      {card.desc}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -479,11 +835,13 @@ const DashboardPage = () => {
                 <div className={`bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 shadow-sm transition-all ${!activeGa4PropertyId ? 'opacity-50 grayscale blur-[0.5px] border-dashed' : ''}`}>
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <span className="text-lg">📊</span>
+                      <div className="w-6 h-6 rounded-lg bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center shrink-0">
+                        <Ga4Logo className="w-4 h-4" />
+                      </div>
                       <h3 className="text-sm font-black text-neutral-900 dark:text-white">Google Analytics 4</h3>
                     </div>
                     <div className="flex items-center gap-2">
-                      {activeGa4PropertyId && <AiSectionChat sectionTitle="Overview - GA4 Summary" contextPrompt={`Quick GA4 summary: ${formatNumber(overviewData.ga4?.users)} users, ${formatNumber(overviewData.ga4?.sessions)} sessions, bounce rate ${formatPct(overviewData.ga4?.bounceRate||0)}, avg session ${formatTime(overviewData.ga4?.avgSessionDuration)}. What are the key insights and opportunities?`} activeSources={['ga4']} />}
+                      {activeGa4PropertyId && <AiSectionChat sectionTitle="Overview - GA4 Summary" contextPrompt={`Quick GA4 summary: ${formatNumber(overviewData.ga4?.users)} users, ${formatNumber(overviewData.ga4?.sessions)} sessions, bounce rate ${formatPct(overviewData.ga4?.bounceRate || 0)}, avg session ${formatTime(overviewData.ga4?.avgSessionDuration)}. What are the key insights and opportunities?`} activeSources={['ga4']} />}
                       <button onClick={() => navigate('/dashboard/ga4')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">View Full <ArrowRightIcon className="w-3 h-3" /></button>
                     </div>
                   </div>
@@ -511,11 +869,13 @@ const DashboardPage = () => {
                 <div className={`bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 shadow-sm transition-all ${!activeGscSite ? 'opacity-50 grayscale blur-[0.5px] border-dashed' : ''}`}>
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <span className="text-lg">🔍</span>
+                      <div className="w-6 h-6 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center shrink-0">
+                        <GscLogo className="w-4 h-4" />
+                      </div>
                       <h3 className="text-sm font-black text-neutral-900 dark:text-white">Search Console</h3>
                     </div>
                     <div className="flex items-center gap-2">
-                      {activeGscSite && <AiSectionChat sectionTitle="Overview - GSC Summary" contextPrompt={`Quick GSC summary: ${formatNumber(overviewData.gsc?.clicks)} clicks, ${formatNumber(overviewData.gsc?.impressions)} impressions, ${formatPct((overviewData.gsc?.ctr||0)*100)} CTR, avg position #${(overviewData.gsc?.avgPosition||0).toFixed(1)}. Any quick wins I should focus on?`} activeSources={['gsc']} />}
+                      {activeGscSite && <AiSectionChat sectionTitle="Overview - GSC Summary" contextPrompt={`Quick GSC summary: ${formatNumber(overviewData.gsc?.clicks)} clicks, ${formatNumber(overviewData.gsc?.impressions)} impressions, ${formatPct((overviewData.gsc?.ctr || 0) * 100)} CTR, avg position #${(overviewData.gsc?.avgPosition || 0).toFixed(1)}. Any quick wins I should focus on?`} activeSources={['gsc']} />}
                       <button onClick={() => navigate('/dashboard/gsc')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">View Full <ArrowRightIcon className="w-3 h-3" /></button>
                     </div>
                   </div>
@@ -543,7 +903,9 @@ const DashboardPage = () => {
                 <div className={`bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 shadow-sm transition-all ${!activeGoogleAdsCustomerId ? 'opacity-50 grayscale blur-[0.5px] border-dashed' : ''}`}>
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <span className="text-lg">📢</span>
+                      <div className="w-6 h-6 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center shrink-0">
+                        <GoogleAdsLogo className="w-4 h-4" />
+                      </div>
                       <h3 className="text-sm font-black text-neutral-900 dark:text-white">Google Ads</h3>
                     </div>
                     <div className="flex items-center gap-2">
@@ -575,11 +937,13 @@ const DashboardPage = () => {
                 <div className={`bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 shadow-sm transition-all ${!activeFacebookAdAccountId ? 'opacity-50 grayscale blur-[0.5px] border-dashed' : ''}`}>
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <span className="text-lg">📘</span>
+                      <div className="w-6 h-6 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center shrink-0">
+                        <FacebookAdsLogo className="w-4 h-4" />
+                      </div>
                       <h3 className="text-sm font-black text-neutral-900 dark:text-white">Facebook Ads</h3>
                     </div>
                     <div className="flex items-center gap-2">
-                      {activeFacebookAdAccountId && <AiSectionChat sectionTitle="Overview - Facebook Ads Summary" contextPrompt={`Quick Facebook Ads summary: Spend ${formatCurrency(overviewData.facebookAds?.spend)}, Reach ${formatNumber(overviewData.facebookAds?.reach||0)}, ${formatNumber(overviewData.facebookAds?.impressions)} impressions, ROAS ${(overviewData.facebookAds?.roas||0).toFixed(2)}x. What's my campaign efficiency and what should I improve?`} activeSources={['facebook-ads']} />}
+                      {activeFacebookAdAccountId && <AiSectionChat sectionTitle="Overview - Facebook Ads Summary" contextPrompt={`Quick Facebook Ads summary: Spend ${formatCurrency(overviewData.facebookAds?.spend)}, Reach ${formatNumber(overviewData.facebookAds?.reach || 0)}, ${formatNumber(overviewData.facebookAds?.impressions)} impressions, ROAS ${(overviewData.facebookAds?.roas || 0).toFixed(2)}x. What's my campaign efficiency and what should I improve?`} activeSources={['facebook-ads']} />}
                       <button onClick={() => navigate('/dashboard/facebook-ads')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">View Full <ArrowRightIcon className="w-3 h-3" /></button>
                     </div>
                   </div>
@@ -615,9 +979,9 @@ const DashboardPage = () => {
                   <div className="flex items-center gap-2">
                     {(activeGoogleAdsCustomerId || activeFacebookAdAccountId) && (
                       <AiSectionChat
-                          sectionTitle="Overview - Ad Platform Comparison"
-                          contextPrompt={`Comparing my ad platforms: Google Ads spent ${formatCurrency(overviewData.googleAds?.spend||0)} getting ${formatNumber(overviewData.googleAds?.conversions||0)} conversions. Facebook Ads spent ${formatCurrency(overviewData.facebookAds?.spend||0)} getting ${formatNumber(overviewData.facebookAds?.conversions||0)} conversions and ${formatNumber(overviewData.facebookAds?.reach||0)} reach. Which platform is more efficient for me and how should I reallocate budget?`}
-                          activeSources={['google-ads', 'facebook-ads']}
+                        sectionTitle="Overview - Ad Platform Comparison"
+                        contextPrompt={`Comparing my ad platforms: Google Ads spent ${formatCurrency(overviewData.googleAds?.spend || 0)} getting ${formatNumber(overviewData.googleAds?.conversions || 0)} conversions. Facebook Ads spent ${formatCurrency(overviewData.facebookAds?.spend || 0)} getting ${formatNumber(overviewData.facebookAds?.conversions || 0)} conversions and ${formatNumber(overviewData.facebookAds?.reach || 0)} reach. Which platform is more efficient for me and how should I reallocate budget?`}
+                        activeSources={['google-ads', 'facebook-ads']}
                       />
                     )}
                     <span className="text-xs font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-500 px-3 py-1 rounded-full">This Period</span>
@@ -687,9 +1051,9 @@ const DashboardPage = () => {
                       <h3 className="text-xl font-black text-neutral-900 dark:text-white">Growth Matrix</h3>
                       {!isDataEmpty && (
                         <AiSectionChat
-                            sectionTitle="Overview - Growth Matrix"
-                            contextPrompt={`My overall growth matrix for ${selectedMetric}: latest value ${timeseriesData.length > 0 ? timeseriesData[timeseriesData.length-1]?.[selectedMetric] : 0}. GA4 sessions: ${formatNumber(overviewData.ga4?.sessions)}, GSC clicks: ${formatNumber(overviewData.gsc?.clicks)}, Ad spend: ${formatCurrency((overviewData.googleAds?.spend||0)+(overviewData.facebookAds?.spend||0))}. What's the overall trend and what should I prioritize?`}
-                            activeSources={['ga4', 'gsc', 'google-ads', 'facebook-ads']}
+                          sectionTitle="Overview - Growth Matrix"
+                          contextPrompt={`My overall growth matrix for ${selectedMetric}: latest value ${timeseriesData.length > 0 ? timeseriesData[timeseriesData.length - 1]?.[selectedMetric] : 0}. GA4 sessions: ${formatNumber(overviewData.ga4?.sessions)}, GSC clicks: ${formatNumber(overviewData.gsc?.clicks)}, Ad spend: ${formatCurrency((overviewData.googleAds?.spend || 0) + (overviewData.facebookAds?.spend || 0))}. What's the overall trend and what should I prioritize?`}
+                          activeSources={['ga4', 'gsc', 'google-ads', 'facebook-ads']}
                         />
                       )}
                     </div>
@@ -716,14 +1080,14 @@ const DashboardPage = () => {
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" className="dark:stroke-neutral-800/30" />
                       <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} tickFormatter={(str) => { const d = new Date(str); return isNaN(d) ? str : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }} />
                       <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} />
-                      <Tooltip 
-                        contentStyle={{ 
-                          borderRadius: '16px', 
-                          border: 'none', 
+                      <Tooltip
+                        contentStyle={{
+                          borderRadius: '16px',
+                          border: 'none',
                           boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
                           background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
                           color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
-                        }} 
+                        }}
                       />
                       <Area type="monotone" dataKey={selectedMetric} stroke={metricColor} strokeWidth={3} fill="url(#colorMetric)" />
                     </AreaChart>
@@ -792,7 +1156,7 @@ const DashboardPage = () => {
                     {activeGa4PropertyId && (
                       <AiSectionChat
                         sectionTitle="Overview - Top Performing Pages"
-                        contextPrompt={`My top GA4 pages: ${topPages.slice(0,5).map(p => `${p.url} (${p.visitors} visitors, ${p.bounce} bounce)`).join(', ')}. Which pages should I optimize for better engagement? Any low-hanging SEO or UX improvements?`}
+                        contextPrompt={`My top GA4 pages: ${topPages.slice(0, 5).map(p => `${p.url} (${p.visitors} visitors, ${p.bounce} bounce)`).join(', ')}. Which pages should I optimize for better engagement? Any low-hanging SEO or UX improvements?`}
                         activeSources={['ga4']}
                       />
                     )}
@@ -894,8 +1258,8 @@ const DashboardPage = () => {
                             </td>
                             <td className="py-3">
                               <span className={`inline-flex items-center gap-1 text-[11px] font-black px-2 py-0.5 rounded-full ${isUp
-                                  ? 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400'
-                                  : 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
+                                ? 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400'
+                                : 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
                                 }`}>
                                 {isUp ? '▲' : '▼'} {Math.abs(row.growth).toFixed(1)}%
                               </span>

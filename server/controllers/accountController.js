@@ -252,17 +252,29 @@ export const selectAccounts = async (req, res) => {
 export const getActiveAccounts = async (req, res) => {
     const { siteId } = req.query;
     let account;
+    const query = { userId: req.user._id };
     if (siteId && siteId !== 'undefined') {
-        account = await UserAccounts.findOne({ _id: siteId, userId: req.user._id });
-    } else {
-        account = await UserAccounts.findOne({ userId: req.user._id }).sort({ updatedAt: -1 });
+        query._id = siteId;
     }
+    
+    account = await UserAccounts.findOne(query)
+        .populate('ga4TokenId', 'email')
+        .populate('gscTokenId', 'email')
+        .populate('googleAdsTokenId', 'email')
+        .populate('facebookTokenId', 'name')
+        .sort({ updatedAt: -1 });
+
     res.status(200).json(account || {});
 };
 
 export const listSites = async (req, res) => {
     try {
-        const sites = await UserAccounts.find({ userId: req.user._id }).sort({ updatedAt: -1 });
+        const sites = await UserAccounts.find({ userId: req.user._id })
+            .populate('ga4TokenId', 'email')
+            .populate('gscTokenId', 'email')
+            .populate('googleAdsTokenId', 'email')
+            .populate('facebookTokenId', 'name')
+            .sort({ updatedAt: -1 });
         res.status(200).json(sites);
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

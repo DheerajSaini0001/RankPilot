@@ -75,30 +75,22 @@ const FilterBar = ({ showDevice = true, showCampaign = false, showChannel = fals
     };
 
     return (
-        <div className="relative mb-6">
-            <div className="bg-white dark:bg-dark-card border border-neutral-200/70 dark:border-neutral-700/50 rounded-2xl px-4 py-2.5 shadow-sm flex items-center gap-3 overflow-x-auto no-scrollbar transition-all hover:shadow-md">
+        <div className="relative mb-8 flex justify-center sm:justify-start">
+            <div className="glass-morphism bg-white/70 dark:bg-dark-card/70 backdrop-blur-lg border border-white/20 dark:border-neutral-700/50 rounded-full px-3 py-1.5 shadow-xl shadow-brand-500/5 flex items-center gap-1.5 w-fit transition-all hover:shadow-brand-500/10 hover:border-brand-500/20">
                 
-                {/* Date Presets */}
-                <div className="flex items-center gap-2 shrink-0">
-                    <button
-                        onClick={() => setShowPicker(!showPicker)}
-                        className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shrink-0 ${
-                            showPicker
-                                ? 'bg-brand-600 text-white shadow-md'
-                                : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600'
-                        }`}
-                    >
-                        <CalendarIcon className="w-4 h-4" />
-                    </button>
-
-                    <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 rounded-xl p-0.5 gap-0.5">
+                {/* Date Presets - Slim Pill */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center bg-neutral-200/50 dark:bg-neutral-800/50 rounded-full p-1 gap-0.5">
+                        <div className="w-6 h-6 rounded-full bg-white dark:bg-neutral-700 flex items-center justify-center shadow-sm text-brand-600">
+                             <CalendarIcon className="w-3.5 h-3.5" />
+                        </div>
                         {datePresets.map((p) => (
                             <button
                                 key={p.value}
                                 onClick={() => handleDatePreset(p)}
-                                className={`px-2.5 py-1.5 text-[11px] font-black rounded-lg transition-all ${
+                                className={`px-2.5 py-1 text-[10px] font-black rounded-full transition-all ${
                                     preset === p.value
-                                        ? 'bg-white dark:bg-neutral-700 text-brand-600 dark:text-brand-400 shadow-sm'
+                                        ? 'bg-brand-600 text-white shadow-md'
                                         : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'
                                 }`}
                             >
@@ -109,7 +101,7 @@ const FilterBar = ({ showDevice = true, showCampaign = false, showChannel = fals
 
                     <button
                         onClick={() => setShowPicker(!showPicker)}
-                        className="text-[11px] font-bold text-neutral-400 dark:text-neutral-500 hover:text-brand-500 transition-colors whitespace-nowrap hidden md:block"
+                        className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 hover:text-brand-500 transition-colors whitespace-nowrap hidden lg:block px-2"
                     >
                         {startDate} — {endDate}
                     </button>
@@ -120,12 +112,9 @@ const FilterBar = ({ showDevice = true, showCampaign = false, showChannel = fals
                 {/* Device Filter */}
                 {showDevice && (
                     <>
-                        <div className="h-6 w-px bg-neutral-200 dark:bg-neutral-700 shrink-0 hidden sm:block"/>
-                        <div className="flex items-center gap-2 shrink-0">
-                            <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
-                                <FunnelIcon className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400"/>
-                            </div>
-                            <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 rounded-xl p-0.5 gap-0.5">
+                        <div className="h-4 w-px bg-neutral-300 dark:bg-neutral-600 shrink-0 hidden sm:block mx-1"/>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                            <div className="flex items-center bg-neutral-200/50 dark:bg-neutral-800/50 rounded-full p-1 gap-0.5">
                                 {[
                                     { label: 'All',     value: '',        icon: FunnelIcon },
                                     { label: 'Mobile',  value: 'mobile',  icon: DevicePhoneMobileIcon },
@@ -136,14 +125,14 @@ const FilterBar = ({ showDevice = true, showCampaign = false, showChannel = fals
                                         key={d.value}
                                         onClick={() => setFilters({ device: d.value })}
                                         title={d.label}
-                                        className={`px-2.5 py-1.5 text-[11px] font-black rounded-lg transition-all flex items-center gap-1 ${
+                                        className={`px-3 py-1 text-[10px] font-black rounded-full transition-all flex items-center gap-1.5 ${
                                             device === d.value
-                                                ? 'bg-white dark:bg-neutral-700 text-amber-600 dark:text-amber-400 shadow-sm'
+                                                ? 'bg-amber-500 text-white shadow-md'
                                                 : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'
                                         }`}
                                     >
                                         <d.icon className="w-3 h-3"/>
-                                        <span className="hidden lg:inline">{d.label}</span>
+                                        <span className="hidden xl:inline">{d.label}</span>
                                     </button>
                                 ))}
                             </div>
@@ -185,56 +174,7 @@ const FilterBar = ({ showDevice = true, showCampaign = false, showChannel = fals
                     </button>
                 )}
 
-                {/* Right Side - Refresh + Sync */}
-                <div className="ml-auto flex items-center gap-2 shrink-0 pl-3 border-l border-neutral-200 dark:border-neutral-700">
-                    {onRefresh && (
-                        <button
-                            onClick={onRefresh}
-                            disabled={loading}
-                            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-                                loading
-                                    ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed'
-                                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 dark:hover:text-brand-400 active:scale-90'
-                            }`}
-                            title="Refresh data"
-                        >
-                            <ArrowPathIcon className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}/>
-                        </button>
-                    )}
 
-                    {(activeGa4PropertyId || activeGscSite || activeGoogleAdsCustomerId || activeFacebookAdAccountId) ? (
-                        <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[10px] font-black transition-all ${
-                            syncMetadata.syncStatus === 'syncing'
-                                ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-800 animate-pulse'
-                                : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800'
-                        }`}>
-                            {syncMetadata.syncStatus === 'syncing'
-                                ? <ArrowPathIcon className="w-3 h-3 animate-spin"/>
-                                : <CheckCircleIcon className="w-3 h-3"/>
-                            }
-                            <span className="hidden sm:inline uppercase tracking-wide">
-                                {syncMetadata.syncStatus === 'syncing' ? 'Syncing' : 'Synced'}
-                            </span>
-                        </div>
-                    ) : (
-                        <a
-                            href="/connect-accounts"
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-[10px] font-black transition-all hover:scale-105 active:scale-95 shadow-sm shadow-brand-500/20"
-                        >
-                            <CloudArrowUpIcon className="w-3.5 h-3.5"/>
-                            <span className="hidden sm:inline">Connect</span>
-                        </a>
-                    )}
-
-                    {syncMetadata.lastDailySyncAt && syncMetadata.syncStatus !== 'syncing' && !loading && (
-                        <div className="hidden xl:flex flex-col items-end pl-3 border-l border-neutral-200 dark:border-neutral-700">
-                            <span className="text-[8px] font-black uppercase tracking-widest text-neutral-400 leading-none">Last Sync</span>
-                            <span className="text-[10px] font-bold text-neutral-600 dark:text-neutral-300 mt-0.5">
-                                {new Date(syncMetadata.lastDailySyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                        </div>
-                    )}
-                </div>
             </div>
 
             {/* Custom Date Picker Dropdown */}
