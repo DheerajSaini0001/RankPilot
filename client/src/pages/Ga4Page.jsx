@@ -9,45 +9,50 @@ import { useAccountsStore } from '../store/accountsStore';
 import api from '../api';
 import { getActiveAccounts } from '../api/accountApi';
 import {
+    ArrowDownTrayIcon,
+    GlobeAltIcon,
+    UserCircleIcon,
+    EnvelopeIcon,
+    BoltIcon,
+    ArrowPathIcon,
     UsersIcon,
     CursorArrowRaysIcon,
     ClockIcon,
-    ArrowPathIcon,
     ExclamationTriangleIcon,
     ChartBarIcon,
-    ArrowDownTrayIcon
+    ChevronRightIcon
 } from '@heroicons/react/24/outline';
 import { exportToPdf } from '../utils/reportExport';
-import { 
-    ResponsiveContainer, 
-    AreaChart, Area, 
+import {
+    ResponsiveContainer,
+    AreaChart, Area,
     BarChart, Bar,
-    PieChart, Pie, Cell, 
-    XAxis, YAxis, 
-    Tooltip, CartesianGrid 
+    PieChart, Pie, Cell,
+    XAxis, YAxis,
+    Tooltip, CartesianGrid
 } from 'recharts';
 import FilterBar from '../components/dashboard/FilterBar';
 import { useFilterStore } from '../store/filterStore';
 
 const formatNumber = (num) =>
-  Number(num || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
+    Number(num || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
 
 const formatTime = (secs) => {
-  const s = Math.floor(secs || 0);
-  const min = Math.floor(s / 60);
-  const remainingSecs = s % 60;
-  return `${min}m ${remainingSecs}s`;
+    const s = Math.floor(secs || 0);
+    const min = Math.floor(s / 60);
+    const remainingSecs = s % 60;
+    return `${min}m ${remainingSecs}s`;
 };
 
 const Ga4Page = () => {
     const { startDate, endDate } = useDateRangeStore();
     const { device, campaign, channel } = useFilterStore();
-    const { connectedSources, activeGa4PropertyId, activeSiteId, syncMetadata, setAccounts } = useAccountsStore();
+    const { connectedSources, activeGa4PropertyId, activeSiteId, userSites, syncMetadata, setAccounts } = useAccountsStore();
     const isConnected = connectedSources.includes('ga4');
     const hasProperty = !!activeGa4PropertyId;
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
-    
+
     const [overview, setOverview] = useState(null);
     const [priorOverview, setPriorOverview] = useState(null);
     const [timeseries, setTimeseries] = useState([]);
@@ -147,7 +152,7 @@ const Ga4Page = () => {
 
         return () => clearInterval(interval);
     }, [loadData]);
-    
+
     // Refresh data when sync completes
     useEffect(() => {
         if (syncMetadata?.syncStatus !== 'syncing' && activeSiteId) {
@@ -189,12 +194,12 @@ const Ga4Page = () => {
 
     const { searchQuery } = useFilterStore();
 
-    const filteredTraffic = traffic.filter(t => 
+    const filteredTraffic = traffic.filter(t =>
         (t.channel?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
         (t.source?.toLowerCase() || '').includes(searchQuery.toLowerCase())
     );
 
-    const filteredPages = pages.filter(p => 
+    const filteredPages = pages.filter(p =>
         (p.title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
         (p.path?.toLowerCase() || '').includes(searchQuery.toLowerCase())
     );
@@ -215,19 +220,19 @@ const Ga4Page = () => {
 
     // Derived Data
     const pagesPerSession = (overview?.sessions > 0)
-      ? (overview.pageViews / overview.sessions).toFixed(2)
-      : '0.00';
+        ? (overview.pageViews / overview.sessions).toFixed(2)
+        : '0.00';
     const newUsers = overview ? Math.round((overview.users || 0) * 0.59) : 0;
     const retUsers = overview ? (overview.users || 0) - newUsers : 0;
     const newPct = overview?.users > 0 ? ((newUsers / overview.users) * 100).toFixed(1) : '0';
     const retPct = overview?.users > 0 ? ((retUsers / overview.users) * 100).toFixed(1) : '0';
     const engagementRate = overview ? (100 - (overview.bounceRate || 0)).toFixed(1) : '0';
     const engagedSessions = overview ? Math.round((overview.sessions || 0) * (1 - (overview.bounceRate || 0) / 100)) : 0;
-    
+
     // Real trend data using actual bounceRate from timeseries
     const bounceTrend = timeseries.map((d) => ({
-      date: d.date,
-      bounceRate: d.bounceRate ? parseFloat(d.bounceRate.toFixed(1)) : 0,
+        date: d.date,
+        bounceRate: d.bounceRate ? parseFloat(d.bounceRate.toFixed(1)) : 0,
     }));
 
     const calculateChange = (current, prior) => {
@@ -236,54 +241,115 @@ const Ga4Page = () => {
     };
 
     const comparison = (overview && priorOverview) ? [
-      { metric:'👥 Users',        current: formatNumber(overview.users),                       prior: formatNumber(priorOverview.users),              change: calculateChange(overview.users, priorOverview.users),  up: overview.users >= priorOverview.users },
-      { metric:'🔁 Sessions',     current: formatNumber(overview.sessions),                    prior: formatNumber(priorOverview.sessions),           change: calculateChange(overview.sessions, priorOverview.sessions),   up: overview.sessions >= priorOverview.sessions },
-      { metric:'📄 Page Views',   current: formatNumber(overview.pageViews),                   prior: formatNumber(priorOverview.pageViews),          change: calculateChange(overview.pageViews, priorOverview.pageViews),  up: overview.pageViews >= priorOverview.pageViews },
-      { metric:'📉 Bounce Rate',  current: `${(overview.bounceRate || 0).toFixed(1)}%`,       prior: `${(priorOverview.bounceRate || 0).toFixed(1)}%`,          change: calculateChange(overview.bounceRate || 0, priorOverview.bounceRate || 0),  up: (overview.bounceRate || 0) <= (priorOverview.bounceRate || 0) }, // Down is good for bounce
-      { metric:'⏱ Avg Duration',  current: formatTime(overview.avgSessionDuration),            prior: formatTime(priorOverview.avgSessionDuration),               change: calculateChange(overview.avgSessionDuration, priorOverview.avgSessionDuration),  up: overview.avgSessionDuration >= priorOverview.avgSessionDuration },
-      { metric:'✨ New Users',    current: formatNumber(Math.round(overview.users * 0.59)),    prior: formatNumber(Math.round(priorOverview.users * 0.59)),       change: calculateChange(overview.users, priorOverview.users),  up: overview.users >= priorOverview.users },
+        { metric: '👥 Users', current: formatNumber(overview.users), prior: formatNumber(priorOverview.users), change: calculateChange(overview.users, priorOverview.users), up: overview.users >= priorOverview.users },
+        { metric: '🔁 Sessions', current: formatNumber(overview.sessions), prior: formatNumber(priorOverview.sessions), change: calculateChange(overview.sessions, priorOverview.sessions), up: overview.sessions >= priorOverview.sessions },
+        { metric: '📄 Page Views', current: formatNumber(overview.pageViews), prior: formatNumber(priorOverview.pageViews), change: calculateChange(overview.pageViews, priorOverview.pageViews), up: overview.pageViews >= priorOverview.pageViews },
+        { metric: '📉 Bounce Rate', current: `${(overview.bounceRate || 0).toFixed(1)}%`, prior: `${(priorOverview.bounceRate || 0).toFixed(1)}%`, change: calculateChange(overview.bounceRate || 0, priorOverview.bounceRate || 0), up: (overview.bounceRate || 0) <= (priorOverview.bounceRate || 0) }, // Down is good for bounce
+        { metric: '⏱ Avg Duration', current: formatTime(overview.avgSessionDuration), prior: formatTime(priorOverview.avgSessionDuration), change: calculateChange(overview.avgSessionDuration, priorOverview.avgSessionDuration), up: overview.avgSessionDuration >= priorOverview.avgSessionDuration },
+        { metric: '✨ New Users', current: formatNumber(Math.round(overview.users * 0.59)), prior: formatNumber(Math.round(priorOverview.users * 0.59)), change: calculateChange(overview.users, priorOverview.users), up: overview.users >= priorOverview.users },
     ] : [];
 
 
     return (
         <DashboardLayout>
             <div id="ga4-report" className="flex flex-col space-y-8">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-dark-card p-6 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-sm relative overflow-hidden group">
-                     <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -mr-32 -mt-32 group-hover:bg-emerald-500/10 transition-colors duration-700"></div>
-                     <div className="relative z-10">
-                        <h1 className="text-2xl lg:text-3xl font-black text-neutral-900 dark:text-white tracking-tight">Google Analytics 4</h1>
-                        <p className="text-sm font-bold text-neutral-500 dark:text-neutral-400 mt-1">Website traffic and engagement metrics</p>
-                     </div>
-                     <div className="relative z-10 flex items-center gap-3">
-                        <button 
-                            onClick={() => exportToPdf('ga4-report', `RankPilot-GA4-${activeSiteId}`)}
-                            className="px-4 py-2.5 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 rounded-2xl text-xs font-black flex items-center gap-2 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all shadow-sm active:scale-95"
-                        >
-                            <ArrowDownTrayIcon className="w-4 h-4" />
-                            Download PDF Report
-                        </button>
-                        <AiSectionChat 
-                            label="Get AI Summary"
-                            sectionTitle="GA4 Dashboard Summary"
-                            activeSources={['ga4']}
-                            contextPrompt={`Analyze this GA4 dashboard for ${startDate} to ${endDate}. 
-- Users: ${formatNumber(overview?.users || 0)} (Change: ${calculateChange(overview?.users, priorOverview?.users)}%)
-- Sessions: ${formatNumber(overview?.sessions || 0)} (Change: ${calculateChange(overview?.sessions, priorOverview?.sessions)}%)
-- Page Views: ${formatNumber(overview?.pageViews || 0)}
-- Bounce Rate: ${(overview?.bounceRate || 0).toFixed(1)}%
+                {/* Compact Professional Header */}
+                <div className="bg-white dark:bg-[#0d0d0d] px-6 py-4 rounded-[1.5rem] border border-neutral-100 dark:border-neutral-800 shadow-sm relative overflow-hidden">
 
-Top Traffic Sources: ${traffic.slice(0, 3).map(t => t.source).join(', ')}
+                    <div className="relative z-10 flex flex-col xl:flex-row xl:items-center gap-6 xl:gap-10">
 
-Please provide: 
-1. Traffic Quality Score (1-100)
-2. Most valuable traffic source
-3. One advice to increase user retention.`}
-                        />
-                     </div>
+                        {/* 1. Logo & Identity Section */}
+                        <div className="flex items-center gap-4 shrink-0">
+                            <div className="w-12 h-12 bg-white dark:bg-neutral-800/80 rounded-xl flex items-center justify-center shrink-0 border border-neutral-100 dark:border-neutral-700 shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)]">
+                                <div className="flex items-end gap-[3px] h-6 mb-0.5">
+                                    <div className="w-[5px] h-[45%] bg-[#F9AB00] rounded-t-sm shadow-[0_1px_2px_rgba(249,171,0,0.2)]"></div>
+                                    <div className="w-[5px] h-[75%] bg-[#F57C00] rounded-t-sm shadow-[0_1px_2px_rgba(245,124,0,0.2)]"></div>
+                                    <div className="w-[5px] h-[100%] bg-[#E65100] rounded-t-sm shadow-[0_1px_2px_rgba(230,81,0,0.2)]"></div>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col justify-center">
+                                <div className="flex items-center gap-2.5">
+                                    <h1 className="text-lg md:text-xl font-black text-neutral-900 dark:text-white tracking-tight leading-none">Google Analytics 4</h1>
+                                    {activeSiteId && (
+                                        <div className="px-2 py-0.5 bg-neutral-900 dark:bg-neutral-800 text-white rounded text-[7px] font-black uppercase tracking-widest">
+                                            {userSites?.find(s => s._id === activeSiteId)?.siteName || 'CARWEEK'}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium leading-none mt-1.5 selection:bg-brand-500/20">
+                                    Understand your visitors in real-time and get AI-powered insights to grow your site.
+                                </p>
+                                
+                                <div className="mt-2.5 flex items-center gap-3">
+                                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/5 rounded-full border border-emerald-500/10">
+                                        <div className="w-1 h-1 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]"></div>
+                                        <span className="text-[8px] font-black text-emerald-600 dark:text-emerald-500 uppercase tracking-widest">Active</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-[9px] text-neutral-400 font-bold uppercase tracking-widest">
+                                        Synced: <span className="text-neutral-700 dark:text-neutral-300 tabular-nums font-black">{syncMetadata?.lastDailySyncAt ? new Date(syncMetadata.lastDailySyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '12:01 PM'}</span>
+                                        <button onClick={handleManualRefresh} className="hover:text-brand-500 transition-all active:rotate-180">
+                                            <ArrowPathIcon className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 2. Divider (Desktop) */}
+                        <div className="hidden xl:block w-[1px] h-8 bg-neutral-100 dark:bg-neutral-800/60"></div>
+
+                        {/* 3. Information Row */}
+                        <div className="flex-1 flex flex-wrap items-center gap-x-10 gap-y-3">
+                            {[
+                                { label: 'WEBSITE', value: (userSites?.find(s => s._id === activeSiteId)?.siteName?.toLowerCase().replace(/\s+/g, '') || 'carweek') + '.com', icon: GlobeAltIcon },
+                                { label: 'PROPERTY ID', value: '#' + (activeGa4PropertyId?.replace('properties/', '') || '297612575'), icon: ChartBarIcon },
+                                { label: 'SYNC ACCOUNT', value: userSites?.find(s => s._id === activeSiteId)?.ga4TokenId?.email || 'seo@slt.work', icon: EnvelopeIcon }
+                            ].map((item, idx) => (
+                                <div key={idx} className="flex items-center gap-2.5 min-w-max">
+                                    <div className="w-8 h-8 rounded-lg bg-neutral-50 dark:bg-neutral-800/40 flex items-center justify-center border border-neutral-100 dark:border-neutral-700/30">
+                                        <item.icon className="w-4 h-4 text-neutral-400" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[7px] font-black text-neutral-400 uppercase tracking-widest leading-none mb-0.5">{item.label}</span>
+                                        <span className="text-xs font-bold text-neutral-700 dark:text-neutral-200 tracking-tight">{item.value}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* 4. Action Buttons */}
+                        <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+                            <AiSectionChat
+                                label="GET AI SUMMARY"
+                                sectionTitle="GA4 Dashboard Summary"
+                                activeSources={['ga4']}
+                                contextPrompt={`Analyze my GA4 performance for ${startDate} to ${endDate}. 
+                                Users: ${formatNumber(overview?.users || 0)}, Sessions: ${formatNumber(overview?.sessions || 0)}`}
+                                customTrigger={(open) => (
+                                    <button
+                                        onClick={open}
+                                        className="h-8 px-3 bg-brand-500/10 hover:bg-brand-500/20 text-brand-600 dark:text-brand-400 rounded-lg text-[9px] font-black tracking-widest flex items-center justify-center gap-2 transition-all border border-brand-500/20"
+                                    >
+                                        <BoltIcon className="w-3.5 h-3.5" />
+                                        AI SUMMARY
+                                    </button>
+                                )}
+                            />
+                            <button
+                                onClick={() => exportToPdf('ga4-report', `RankPilot-GA4-${activeSiteId}`)}
+                                className="h-8 px-3 bg-white dark:bg-neutral-800/20 border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-lg text-[9px] font-black tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-50 transition-all"
+                            >
+                                <ArrowDownTrayIcon className="w-3.5 h-3.5" />
+                                PDF REPORT
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                <FilterBar 
-                    showChannel 
+                <FilterBar
+                    showChannel
                     onRefresh={handleManualRefresh}
                     loading={loading}
                 />
@@ -331,21 +397,21 @@ Please provide:
 
                 {/* ADD 2 — Summary Strip */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                  {[
-                    { label: 'Total Page Views', value: overview ? formatNumber(overview.pageViews) : '0', icon: '📄' },
-                    { label: 'New Users', value: formatNumber(newUsers), icon: '✨' },
-                    { label: 'Pages / Session', value: pagesPerSession, icon: '🎯' }
-                  ].map((card, idx) => (
-                    <div key={idx} className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-4 flex items-center gap-4 shadow-sm">
-                      <span className="text-2xl">{card.icon}</span>
-                      <div>
-                        <div className="text-xl font-black text-neutral-900 dark:text-white tabular-nums">
-                          {loading ? <div className="h-6 w-20 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse"/> : card.value}
+                    {[
+                        { label: 'Total Page Views', value: overview ? formatNumber(overview.pageViews) : '0', icon: '📄' },
+                        { label: 'New Users', value: formatNumber(newUsers), icon: '✨' },
+                        { label: 'Pages / Session', value: pagesPerSession, icon: '🎯' }
+                    ].map((card, idx) => (
+                        <div key={idx} className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-4 flex items-center gap-4 shadow-sm">
+                            <span className="text-2xl">{card.icon}</span>
+                            <div>
+                                <div className="text-xl font-black text-neutral-900 dark:text-white tabular-nums">
+                                    {loading ? <div className="h-6 w-20 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse" /> : card.value}
+                                </div>
+                                <div className="text-xs text-neutral-500 dark:text-neutral-400 font-medium mt-0.5">{card.label}</div>
+                            </div>
                         </div>
-                        <div className="text-xs text-neutral-500 dark:text-neutral-400 font-medium mt-0.5">{card.label}</div>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
 
                 {/* Timeseries Chart Row (FIX Matrix + ADD New vs Returning) */}
@@ -360,21 +426,21 @@ Please provide:
                             <div className="p-2 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 flex items-center gap-2">
                                 <AiSectionChat
                                     sectionTitle="GA4 - Engagement Resonance Matrix"
-                                    contextPrompt={`My GA4 sessions trend: ${timeseries.slice(-7).map(d => `${d.date}: ${d.sessions}`).join(', ')}. Total sessions: ${formatNumber(overview?.sessions)}, Bounce Rate: ${((overview?.bounceRate||0)*100).toFixed(1)}%. What does my engagement look like and how can I improve it?`}
+                                    contextPrompt={`My GA4 sessions trend: ${timeseries.slice(-7).map(d => `${d.date}: ${d.sessions}`).join(', ')}. Total sessions: ${formatNumber(overview?.sessions)}, Bounce Rate: ${((overview?.bounceRate || 0) * 100).toFixed(1)}%. What does my engagement look like and how can I improve it?`}
                                     activeSources={['ga4']}
                                 />
                                 <ChartBarIcon className="w-5 h-5 text-emerald-500" />
                             </div>
                         </div>
-                        
+
                         <div className="flex-1 p-8 min-h-[350px] relative">
                             {loading ? (
                                 <div className="w-full h-full animate-pulse bg-gradient-to-r from-neutral-100 to-neutral-50 dark:from-neutral-800 dark:to-neutral-800/50 rounded-xl"></div>
                             ) : timeseries.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center h-full text-neutral-400">
-                                  <div className="text-4xl mb-3">📭</div>
-                                  <p className="text-sm font-semibold">No session data for this period</p>
-                                  <p className="text-xs mt-1">Try selecting a wider date range</p>
+                                    <div className="text-4xl mb-3">📭</div>
+                                    <p className="text-sm font-semibold">No session data for this period</p>
+                                    <p className="text-xs mt-1">Try selecting a wider date range</p>
                                 </div>
                             ) : (
                                 <ResponsiveContainer width="100%" height="100%">
@@ -386,28 +452,28 @@ Please provide:
                                             </linearGradient>
                                         </defs>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" className="dark:stroke-neutral-800" opacity={0.5} />
-                                        <XAxis 
-                                            dataKey="date" 
-                                            axisLine={false} 
-                                            tickLine={false} 
-                                            tick={{ fontSize: 10, fill: '#9CA3AF', fontWeight: 'bold' }} 
-                                            dy={15} 
+                                        <XAxis
+                                            dataKey="date"
+                                            axisLine={false}
+                                            tickLine={false}
+                                            tick={{ fontSize: 10, fill: '#9CA3AF', fontWeight: 'bold' }}
+                                            dy={15}
                                         />
-                                        <YAxis 
-                                            axisLine={false} 
-                                            tickLine={false} 
-                                            tick={{ fontSize: 10, fill: '#9CA3AF', fontWeight: 'bold' }} 
-                                            tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val} 
+                                        <YAxis
+                                            axisLine={false}
+                                            tickLine={false}
+                                            tick={{ fontSize: 10, fill: '#9CA3AF', fontWeight: 'bold' }}
+                                            tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val}
                                         />
-                                        <Tooltip 
-                                            contentStyle={{ 
-                                                borderRadius: '20px', 
-                                                border: 'none', 
+                                        <Tooltip
+                                            contentStyle={{
+                                                borderRadius: '20px',
+                                                border: 'none',
                                                 boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
                                                 background: document.documentElement.classList.contains('dark') ? '#111827' : 'rgba(255, 255, 255, 0.95)',
                                                 color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827',
                                                 padding: '12px'
-                                            }} 
+                                            }}
                                             itemStyle={{ fontWeight: '900', fontSize: '12px' }}
                                         />
                                         <Area type="monotone" dataKey="sessions" stroke="#10B981" strokeWidth={4} fillOpacity={1} fill="url(#colorSessions)" name="Sessions" strokeLinecap="round" />
@@ -429,24 +495,24 @@ Please provide:
                         </div>
                         <p className="text-xs text-neutral-400 font-semibold mb-4">User type distribution</p>
 
-                        <div className="flex items-center justify-center relative" style={{height: 160}}>
+                        <div className="flex items-center justify-center relative" style={{ height: 160 }}>
                             {loading ? (
                                 <div className="w-32 h-32 rounded-full border-8 border-neutral-100 dark:border-neutral-800 border-t-brand-500 animate-spin"></div>
                             ) : (
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie
-                                          data={[{name:'New Users', value: newUsers}, {name:'Returning', value: retUsers}]}
-                                          innerRadius={52} outerRadius={72} paddingAngle={4} dataKey="value"
+                                            data={[{ name: 'New Users', value: newUsers }, { name: 'Returning', value: retUsers }]}
+                                            innerRadius={52} outerRadius={72} paddingAngle={4} dataKey="value"
                                         >
-                                          <Cell fill="#3B82F6" />
-                                          <Cell fill="#10B981" />
+                                            <Cell fill="#3B82F6" />
+                                            <Cell fill="#10B981" />
                                         </Pie>
-                                        <Tooltip 
+                                        <Tooltip
                                             contentStyle={{
-                                                borderRadius:'12px', 
-                                                border:'none', 
-                                                fontSize:'12px',
+                                                borderRadius: '12px',
+                                                border: 'none',
+                                                fontSize: '12px',
                                                 background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
                                                 color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
                                             }}
@@ -477,45 +543,45 @@ Please provide:
 
                 {/* ADD 4 — Engagement Rate Section */}
                 <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-[2rem] p-6 shadow-sm">
-                  <div className="flex items-center justify-between mb-5">
-                    <div>
-                      <h3 className="text-base font-black text-neutral-900 dark:text-white">Engagement Rate</h3>
-                      <p className="text-xs text-neutral-400 font-semibold mt-0.5">GA4 engagement metrics — inverse of bounce rate</p>
+                    <div className="flex items-center justify-between mb-5">
+                        <div>
+                            <h3 className="text-base font-black text-neutral-900 dark:text-white">Engagement Rate</h3>
+                            <p className="text-xs text-neutral-400 font-semibold mt-0.5">GA4 engagement metrics — inverse of bounce rate</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <AiSectionChat
+                                sectionTitle="GA4 - Engagement Rate"
+                                contextPrompt={`My GA4 engagement rate is ${engagementRate}% with ${formatNumber(engagedSessions)} engaged sessions. Average session duration: ${formatTime(overview?.avgSessionDuration)}. Is this good for my industry? What can I do to boost engagement?`}
+                                activeSources={['ga4']}
+                            />
+                            <span className="text-xs font-bold bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 px-3 py-1 rounded-full border border-brand-100 dark:border-brand-800">GA4 Metric</span>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <AiSectionChat
-                          sectionTitle="GA4 - Engagement Rate"
-                          contextPrompt={`My GA4 engagement rate is ${engagementRate}% with ${formatNumber(engagedSessions)} engaged sessions. Average session duration: ${formatTime(overview?.avgSessionDuration)}. Is this good for my industry? What can I do to boost engagement?`}
-                          activeSources={['ga4']}
-                      />
-                      <span className="text-xs font-bold bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 px-3 py-1 rounded-full border border-brand-100 dark:border-brand-800">GA4 Metric</span>
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="text-center p-4 bg-green-50 dark:bg-green-900/10 rounded-2xl border border-green-100 dark:border-green-800">
-                      <div className="text-2xl font-black text-green-600 dark:text-green-400 tabular-nums">
-                        {loading ? '—' : (engagementRate + '%')}
-                      </div>
-                      <div className="text-xs text-neutral-500 mt-1">Engagement Rate</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="text-center p-4 bg-green-50 dark:bg-green-900/10 rounded-2xl border border-green-100 dark:border-green-800">
+                            <div className="text-2xl font-black text-green-600 dark:text-green-400 tabular-nums">
+                                {loading ? '—' : (engagementRate + '%')}
+                            </div>
+                            <div className="text-xs text-neutral-500 mt-1">Engagement Rate</div>
+                        </div>
+                        <div className="text-center p-4 bg-brand-50 dark:bg-brand-900/10 rounded-2xl border border-brand-100 dark:border-brand-800">
+                            <div className="text-2xl font-black text-brand-600 dark:text-brand-400 tabular-nums">
+                                {loading ? '—' : formatNumber(engagedSessions)}
+                            </div>
+                            <div className="text-xs text-neutral-500 mt-1">Engaged Sessions</div>
+                        </div>
+                        <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/10 rounded-2xl border border-orange-100 dark:border-orange-800">
+                            <div className="text-2xl font-black text-orange-500 tabular-nums">
+                                {loading ? '—' : (overview ? formatTime(overview.avgSessionDuration) : '—')}
+                            </div>
+                            <div className="text-xs text-neutral-500 mt-1">Avg Engaged Time</div>
+                        </div>
                     </div>
-                    <div className="text-center p-4 bg-brand-50 dark:bg-brand-900/10 rounded-2xl border border-brand-100 dark:border-brand-800">
-                      <div className="text-2xl font-black text-brand-600 dark:text-brand-400 tabular-nums">
-                        {loading ? '—' : formatNumber(engagedSessions)}
-                      </div>
-                      <div className="text-xs text-neutral-500 mt-1">Engaged Sessions</div>
-                    </div>
-                    <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/10 rounded-2xl border border-orange-100 dark:border-orange-800">
-                      <div className="text-2xl font-black text-orange-500 tabular-nums">
-                        {loading ? '—' : (overview ? formatTime(overview.avgSessionDuration) : '—')}
-                      </div>
-                      <div className="text-xs text-neutral-500 mt-1">Avg Engaged Time</div>
-                    </div>
-                  </div>
 
-                  <div className="mt-4 p-3 bg-brand-50 dark:bg-brand-900/20 rounded-xl text-xs text-brand-700 dark:text-brand-300">
-                    💡 <strong>Engagement Rate</strong> = Sessions lasting 10+ seconds, with a conversion event, or 2+ pageviews. GA4 uses this as the replacement for Bounce Rate.
-                  </div>
+                    <div className="mt-4 p-3 bg-brand-50 dark:bg-brand-900/20 rounded-xl text-xs text-brand-700 dark:text-brand-300">
+                        💡 <strong>Engagement Rate</strong> = Sessions lasting 10+ seconds, with a conversion event, or 2+ pageviews. GA4 uses this as the replacement for Bounce Rate.
+                    </div>
                 </div>
 
                 {/* ADD 5 — Bounce Rate Trend + Page Views Bar Chart */}
@@ -526,36 +592,36 @@ Please provide:
                             <h3 className="text-sm font-black text-neutral-900 dark:text-white">Bounce Rate Trend</h3>
                             <AiSectionChat
                                 sectionTitle="GA4 - Bounce Rate Trend"
-                                contextPrompt={`My GA4 bounce rate is ${((overview?.bounceRate||0)*100).toFixed(1)}% (engagement rate: ${engagementRate}%). Is this a problem? What pages might be causing high bounce and how can I fix it?`}
+                                contextPrompt={`My GA4 bounce rate is ${((overview?.bounceRate || 0) * 100).toFixed(1)}% (engagement rate: ${engagementRate}%). Is this a problem? What pages might be causing high bounce and how can I fix it?`}
                                 activeSources={['ga4']}
                             />
                         </div>
                         <p className="text-xs text-neutral-400 mb-4">Daily resonance fluctuations</p>
                         {loading ? (
-                            <div className="h-48 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"/>
+                            <div className="h-48 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse" />
                         ) : (
                             <ResponsiveContainer width="100%" height={190}>
-                              <AreaChart data={bounceTrend} margin={{top:5, right:10, left:-25, bottom:0}}>
-                                <defs>
-                                  <linearGradient id="bounceGrad" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%"  stopColor="#F97316" stopOpacity={0.15}/>
-                                    <stop offset="95%" stopColor="#F97316" stopOpacity={0}/>
-                                  </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" className="dark:stroke-neutral-800" opacity={0.5}/>
-                                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize:10, fill:'#9CA3AF', fontWeight: 'bold'}}/>
-                                <YAxis axisLine={false} tickLine={false} tick={{fontSize:10, fill:'#9CA3AF', fontWeight: 'bold'}} tickFormatter={v=>`${v}%`}/>
-                                <Tooltip 
-                                  contentStyle={{ 
-                                    borderRadius: '15px', 
-                                    border: 'none', 
-                                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                                    background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
-                                    color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
-                                  }} 
-                                />
-                                <Area type="monotone" dataKey="bounceRate" stroke="#F97316" strokeWidth={2.5} fill="url(#bounceGrad)" name="Bounce Rate %" dot={false}/>
-                              </AreaChart>
+                                <AreaChart data={bounceTrend} margin={{ top: 5, right: 10, left: -25, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="bounceGrad" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#F97316" stopOpacity={0.15} />
+                                            <stop offset="95%" stopColor="#F97316" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" className="dark:stroke-neutral-800" opacity={0.5} />
+                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9CA3AF', fontWeight: 'bold' }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9CA3AF', fontWeight: 'bold' }} tickFormatter={v => `${v}%`} />
+                                    <Tooltip
+                                        contentStyle={{
+                                            borderRadius: '15px',
+                                            border: 'none',
+                                            boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                                            background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+                                            color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+                                        }}
+                                    />
+                                    <Area type="monotone" dataKey="bounceRate" stroke="#F97316" strokeWidth={2.5} fill="url(#bounceGrad)" name="Bounce Rate %" dot={false} />
+                                </AreaChart>
                             </ResponsiveContainer>
                         )}
                     </div>
@@ -572,24 +638,24 @@ Please provide:
                         </div>
                         <p className="text-xs text-neutral-400 mb-4">Traffic density per interval</p>
                         {loading ? (
-                            <div className="h-48 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"/>
+                            <div className="h-48 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse" />
                         ) : (
                             <ResponsiveContainer width="100%" height={190}>
-                              <BarChart data={timeseries} margin={{top:5, right:10, left:-25, bottom:0}}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" className="dark:stroke-neutral-800" opacity={0.5}/>
-                                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize:10, fill:'#9CA3AF', fontWeight: 'bold'}}/>
-                                <YAxis axisLine={false} tickLine={false} tick={{fontSize:10, fill:'#9CA3AF', fontWeight: 'bold'}} tickFormatter={v=>v>=1000?`${(v/1000).toFixed(0)}k`:v}/>
-                                <Tooltip 
-                                  contentStyle={{ 
-                                    borderRadius: '15px', 
-                                    border: 'none', 
-                                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                                    background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
-                                    color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
-                                  }} 
-                                />
-                                <Bar dataKey="pageViews" fill="#3B82F6" radius={[4,4,0,0]} name="Page Views" fillOpacity={0.85}/>
-                              </BarChart>
+                                <BarChart data={timeseries} margin={{ top: 5, right: 10, left: -25, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" className="dark:stroke-neutral-800" opacity={0.5} />
+                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9CA3AF', fontWeight: 'bold' }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9CA3AF', fontWeight: 'bold' }} tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v} />
+                                    <Tooltip
+                                        contentStyle={{
+                                            borderRadius: '15px',
+                                            border: 'none',
+                                            boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                                            background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+                                            color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+                                        }}
+                                    />
+                                    <Bar dataKey="pageViews" fill="#3B82F6" radius={[4, 4, 0, 0]} name="Page Views" fillOpacity={0.85} />
+                                </BarChart>
                             </ResponsiveContainer>
                         )}
                     </div>
@@ -603,7 +669,7 @@ Please provide:
                             <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Traffic Sources</h3>
                             <AiSectionChat
                                 sectionTitle="GA4 - Traffic Sources"
-                                contextPrompt={`My GA4 top traffic sources: ${traffic.slice(0,5).map(t => `${t.channel} (${t.sessions} sessions)`).join(', ')}. Which channels are performing best? How can I optimize my traffic mix?`}
+                                contextPrompt={`My GA4 top traffic sources: ${traffic.slice(0, 5).map(t => `${t.channel} (${t.sessions} sessions)`).join(', ')}. Which channels are performing best? How can I optimize my traffic mix?`}
                                 activeSources={['ga4']}
                             />
                         </div>
@@ -611,13 +677,13 @@ Please provide:
                             <DataTable columns={trafficColumns} data={filteredTraffic} loading={loading} initialLimit={5} />
                         </div>
                     </div>
-                    
+
                     <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-2xl shadow-sm overflow-hidden flex flex-col">
                         <div className="p-5 border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-dark-surface/50 flex items-center justify-between">
                             <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Top Pages</h3>
                             <AiSectionChat
                                 sectionTitle="GA4 - Top Landing Pages"
-                                contextPrompt={`My GA4 top pages: ${pages.slice(0,5).map(p => `${p.path} (${p.views} views)`).join(', ')}. Which pages have the best performance? Are there pages with high views but low engagement?`}
+                                contextPrompt={`My GA4 top pages: ${pages.slice(0, 5).map(p => `${p.path} (${p.views} views)`).join(', ')}. Which pages have the best performance? Are there pages with high views but low engagement?`}
                                 activeSources={['ga4']}
                             />
                         </div>
@@ -659,10 +725,10 @@ Please provide:
                                                     <Cell key={index} fill={['#10B981', '#3B82F6', '#F59E0B', '#EF4444'][index % 4]} />
                                                 ))}
                                             </Pie>
-                                            <Tooltip 
-                                                contentStyle={{ 
-                                                    borderRadius: '15px', 
-                                                    border: 'none', 
+                                            <Tooltip
+                                                contentStyle={{
+                                                    borderRadius: '15px',
+                                                    border: 'none',
                                                     boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
                                                     background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
                                                     color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
@@ -696,7 +762,7 @@ Please provide:
                             </div>
                             <AiSectionChat
                                 sectionTitle="GA4 - Geographic Distribution"
-                                contextPrompt={`My top GA4 locations by sessions: ${breakdowns.locations.slice(0,5).map(l => `${l.name}: ${formatNumber(l.value)}`).join(', ')}. Any geo-based opportunities or localization strategies I should pursue?`}
+                                contextPrompt={`My top GA4 locations by sessions: ${breakdowns.locations.slice(0, 5).map(l => `${l.name}: ${formatNumber(l.value)}`).join(', ')}. Any geo-based opportunities or localization strategies I should pursue?`}
                                 activeSources={['ga4']}
                             />
                         </div>
@@ -712,13 +778,13 @@ Please provide:
                                     <div key={i} className="space-y-2">
                                         <div className="flex justify-between items-end">
                                             <span className="text-xs font-black text-neutral-700 dark:text-neutral-300 flex items-center gap-2">
-                                                <span className="w-5 h-5 flex items-center justify-center bg-neutral-100 dark:bg-dark-surface rounded-md text-[10px]">{i+1}</span>
+                                                <span className="w-5 h-5 flex items-center justify-center bg-neutral-100 dark:bg-dark-surface rounded-md text-[10px]">{i + 1}</span>
                                                 {loc.name}
                                             </span>
                                             <span className="text-[10px] font-black text-neutral-400">{formatNumber(loc.value)} SESSIONS</span>
                                         </div>
                                         <div className="h-2 w-full bg-neutral-100 dark:bg-dark-surface rounded-full overflow-hidden">
-                                            <div 
+                                            <div
                                                 className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-1000"
                                                 style={{ width: `${width}%` }}
                                             ></div>
@@ -732,57 +798,56 @@ Please provide:
 
                 {/* ADD 6 — Period Comparison Table */}
                 <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 shadow-sm">
-                  <div className="flex items-center justify-between mb-5">
-                    <div>
-                      <h3 className="text-sm font-black text-neutral-900 dark:text-white">Period Comparison</h3>
-                      <p className="text-xs text-neutral-400 mt-0.5">This period vs last period — all key metrics</p>
+                    <div className="flex items-center justify-between mb-5">
+                        <div>
+                            <h3 className="text-sm font-black text-neutral-900 dark:text-white">Period Comparison</h3>
+                            <p className="text-xs text-neutral-400 mt-0.5">This period vs last period — all key metrics</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <AiSectionChat
+                                sectionTitle="GA4 - Period Comparison"
+                                contextPrompt={`My GA4 comparison — Users: ${formatNumber(overview?.users)} vs ${formatNumber(priorOverview?.users)}, Sessions: ${formatNumber(overview?.sessions)} vs ${formatNumber(priorOverview?.sessions)}, Bounce: ${((overview?.bounceRate || 0) * 100).toFixed(1)}% vs ${((priorOverview?.bounceRate || 0) * 100).toFixed(1)}%. What are the most significant changes and what might be causing them?`}
+                                activeSources={['ga4']}
+                            />
+                            <span className="text-xs font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full border border-purple-100 dark:border-purple-800">vs Last Period</span>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <AiSectionChat
-                          sectionTitle="GA4 - Period Comparison"
-                          contextPrompt={`My GA4 comparison — Users: ${formatNumber(overview?.users)} vs ${formatNumber(priorOverview?.users)}, Sessions: ${formatNumber(overview?.sessions)} vs ${formatNumber(priorOverview?.sessions)}, Bounce: ${((overview?.bounceRate||0)*100).toFixed(1)}% vs ${((priorOverview?.bounceRate||0)*100).toFixed(1)}%. What are the most significant changes and what might be causing them?`}
-                          activeSources={['ga4']}
-                      />
-                      <span className="text-xs font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full border border-purple-100 dark:border-purple-800">vs Last Period</span>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead className="border-b border-neutral-100 dark:border-neutral-800">
+                                <tr>
+                                    {['Metric', 'This Period', 'Last Period', 'Change'].map(h => (
+                                        <th key={h} className="pb-3 text-left text-[11px] font-black uppercase tracking-wider text-neutral-400 whitespace-nowrap">{h}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {loading ? (
+                                    Array(7).fill(0).map((_, i) => (
+                                        <tr key={i} className="animate-pulse">
+                                            <td colSpan={4} className="py-3"><div className="h-4 bg-neutral-100 dark:bg-neutral-800 rounded-lg"></div></td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    comparison.map((row, i) => (
+                                        <tr key={i} className="border-b border-neutral-50 dark:border-neutral-800/50 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors">
+                                            <td className="py-3 text-xs font-bold text-neutral-700 dark:text-neutral-300 whitespace-nowrap">{row.metric}</td>
+                                            <td className="py-3 text-xs font-black text-neutral-900 dark:text-white tabular-nums">{row.current}</td>
+                                            <td className="py-3 text-xs text-neutral-400 tabular-nums">{row.prior}</td>
+                                            <td className="py-3">
+                                                <span className={`inline-flex items-center gap-1 text-[11px] font-black px-2 py-0.5 rounded-full ${row.up
+                                                    ? 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400'
+                                                    : 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
+                                                    }`}>
+                                                    {row.up ? '▲' : '▼'} {Math.abs(row.change)}%
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
                     </div>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead className="border-b border-neutral-100 dark:border-neutral-800">
-                          <tr>
-                            {['Metric', 'This Period', 'Last Period', 'Change'].map(h => (
-                              <th key={h} className="pb-3 text-left text-[11px] font-black uppercase tracking-wider text-neutral-400 whitespace-nowrap">{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {loading ? (
-                            Array(7).fill(0).map((_, i) => (
-                                <tr key={i} className="animate-pulse">
-                                    <td colSpan={4} className="py-3"><div className="h-4 bg-neutral-100 dark:bg-neutral-800 rounded-lg"></div></td>
-                                </tr>
-                            ))
-                          ) : (
-                            comparison.map((row, i) => (
-                                <tr key={i} className="border-b border-neutral-50 dark:border-neutral-800/50 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors">
-                                  <td className="py-3 text-xs font-bold text-neutral-700 dark:text-neutral-300 whitespace-nowrap">{row.metric}</td>
-                                  <td className="py-3 text-xs font-black text-neutral-900 dark:text-white tabular-nums">{row.current}</td>
-                                  <td className="py-3 text-xs text-neutral-400 tabular-nums">{row.prior}</td>
-                                  <td className="py-3">
-                                    <span className={`inline-flex items-center gap-1 text-[11px] font-black px-2 py-0.5 rounded-full ${
-                                      row.up
-                                        ? 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400'
-                                        : 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
-                                    }`}>
-                                      {row.up ? '▲' : '▼'} {Math.abs(row.change)}%
-                                    </span>
-                                  </td>
-                                </tr>
-                            ))
-                          )}
-                        </tbody>
-                    </table>
-                  </div>
                 </div>
 
             </div>
