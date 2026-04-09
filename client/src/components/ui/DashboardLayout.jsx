@@ -99,7 +99,7 @@ const DashboardLayout = ({ children, noScroll = false }) => {
             getActiveAccounts(activeSiteId)
                 .then(res => {
                     const data = res.data || {};
-                    
+
                     // If we requested a specific site but got an empty object back, it means site was not found
                     if (activeSiteId && !data._id) {
                         setAccounts({ activeSiteId: null });

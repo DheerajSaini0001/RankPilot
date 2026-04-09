@@ -172,3 +172,77 @@
 .prose p, .markdown-content p {
   margin-bottom: 1rem !important;
 }
+
+/* PDF Export Optimization */
+@media print {
+  .no-print { display: none !important; }
+}
+
+.pdf-export-container {
+  padding: 20px !important;
+  background: white !important;
+}
+
+.dark .pdf-export-container {
+  background: #0A0A0A !important;
+}
+
+/* Force cards to stay together and not split across pages */
+.pdf-export-container .bg-white,
+.pdf-export-container .dark\:bg-dark-card,
+.pdf-export-container .glass-card,
+.pdf-export-container .rounded-2xl,
+.pdf-export-container .rounded-3xl {
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
+  margin-bottom: 20px !important;
+}
+
+/* Hide interactive chart elements in PDF */
+.pdf-export-container .recharts-tooltip-cursor,
+.pdf-export-container .recharts-active-dot,
+.pdf-export-container .recharts-tooltip-wrapper,
+.pdf-export-container .recharts-legend-wrapper,
+.pdf-export-container .recharts-responsive-container-shadow {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+/* Ensure grids don't break weirdly but allow side-by-side for small items */
+.pdf-export-container .grid-cols-4,
+.pdf-export-container .grid-cols-3 {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.pdf-export-container .grid-cols-2,
+.pdf-export-container .lg\:grid-cols-4,
+.pdf-export-container .lg\:grid-cols-3 {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 15px !important;
+}
+
+/* Large charts should be full width */
+.pdf-export-container .lg\:col-span-2,
+.pdf-export-container .lg\:col-span-3 {
+  grid-column: span 2 / span 2 !important;
+}
+
+/* Table styling for PDF */
+.pdf-export-container table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+}
+
+.pdf-export-container th, 
+.pdf-export-container td {
+  padding: 8px !important;
+  font-size: 10px !important;
+}
+
+/* Specific button hiding */
+.pdf-export-container button,
+.pdf-export-container .export-ignore {
+  display: none !important;
+}

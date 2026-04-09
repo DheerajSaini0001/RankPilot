@@ -25,6 +25,8 @@ import FilterBar from '../components/dashboard/FilterBar';
 import { useFilterStore } from '../store/filterStore';
 import { useAuthStore } from '../store/authStore';
 import DataTable from '../components/dashboard/DataTable';
+import { exportToPdf } from '../utils/reportExport';
+import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
 const formatCurrency = (num) => `$${Number(num || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -167,7 +169,7 @@ const DashboardPage = () => {
   }, [syncMetadata?.syncStatus, activeSiteId, loadDashboardData]);
 
   // Background Polling for Sync Status (Specific for historical sync progress)
-  const activeSite = userSites.find(s => s._id === activeSiteId);
+  const activeSite = userSites?.find?.(s => s._id === activeSiteId);
   const isSyncingHistorical = !!(activeSite && (
     (activeSite.ga4PropertyId && !activeSite.ga4HistoricalComplete) ||
     (activeSite.gscSiteUrl && !activeSite.gscHistoricalComplete) ||
@@ -181,7 +183,7 @@ const DashboardPage = () => {
       interval = setInterval(async () => {
          try {
            const res = await api.get('/accounts/sites'); 
-           if (res.data) setUserSites(res.data);
+           if (res.data && Array.isArray(res.data)) setUserSites(res.data);
          } catch (e) { console.error("Polling error", e); }
       }, 60000); 
     }
@@ -301,7 +303,7 @@ const DashboardPage = () => {
           </div>
         )}
 
-        <div className="flex flex-col space-y-8 min-w-0">
+        <div id="dashboard-report" className="flex flex-col space-y-8 min-w-0">
           {/* SECTION 1 — Greeting Card */}
           <div className="bg-white/60 dark:bg-dark-card/60 backdrop-blur-xl border border-neutral-200/60 dark:border-neutral-800/60 rounded-[2rem] p-6 shadow-sm relative overflow-hidden group flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-brand-500/10 transition-colors pointer-events-none"></div>
@@ -317,22 +319,29 @@ const DashboardPage = () => {
               </p>
             </div>
 
-            <div className="relative z-10 shrink-0">
+            <div className="relative z-10 shrink-0 flex items-center gap-3">
+               <button 
+                  onClick={() => exportToPdf('dashboard-report', `RankPilot-Dashboard-${activeSite?.siteName || 'Report'}`)}
+                  className="px-4 py-2.5 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 rounded-2xl text-xs font-black flex items-center gap-2 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all shadow-sm active:scale-95"
+               >
+                  <ArrowDownTrayIcon className="w-4 h-4" />
+                  Download PDF Report
+               </button>
                <AiSectionChat 
                   label="Generate Total Brand Summary"
                   sectionTitle="Total Dashboard Summary"
                   activeSources={['ga4', 'gsc', 'google-ads', 'facebook-ads']}
                   contextPrompt={`Analyze my complete brand dashboard for ${startDate} to ${endDate}. 
-- Total Web Traffic (GA4 Sessions): ${formatNumber(totalTraffic || 0)}
-- Total Organic Clicks (GSC): ${formatNumber(searchClicks || 0)}
-- Total Ad Spend (Meta + Google): ${formatCurrency(totalAdSpend || 0)}
-- Total Ad Conversions: ${formatNumber(totalConversions || 0)}
-- Overall Health Score: ${healthScore}/100
+                  - Total Web Traffic (GA4 Sessions): ${formatNumber(totalTraffic || 0)}
+                  - Total Organic Clicks (GSC): ${formatNumber(searchClicks || 0)}
+                  - Total Ad Spend (Meta + Google): ${formatCurrency(totalAdSpend || 0)}
+                  - Total Ad Conversions: ${formatNumber(totalConversions || 0)}
+                  - Overall Health Score: ${healthScore}/100
 
-Give me a 3-part strategic review:
-1. Brand Performance Analysis (Organic vs Paid)
-2. Most Efficient Channel this week
-3. One high-level strategy for the next 7 days for maximum ROI.`}
+                  Give me a 3-part strategic review:
+                  1. Brand Performance Analysis (Organic vs Paid)
+                  2. Most Efficient Channel this week
+                  3. One high-level strategy for the next 7 days for maximum ROI.`}
                />
             </div>
           </div>

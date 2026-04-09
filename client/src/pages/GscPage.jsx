@@ -15,8 +15,10 @@ import {
     ExclamationTriangleIcon,
     InformationCircleIcon,
     SparklesIcon,
-    GlobeAltIcon
+    GlobeAltIcon,
+    ArrowDownTrayIcon
 } from '@heroicons/react/24/outline';
+import { exportToPdf } from '../utils/reportExport';
 import { 
     ResponsiveContainer, 
     AreaChart, Area, 
@@ -246,7 +248,7 @@ const GscPage = () => {
 
     return (
         <DashboardLayout>
-            <div className="flex flex-col space-y-8">
+            <div id="gsc-report" className="flex flex-col space-y-8">
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-dark-card p-6 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-sm relative overflow-hidden group">
                      <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 rounded-full blur-3xl -mr-32 -mt-32 group-hover:bg-brand-500/10 transition-colors duration-700"></div>
@@ -254,7 +256,14 @@ const GscPage = () => {
                         <h1 className="text-2xl lg:text-3xl font-black text-neutral-900 dark:text-white tracking-tight">Search Console Performance</h1>
                         <p className="text-sm font-bold text-neutral-500 dark:text-neutral-400 mt-1">Analytics for <span className="text-brand-600 dark:text-brand-400 font-black">{activeGscSite.replace('https://', '')}</span></p>
                      </div>
-                     <div className="relative z-10">
+                     <div className="relative z-10 flex items-center gap-3">
+                        <button 
+                            onClick={() => exportToPdf('gsc-report', `RankPilot-GSC-${activeGscSite?.replace('https://', '')}`)}
+                            className="px-4 py-2.5 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 rounded-2xl text-xs font-black flex items-center gap-2 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all shadow-sm active:scale-95"
+                        >
+                            <ArrowDownTrayIcon className="w-4 h-4" />
+                            Download PDF Report
+                        </button>
                         <AiSectionChat 
                             label="Get AI Summary"
                             sectionTitle="GSC Performance Summary"
