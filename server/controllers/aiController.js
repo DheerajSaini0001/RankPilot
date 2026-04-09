@@ -406,20 +406,43 @@ export const askAi = async (req, res) => {
         await Message.create({ conversationId: convId, role: 'user', content: question });
 
         const chat = await startAgenticChat(chatHistory, aiTools, systemIns + dateContext);
+        let finalContent = "";
         
-        let result = await chat.sendMessage(question);
-        let response = result.response;
+        // --- PROPER STREAMING LOOP ---
+        // We use a stream to send tokens to the UI as they are generated
+        // If a function call happens, we execute it and then resume streaming
+        let result = await chat.sendMessageStream(question);
         
-        // Handle Tool Calls Loop 
         let iteration = 0;
-        while (response.functionCalls()?.length > 0 && iteration < 5) {
+        while (iteration < 5) {
             iteration++;
-            const calls = response.functionCalls();
-            const toolResponses = [];
             
+            // 1. Stream the text tokens if any
+            for await (const chunk of result.stream) {
+                const chunkText = chunk.text();
+                if (chunkText) {
+                    finalContent += chunkText;
+                    // Sanitize against the advisory notice which Gemini sometimes appends
+                    const cleanChunk = chunkText.replace(/(\r?\n)*.*response is advisory only.*/gi, '');
+                    if (cleanChunk) {
+                        res.write(`data: ${JSON.stringify({ chunk: cleanChunk })}\n\n`);
+                    }
+                }
+            }
+
+            // 2. Check for Function Calls in the final response of this turn
+            const response = await result.response;
+            const calls = response.functionCalls();
+            
+            if (!calls || calls.length === 0) break; // End of response
+
+            // 3. Execute Tools
+            const toolResponses = [];
             for (const call of calls) {
-                const data = await executeTool(call.name, call.args, userId, siteId);
+                // Inform UI that we are fetching data (optional micro-animation trigger)
+                // res.write(`data: ${JSON.stringify({ status: `Calling tool: ${call.name}...` })}\n\n`);
                 
+                const data = await executeTool(call.name, call.args, userId, siteId);
                 toolResponses.push({
                     functionResponse: {
                         name: call.name,
@@ -428,19 +451,12 @@ export const askAi = async (req, res) => {
                 });
             }
             
-            result = await chat.sendMessage(toolResponses);
-            response = result.response;
+            // 4. Send tool results back to the model and get a NEW stream
+            result = await chat.sendMessageStream(toolResponses);
         }
 
-        let finalContent = "";
-        try {
-            finalContent = response.text()
-                .replace(/(\r?\n)*.*response is advisory only.*/gi, '')
-                .trim();
-        } catch (e) {
-            console.error("Gemini response text error:", e);
-            finalContent = "I'm sorry, I was unable to process your request at this moment. Please try rephrasing your question.";
-        }
+        // Cleanup final content string (extra safety)
+        finalContent = finalContent.replace(/(\r?\n)*.*response is advisory only.*/gi, '').trim();
 
         // 3. Save Assistant Message Successfully
         const aiMsg = await Message.create({
@@ -451,8 +467,7 @@ export const askAi = async (req, res) => {
             latencyMs: Date.now() - nowLocal
         });
 
-        // Send final response
-        res.write(`data: ${JSON.stringify({ chunk: finalContent })}\n\n`);
+        // Send final done signal
         res.write(`data: ${JSON.stringify({ done: true, conversationId: convId, messageId: aiMsg._id, answer: finalContent })}\n\n`);
         res.end();
 
