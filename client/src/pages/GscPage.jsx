@@ -78,6 +78,14 @@ const GscPage = () => {
             setPages(data.pages || []);
             setDevices(data.devices || []);
             setCountries(data.countries || []);
+
+            if (data.syncMetadata) {
+                setAccounts({
+                    syncStatus: data.syncMetadata.syncStatus,
+                    lastDailySyncAt: data.syncMetadata.lastDailySyncAt,
+                    isHistoricalSyncComplete: data.syncMetadata.isHistoricalSyncComplete
+                });
+            }
             
             console.log('GSC timeseries:', data.timeseries);
         } catch (err) {
@@ -279,7 +287,7 @@ const GscPage = () => {
                                     </div>
                                     <div className="text-[11px] text-neutral-400 font-bold flex items-center gap-2">
                                         <span className="uppercase text-[10px] tracking-tight opacity-60">Synced:</span>
-                                        <span className="text-neutral-700 dark:text-neutral-300 font-black tabular-nums">{syncMetadata?.lastDailySyncAt ? new Date(syncMetadata.lastDailySyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '12:01 PM'}</span>
+                                        <span className="text-neutral-700 dark:text-neutral-300 font-black tabular-nums">{syncMetadata?.lastDailySyncAt ? new Date(syncMetadata.lastDailySyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}</span>
                                         <button onClick={handleManualRefresh} className="p-1 hover:text-brand-500 transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg active:rotate-180 duration-500">
                                             <ArrowPathIcon className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
                                         </button>

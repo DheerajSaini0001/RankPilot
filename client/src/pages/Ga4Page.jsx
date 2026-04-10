@@ -92,6 +92,14 @@ const Ga4Page = () => {
             setTraffic(data.traffic || []);
             setPages(data.pages || []);
             setBreakdowns(data.breakdowns || { devices: [], locations: [] });
+
+            if (data.syncMetadata) {
+                setAccounts({
+                    syncStatus: data.syncMetadata.syncStatus,
+                    lastDailySyncAt: data.syncMetadata.lastDailySyncAt,
+                    isHistoricalSyncComplete: data.syncMetadata.isHistoricalSyncComplete
+                });
+            }
         } catch (err) {
             console.error("GA4 fetch err", err);
         } finally {
@@ -288,7 +296,7 @@ const Ga4Page = () => {
                                         <span className="text-[8px] font-black text-emerald-600 dark:text-emerald-500 uppercase tracking-widest">Active</span>
                                     </div>
                                     <div className="flex items-center gap-1.5 text-[9px] text-neutral-400 font-bold uppercase tracking-widest">
-                                        Synced: <span className="text-neutral-700 dark:text-neutral-300 tabular-nums font-black">{syncMetadata?.lastDailySyncAt ? new Date(syncMetadata.lastDailySyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '12:01 PM'}</span>
+                                        Synced: <span className="text-neutral-700 dark:text-neutral-300 tabular-nums font-black">{syncMetadata?.lastDailySyncAt ? new Date(syncMetadata.lastDailySyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}</span>
                                         <button onClick={handleManualRefresh} className="hover:text-brand-500 transition-all active:rotate-180">
                                             <ArrowPathIcon className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
                                         </button>

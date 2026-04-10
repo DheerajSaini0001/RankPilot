@@ -15,7 +15,8 @@ import {
     GlobeAltIcon,
     BanknotesIcon,
     CurrencyDollarIcon,
-    UserCircleIcon
+    UserCircleIcon,
+    ArrowPathIcon
 } from '@heroicons/react/24/outline';
 import { exportToPdf } from '../utils/reportExport';
 import {
@@ -76,6 +77,16 @@ const FacebookAdsPage = () => {
             setCampaigns(data.campaigns);
             setAdsets(data.adsets);
             setDevices(data.devices || []);
+
+            if (data.syncMetadata) {
+                setAccounts({
+                    syncMetadata: {
+                        syncStatus: data.syncMetadata.syncStatus,
+                        lastDailySyncAt: data.syncMetadata.lastDailySyncAt,
+                        isHistoricalSyncComplete: data.syncMetadata.isHistoricalSyncComplete
+                    }
+                });
+            }
         } catch (err) {
             console.error("Facebook Ads fetch err", err);
         } finally {
@@ -87,7 +98,12 @@ const FacebookAdsPage = () => {
         if (!activeSiteId) return;
         setLoading(true);
         // 1. Set status to syncing in store
-        setAccounts({ syncStatus: 'syncing' });
+        setAccounts({ 
+            syncMetadata: {
+                ...syncMetadata,
+                syncStatus: 'syncing' 
+            }
+        });
 
         try {
             // 2. Perform sync
@@ -293,6 +309,13 @@ const FacebookAdsPage = () => {
                                 </div>
                             )}
                             <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 ml-1">Social media advertising metrics</p>
+                            <div className="flex items-center gap-2 mt-2 ml-1 text-[11px] text-neutral-400 font-bold">
+                                <span className="uppercase text-[10px] tracking-tight opacity-60">Synced:</span>
+                                <span className="text-neutral-700 dark:text-neutral-300 font-black tabular-nums">{syncMetadata?.lastDailySyncAt ? new Date(syncMetadata.lastDailySyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}</span>
+                                <button onClick={handleManualRefresh} className="p-1 hover:text-brand-500 transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg active:rotate-180 duration-500">
+                                    <ArrowPathIcon className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div className="relative z-10 flex flex-col gap-2">
