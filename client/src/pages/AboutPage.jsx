@@ -13,6 +13,8 @@ import {
     BeakerIcon
 } from '@heroicons/react/24/outline';
 import { useThemeStore } from '../store/themeStore';
+import Logo from '../components/ui/Logo';
+
 
 const AboutPage = () => {
     const { theme, toggleTheme } = useThemeStore();
@@ -28,12 +30,7 @@ const AboutPage = () => {
 
                     {/* Logo */}
                     <NavLink to="/" className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/40">
-                            <ChartBarIcon className="w-4 h-4 text-white" strokeWidth={2.5}/>
-                        </div>
-                        <span className="text-lg font-black text-white tracking-tight">
-                            RankPilot<span className="text-brand-500">.</span>
-                        </span>
+                        <Logo className="w-8 h-8" textClassName="text-lg text-white" />
                     </NavLink>
 
                     {/* Nav links — desktop only */}
@@ -367,12 +364,7 @@ const AboutPage = () => {
                     <div className="flex flex-col md:flex-row items-center justify-between gap-6">
 
                         {/* Logo */}
-                        <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-lg bg-brand-600 flex items-center justify-center">
-                                <ChartBarIcon className="w-3.5 h-3.5 text-white"/>
-                            </div>
-                            <span className="text-sm font-black text-white">RankPilot<span className="text-brand-500">.</span></span>
-                        </div>
+                        <Logo className="w-7 h-7" textClassName="text-sm text-white" />
 
                         {/* Links */}
                         <div className="flex flex-wrap items-center justify-center gap-6">

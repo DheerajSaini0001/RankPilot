@@ -18,12 +18,15 @@ import {
     ChevronRightIcon,
     XMarkIcon
 } from '@heroicons/react/24/outline';
+import GlobalAiChat from '../ai/GlobalAiChat';
 import { useAuthStore } from '../../store/authStore';
 import { useAccountsStore } from '../../store/accountsStore';
 import { useFilterStore } from '../../store/filterStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useThemeStore } from '../../store/themeStore';
 import { listSites, getActiveAccounts } from '../../api/accountApi';
+import Logo from './Logo';
+
 
 const DashboardLayout = ({ children, noScroll = false }) => {
     const { user, clearAuth } = useAuthStore();
@@ -245,10 +248,7 @@ const DashboardLayout = ({ children, noScroll = false }) => {
                 {/* Sidebar Logo */}
                 <div className="px-5 py-5 border-b border-neutral-100 dark:border-neutral-800">
                     <NavLink to="/dashboard" className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center shadow-md shadow-brand-500/30">
-                            <ChartBarIcon className="w-4 h-4 text-white" strokeWidth={2.5} />
-                        </div>
-                        <span className="text-lg font-black tracking-tight text-neutral-900 dark:text-white">RankPilot</span>
+                        <Logo className="w-8 h-8" />
                     </NavLink>
                 </div>
 
@@ -657,6 +657,8 @@ const DashboardLayout = ({ children, noScroll = false }) => {
                         {children}
                     </div>
                 </div>
+
+                <GlobalAiChat />
             </main>
         </div>
     );

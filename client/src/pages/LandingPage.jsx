@@ -10,6 +10,8 @@ import {
     MoonIcon
 } from '@heroicons/react/24/outline';
 import { useThemeStore } from '../store/themeStore';
+import Logo from '../components/ui/Logo';
+
 
 const LandingPage = () => {
     const { theme, toggleTheme } = useThemeStore();
@@ -25,10 +27,7 @@ const LandingPage = () => {
 
                     {/* Logo */}
                     <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/40">
-                            <ChartBarIcon className="w-4 h-4 text-white" strokeWidth={2.5}/>
-                        </div>
-                        <span className="text-lg font-black text-neutral-900 dark:text-white tracking-tight">RankPilot<span className="text-brand-500">.</span></span>
+                        <Logo className="w-8 h-8" />
                     </div>
 
                     {/* Center links */}
@@ -254,13 +253,9 @@ const LandingPage = () => {
                 <div className="max-w-7xl mx-auto px-6">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-14">
 
-                        {/* Brand */}
                         <div className="col-span-2 md:col-span-1">
                             <div className="flex items-center gap-2 mb-4">
-                                <div className="w-7 h-7 rounded-lg bg-brand-600 flex items-center justify-center">
-                                    <ChartBarIcon className="w-3.5 h-3.5 text-white"/>
-                                </div>
-                                <span className="text-base font-black text-neutral-900 dark:text-white">RankPilot<span className="text-brand-500">.</span></span>
+                                <Logo className="w-7 h-7" textClassName="text-base text-neutral-900 dark:text-white" />
                             </div>
                             <p className="text-neutral-400 dark:text-slate-500 text-xs font-medium leading-relaxed max-w-[200px]">
                                 AI-powered analytics for the next generation of marketing teams.

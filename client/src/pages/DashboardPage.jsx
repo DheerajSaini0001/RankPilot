@@ -2,9 +2,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import AiSectionChat from '../components/ai/AiSectionChat';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/ui/DashboardLayout';
+import Logo from '../components/ui/Logo';
+
 import KpiCard from '../components/dashboard/KpiCard';
 import { useDateRangeStore } from '../store/dateRangeStore';
 import { useAccountsStore } from '../store/accountsStore';
+import { useAiChatStore } from '../store/aiChatStore';
+import { useFilterStore } from '../store/filterStore';
 import {
   FunnelIcon,
   DevicePhoneMobileIcon,
@@ -29,7 +33,6 @@ import {
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import api from '../api';
 import { getActiveAccounts } from '../api/accountApi';
-import { useFilterStore } from '../store/filterStore';
 import { useAuthStore } from '../store/authStore';
 import DataTable from '../components/dashboard/DataTable';
 import { exportToPdf } from '../utils/reportExport';
@@ -83,11 +86,12 @@ const PerformanceLogo = ({ className = "w-5 h-5" }) => (
 );
 
 const RankPilotLogo = ({ className = "w-5 h-5" }) => (
-  <img src="/favicon.png" alt="RankPilot" className={`${className} object-contain rounded-lg`} />
+  <Logo className={className} iconOnly={true} />
 );
 
 const DashboardPage = () => {
   const navigate = useNavigate();
+  const { openWithQuestion } = useAiChatStore();
   const { preset, startDate, endDate, setPreset } = useDateRangeStore();
   const { device, campaign, channel, searchQuery, setFilters } = useFilterStore();
   const {
@@ -153,7 +157,7 @@ const DashboardPage = () => {
       });
 
       setTimeseriesData(data.timeseries || []);
-      
+
       const totalSessions = data.ga4?.sessions || 1;
       const pagesWithShare = (data.topPages || []).map(p => ({
         ...p,
@@ -405,8 +409,8 @@ const DashboardPage = () => {
                     <p className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-600 dark:text-brand-400 shrink-0">Website Summary</p>
                     <h2 className="text-2xl lg:text-3xl font-black text-neutral-900 dark:text-white tracking-tight leading-none">{overviewData.siteName || activeSite?.siteName || 'RankPilot'}</h2>
                     <p className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-sm mt-2">
-                      {overviewData.intelligence?.websiteSummary || `Monitoring ${overviewData.siteName || activeSite?.siteName} performance across your marketing channels.`}
-                    </p>
+                          {overviewData.intelligence?.websiteSummary || `Monitoring ${overviewData.siteName || activeSite?.siteName} performance across your marketing channels.`}
+                        </p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -559,19 +563,21 @@ const DashboardPage = () => {
                 <div className="flex flex-col md:flex-row gap-6 lg:items-center">
                   <div className="grid grid-cols-2 gap-3 shrink-0">
                     {[
-                      { id: 'ga4', active: !!activeGa4PropertyId, label: 'GA4 Analytics', value: (overviewData.ga4?.sessions) ? formatNumber(overviewData.ga4.sessions) : 'NOT CONNECTED', sublabel: 'Sessions', logo: <Ga4Logo className="w-5 h-5" />, color: 'bg-orange-50' },
-                      { id: 'google-ads', active: !!activeGoogleAdsCustomerId, label: 'Google Ads', value: (overviewData.googleAds?.clicks) ? formatNumber(overviewData.googleAds.clicks) : 'NOT CONNECTED', sublabel: 'Clicks', logo: <GoogleAdsLogo className="w-5 h-5" />, color: 'bg-amber-50' },
-                      { id: 'gsc', active: !!activeGscSite, label: 'Search Console', value: (overviewData.gsc?.impressions) ? formatNumber(overviewData.gsc.impressions) : 'NOT CONNECTED', sublabel: 'Impressions', logo: <GscLogo className="w-5 h-5" />, color: 'bg-blue-50' },
-                      { id: 'facebook', active: !!activeFacebookAdAccountId, label: 'Facebook Ads', value: (overviewData.facebookAds?.reach) ? formatNumber(overviewData.facebookAds.reach) : 'NOT CONNECTED', sublabel: 'Reach', logo: <FacebookAdsLogo className="w-5 h-5" />, color: 'bg-blue-50' }
+                      { id: 'ga4', active: !!activeGa4PropertyId, label: 'GA4 Analytics', logo: <Ga4Logo className="w-5 h-5" />, color: 'bg-orange-50' },
+                      { id: 'google-ads', active: !!activeGoogleAdsCustomerId, label: 'Google Ads', logo: <GoogleAdsLogo className="w-5 h-5" />, color: 'bg-amber-50' },
+                      { id: 'gsc', active: !!activeGscSite, label: 'Search Console', logo: <GscLogo className="w-5 h-5" />, color: 'bg-blue-50' },
+                      { id: 'facebook', active: !!activeFacebookAdAccountId, label: 'Facebook Ads', logo: <FacebookAdsLogo className="w-5 h-5" />, color: 'bg-blue-50' }
                     ].map((card) => (
                       <div key={card.id} className="flex flex-col gap-1.5 p-3 bg-white dark:bg-dark-surface border border-neutral-100 dark:border-neutral-800 rounded-2xl w-40 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md">
                         <div className="flex items-center justify-between">
                           <div className={`w-8 h-8 rounded-xl ${card.color} dark:bg-opacity-10 flex items-center justify-center shrink-0`}>{card.logo}</div>
-                          {card.active && <div className="px-2 py-0.5 rounded-full text-[7px] font-black uppercase tracking-tighter bg-green-100 text-green-600 dark:bg-green-500/10">Connected</div>}
+                          <div className={`w-2 h-2 rounded-full ${card.active ? 'bg-emerald-500 animate-pulse' : 'bg-neutral-300'}`}></div>
                         </div>
                         <div>
-                          <p className="text-[9px] font-black uppercase tracking-widest text-neutral-400 leading-none">{card.label}</p>
-                          <p className={`font-black text-neutral-900 dark:text-white tabular-nums leading-none tracking-tight mt-1 ${card.value === 'NOT CONNECTED' ? 'text-[10px]' : 'text-xl'}`}>{card.value}</p>
+                          <p className="text-[9px] font-black uppercase tracking-widest text-neutral-400 leading-none mb-1">{card.label}</p>
+                          <p className={`font-black uppercase tracking-tight ${card.active ? 'text-emerald-600 dark:text-emerald-400 text-[10px]' : 'text-neutral-400 text-[10px]'}`}>
+                            {card.active ? 'Connected' : 'Not Connected'}
+                          </p>
                         </div>
                       </div>
                     ))}
@@ -579,7 +585,7 @@ const DashboardPage = () => {
 
                   <div className="flex flex-col gap-2 min-w-[200px]">
                     <AiSectionChat
-                      label="AI Brand Summary"
+                      label="AI Summary"
                       sectionTitle="Total Dashboard Summary"
                       activeSources={['ga4', 'gsc', 'google-ads', 'facebook-ads']}
                       contextPrompt={`Analyze complete brand dashboard for ${startDate} to ${endDate}. 
@@ -598,22 +604,35 @@ const DashboardPage = () => {
                       Download PDF
                     </button>
                     <div className="flex flex-col gap-2.5 p-3.5 bg-brand-50/30 dark:bg-brand-500/5 border border-brand-100/50 dark:border-brand-500/20 rounded-2xl shadow-sm relative overflow-hidden group">
-                      <div className="flex items-center justify-between relative z-10">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-9 h-9 rounded-xl bg-brand-500 flex items-center justify-center text-white shadow-lg shadow-brand-500/20 font-black text-xs">H</div>
-                          <div className="space-y-0.5">
-                            <p className="text-[9px] font-black uppercase text-brand-600 dark:text-brand-400 tracking-widest leading-none">Audit Score</p>
-                            <div className={`px-1.5 py-0.5 rounded text-[6px] font-black uppercase tracking-tighter ${healthScore >= 80 ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'} w-fit`}>
-                              {healthScore >= 80 ? 'Optimal' : 'Needs Review'}
+                      {loading ? (
+                        <div className="animate-pulse flex items-center justify-between relative z-10">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-xl bg-neutral-200 dark:bg-neutral-800" />
+                            <div className="space-y-1.5">
+                              <div className="h-2 w-16 bg-neutral-200 dark:bg-neutral-800 rounded-full" />
+                              <div className="h-2 w-10 bg-neutral-100 dark:bg-neutral-900 rounded-full" />
+                            </div>
+                          </div>
+                          <div className="w-12 h-6 bg-neutral-200 dark:bg-neutral-800 rounded-lg" />
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between relative z-10">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-xl bg-brand-500 flex items-center justify-center text-white shadow-lg shadow-brand-500/20 font-black text-xs">H</div>
+                            <div className="space-y-0.5">
+                              <p className="text-[9px] font-black uppercase text-brand-600 dark:text-brand-400 tracking-widest leading-none">Audit Score</p>
+                              <div className={`px-1.5 py-0.5 rounded text-[6px] font-black uppercase tracking-tighter ${healthScore >= 80 ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'} w-fit`}>
+                                {healthScore >= 80 ? 'Optimal' : 'Needs Review'}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-2xl font-black text-brand-600 dark:text-brand-400 tracking-tighter leading-none">
+                              {healthScore}<span className="text-[8px] text-neutral-400 ml-0.5 font-bold">/100</span>
                             </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-2xl font-black text-brand-600 dark:text-brand-400 tracking-tighter leading-none">
-                            {healthScore}<span className="text-[8px] text-neutral-400 ml-0.5 font-bold">/100</span>
-                          </div>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -641,15 +660,34 @@ const DashboardPage = () => {
                   { label: 'Site Health', title: 'Audit Score', metric: healthScore, desc: overviewData.intelligence?.overviewHealth || (healthScore >= 80 ? 'Exceptional health score optimized.' : 'Optimization required for issues.'), icon: <RankPilotLogo className="w-3.5 h-3.5" />, color: healthScore >= 80 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700', active: true, path: '/dashboard/site-audit' }
                 ].map((card, i) => (
                   <div key={i} onClick={() => navigate(card.path)} className={`bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-800/60 rounded-[3rem] p-7 shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl group cursor-pointer overflow-hidden relative flex flex-col h-full min-h-[300px]`}>
-                    {!card.active && <div className="absolute top-6 right-6"><div className="w-8 h-8 rounded-full bg-neutral-50 dark:bg-neutral-800/50 flex items-center justify-center border border-neutral-100 dark:border-neutral-700/50 transition-all duration-500"><PlusIcon className="w-4 h-4" /></div></div>}
-                    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${card.color} text-[10px] font-black mb-6 w-fit`}>{card.icon}{card.label}</div>
-                    <h3 className="text-lg font-black text-neutral-900 dark:text-white mb-2">{card.title}</h3>
-                    {card.metric ? <div className="text-4xl font-black text-neutral-900 dark:text-white tabular-nums mb-4">{card.metric}</div> : <div className="mb-4 py-1"><div className="text-[10px] font-black text-brand-600 dark:text-brand-400 uppercase tracking-widest opacity-60">Connect to Unlock</div></div>}
-                    <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 leading-relaxed mb-6 flex-grow">{card.desc}</p>
-                    <div className="mt-auto pt-4 border-t border-neutral-50 dark:border-neutral-800/50 flex items-center justify-between text-brand-600 dark:text-brand-400 text-[10px] font-black uppercase tracking-widest">
-                      <span>{card.active ? 'View Analytics' : 'Activate Insights'}</span>
-                      <ArrowRightIcon className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                    </div>
+                    {loading ? (
+                      <div className="flex flex-col h-full animate-pulse">
+                        <div className="w-24 h-6 bg-neutral-100 dark:bg-neutral-800 rounded-full mb-6" />
+                        <div className="h-4 w-1/2 bg-neutral-100 dark:bg-neutral-800 rounded-lg mb-3" />
+                        <div className="h-10 w-3/4 bg-neutral-100 dark:bg-neutral-800 rounded-xl mb-6" />
+                        <div className="flex-grow space-y-2">
+                          <div className="h-3 w-full bg-neutral-50 dark:bg-neutral-800/50 rounded-lg" />
+                          <div className="h-3 w-full bg-neutral-50 dark:bg-neutral-800/50 rounded-lg" />
+                          <div className="h-3 w-2/3 bg-neutral-50 dark:bg-neutral-800/50 rounded-lg" />
+                        </div>
+                        <div className="mt-auto pt-6 border-t border-neutral-50 dark:border-neutral-800/50 flex justify-between items-center">
+                          <div className="w-24 h-3 bg-neutral-100 dark:bg-neutral-800 rounded-full" />
+                          <div className="w-4 h-4 bg-neutral-100 dark:bg-neutral-800 rounded-full" />
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {!card.active && <div className="absolute top-6 right-6"><div className="w-8 h-8 rounded-full bg-neutral-50 dark:bg-neutral-800/50 flex items-center justify-center border border-neutral-100 dark:border-neutral-700/50 transition-all duration-500"><PlusIcon className="w-4 h-4" /></div></div>}
+                        <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${card.color} text-[10px] font-black mb-6 w-fit`}>{card.icon}{card.label}</div>
+                        <h3 className="text-lg font-black text-neutral-900 dark:text-white mb-2">{card.title}</h3>
+                        {card.metric ? <div className="text-4xl font-black text-neutral-900 dark:text-white tabular-nums mb-4">{card.metric}</div> : <div className="mb-4 py-1"><div className="text-[10px] font-black text-brand-600 dark:text-brand-400 uppercase tracking-widest opacity-60">Connect to Unlock</div></div>}
+                        <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 leading-relaxed mb-6 flex-grow">{card.desc}</p>
+                        <div className="mt-auto pt-4 border-t border-neutral-50 dark:border-neutral-800/50 flex items-center justify-between text-brand-600 dark:text-brand-400 text-[10px] font-black uppercase tracking-widest">
+                          <span>{card.active ? 'View Analytics' : 'Activate Insights'}</span>
+                          <ArrowRightIcon className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
@@ -672,14 +710,17 @@ const DashboardPage = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       {activeGa4PropertyId && (
-                        <>
-                          <AiSectionChat sectionTitle="Overview - GA4 Summary" contextPrompt={`Quick GA4 summary: ${formatNumber(overviewData.ga4?.users)} users, ${formatNumber(overviewData.ga4?.sessions)} sessions, bounce rate ${formatPct(overviewData.ga4?.bounceRate || 0)}. Insights?`} activeSources={['ga4']} />
-                          <button onClick={() => navigate('/dashboard/ga4')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">View Full <ArrowRightIcon className="w-3 h-3" /></button>
-                        </>
+                        <button onClick={() => navigate('/dashboard/ga4')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">View Full <ArrowRightIcon className="w-3 h-3" /></button>
                       )}
                     </div>
                   </div>
-                  {!activeGa4PropertyId ? <div className="h-[148px]"><EmptyState message="Google Analytics Not Linked" sub="Connect GA4 for traffic analysis." onAction={() => navigate('/connect-accounts')} /></div> : (
+                  {loading ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 animate-pulse">
+                      {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <div key={i} className="p-3 bg-neutral-100 dark:bg-neutral-800/10 rounded-xl h-[52px]" />
+                      ))}
+                    </div>
+                  ) : !activeGa4PropertyId ? <div className="h-[148px]"><EmptyState message="Google Analytics Not Linked" sub="Connect GA4 for traffic analysis." onAction={() => navigate('/connect-accounts')} /></div> : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {[
                         { label: 'Users', value: formatNumber(overviewData.ga4?.users) },
@@ -696,6 +737,31 @@ const DashboardPage = () => {
                       ))}
                     </div>
                   )}
+
+                  {activeGa4PropertyId && (
+                    <div className="mt-6 p-3.5 bg-brand-50/20 dark:bg-brand-500/5 border border-brand-100/50 dark:border-brand-500/20 rounded-2xl">
+                      <h4 className="text-[10px] font-black text-neutral-900 dark:text-white mb-1.5 uppercase tracking-wider">AI Summary</h4>
+                      {loading ? (
+                        <div className="space-y-1.5 animate-pulse">
+                          <div className="h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full w-full" />
+                          <div className="h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full w-[80%]" />
+                        </div>
+                      ) : (
+                    <div className="flex flex-col items-start gap-2.5">
+                        <p className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                          {overviewData.intelligence?.overviewGA4 || "Analyzing high-volume traffic across user engagement."}
+                        </p>
+                        <button 
+                            onClick={() => openWithQuestion(`Provide a detailed analysis of this GA4 traffic summary: ${overviewData.intelligence?.overviewGA4 || 'Traffic engagement overview'}`)}
+                            className="flex items-center gap-1.5 px-3 py-1 bg-brand-600/10 hover:bg-brand-600/20 text-brand-600 dark:text-brand-400 text-[10px] font-black rounded-lg transition-all active:scale-95 uppercase tracking-wider"
+                        >
+                            <SparklesIcon className="w-3 h-3" />
+                            Ask AI
+                        </button>
+                    </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 shadow-sm transition-all shadow-green-500/5">
@@ -706,14 +772,17 @@ const DashboardPage = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       {activeGscSite && (
-                        <>
-                          <AiSectionChat sectionTitle="Overview - GSC Summary" contextPrompt={`Quick GSC: ${formatNumber(overviewData.gsc?.clicks)} clicks, ${formatNumber(overviewData.gsc?.impressions)} impressions. Avg position #${(overviewData.gsc?.avgPosition || 0).toFixed(1)}.`} activeSources={['gsc']} />
-                          <button onClick={() => navigate('/dashboard/gsc')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">View Full <ArrowRightIcon className="w-3 h-3" /></button>
-                        </>
+                        <button onClick={() => navigate('/dashboard/gsc')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">View Full <ArrowRightIcon className="w-3 h-3" /></button>
                       )}
                     </div>
                   </div>
-                  {!activeGscSite ? <div className="h-[148px]"><EmptyState message="Search Console Disconnected" sub="Connect to track rankings." onAction={() => navigate('/connect-accounts')} /></div> : (
+                  {loading ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 animate-pulse">
+                      {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <div key={i} className="p-3 bg-neutral-100 dark:bg-neutral-800/10 rounded-xl h-[52px]" />
+                      ))}
+                    </div>
+                  ) : !activeGscSite ? <div className="h-[148px]"><EmptyState message="Search Console Disconnected" sub="Connect to track rankings." onAction={() => navigate('/connect-accounts')} /></div> : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {[
                         { label: 'Clicks', value: formatNumber(overviewData.gsc?.clicks) },
@@ -730,6 +799,31 @@ const DashboardPage = () => {
                       ))}
                     </div>
                   )}
+
+                  {activeGscSite && (
+                    <div className="mt-6 p-3.5 bg-brand-50/20 dark:bg-brand-500/5 border border-brand-100/50 dark:border-brand-500/20 rounded-2xl">
+                      <h4 className="text-[10px] font-black text-neutral-900 dark:text-white mb-1.5 uppercase tracking-wider">AI Summary</h4>
+                      {loading ? (
+                        <div className="space-y-1.5 animate-pulse">
+                          <div className="h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full w-full" />
+                          <div className="h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full w-[80%]" />
+                        </div>
+                      ) : (
+                    <div className="flex flex-col items-start gap-2.5">
+                        <p className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                          {overviewData.intelligence?.overviewGSC || "SEO visibility is showing stable organic growth."}
+                        </p>
+                        <button 
+                            onClick={() => openWithQuestion(`How can I improve my SEO based on this GSC summary? ${overviewData.intelligence?.overviewGSC || 'Organic visibility overview'}`)}
+                            className="flex items-center gap-1.5 px-3 py-1 bg-brand-600/10 hover:bg-brand-600/20 text-brand-600 dark:text-brand-400 text-[10px] font-black rounded-lg transition-all active:scale-95 uppercase tracking-wider"
+                        >
+                            <SparklesIcon className="w-3 h-3" />
+                            Ask AI
+                        </button>
+                    </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 shadow-sm transition-all shadow-amber-500/5">
@@ -740,7 +834,13 @@ const DashboardPage = () => {
                     </div>
                     {activeGoogleAdsCustomerId && <button onClick={() => navigate('/dashboard/google-ads')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">View Full <ArrowRightIcon className="w-3 h-3" /></button>}
                   </div>
-                  {!activeGoogleAdsCustomerId ? <div className="h-[148px]"><EmptyState message="Google Ads Not Found" sub="Link to track spend." onAction={() => navigate('/connect-accounts')} /></div> : (
+                  {loading ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 animate-pulse">
+                      {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <div key={i} className="p-3 bg-neutral-100 dark:bg-neutral-800/10 rounded-xl h-[52px]" />
+                      ))}
+                    </div>
+                  ) : !activeGoogleAdsCustomerId ? <div className="h-[148px]"><EmptyState message="Google Ads Not Found" sub="Link to track spend." onAction={() => navigate('/connect-accounts')} /></div> : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {[
                         { label: 'Spend', value: formatCurrency(overviewData.googleAds?.spend) },
@@ -757,6 +857,31 @@ const DashboardPage = () => {
                       ))}
                     </div>
                   )}
+
+                  {activeGoogleAdsCustomerId && (
+                    <div className="mt-6 p-3.5 bg-brand-50/20 dark:bg-brand-500/5 border border-brand-100/50 dark:border-brand-500/20 rounded-2xl">
+                      <h4 className="text-[10px] font-black text-neutral-900 dark:text-white mb-1.5 uppercase tracking-wider">AI Summary</h4>
+                      {loading ? (
+                        <div className="space-y-1.5 animate-pulse">
+                          <div className="h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full w-full" />
+                          <div className="h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full w-[80%]" />
+                        </div>
+                      ) : (
+                    <div className="flex flex-col items-start gap-2.5">
+                        <p className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                          {overviewData.intelligence?.overviewGAds || "Google Ads campaigns are actively spending."}
+                        </p>
+                        <button 
+                            onClick={() => openWithQuestion(`Analyze Google Ads efficiency based on this: ${overviewData.intelligence?.overviewGAds || 'Ad campaign overview'}`)}
+                            className="flex items-center gap-1.5 px-3 py-1 bg-brand-600/10 hover:bg-brand-600/20 text-brand-600 dark:text-brand-400 text-[10px] font-black rounded-lg transition-all active:scale-95 uppercase tracking-wider"
+                        >
+                            <SparklesIcon className="w-3 h-3" />
+                            Ask AI
+                        </button>
+                    </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 shadow-sm transition-all shadow-blue-500/5">
@@ -767,7 +892,13 @@ const DashboardPage = () => {
                     </div>
                     {activeFacebookAdAccountId && <button onClick={() => navigate('/dashboard/facebook-ads')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">View Full <ArrowRightIcon className="w-3 h-3" /></button>}
                   </div>
-                  {!activeFacebookAdAccountId ? <div className="h-[148px]"><EmptyState message="Meta Ads Not Found" sub="Connect to analyze spend." onAction={() => navigate('/connect-accounts')} /></div> : (
+                  {loading ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 animate-pulse">
+                      {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <div key={i} className="p-3 bg-neutral-100 dark:bg-neutral-800/10 rounded-xl h-[52px]" />
+                      ))}
+                    </div>
+                  ) : !activeFacebookAdAccountId ? <div className="h-[148px]"><EmptyState message="Meta Ads Not Found" sub="Connect to analyze spend." onAction={() => navigate('/connect-accounts')} /></div> : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {[
                         { label: 'Spend', value: formatCurrency(overviewData.facebookAds?.spend) },
@@ -784,194 +915,302 @@ const DashboardPage = () => {
                       ))}
                     </div>
                   )}
-                </div>
-              </div>
 
-                <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-8 mb-8">
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-                    <div>
-                      <h3 className="text-xl font-black uppercase tracking-tight">Ad Platform Comparison</h3>
-                      <p className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 mt-1">
-                        {overviewData.intelligence?.adWinnerInsight || "Platform performance comparison shows clear efficiency leaders."}
-                      </p>
+                  {activeFacebookAdAccountId && (
+                    <div className="mt-6 p-3.5 bg-brand-50/20 dark:bg-brand-500/5 border border-brand-100/50 dark:border-brand-500/20 rounded-2xl">
+                      <h4 className="text-[10px] font-black text-neutral-900 dark:text-white mb-1.5 uppercase tracking-wider">AI Summary</h4>
+                      {loading ? (
+                        <div className="space-y-1.5 animate-pulse">
+                          <div className="h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full w-full" />
+                          <div className="h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full w-[80%]" />
+                        </div>
+                      ) : (
+                    <div className="flex flex-col items-start gap-2.5">
+                        <p className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                          {overviewData.intelligence?.overviewFAds || "Facebook ad reach is expanding profitably."}
+                        </p>
+                        <button 
+                            onClick={() => openWithQuestion(`Give me strategies to scale Facebook ads based on this summary: ${overviewData.intelligence?.overviewFAds || 'Meta ads overview'}`)}
+                            className="flex items-center gap-1.5 px-3 py-1 bg-brand-600/10 hover:bg-brand-600/20 text-brand-600 dark:text-brand-400 text-[10px] font-black rounded-lg transition-all active:scale-95 uppercase tracking-wider"
+                        >
+                            <SparklesIcon className="w-3 h-3" />
+                            Ask AI
+                        </button>
                     </div>
-                    <div className="flex items-center gap-3">
-                      {!overviewData.connectionStatus?.googleAds && <span className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[8px] font-black uppercase border border-amber-100/50">Google Ads Missing</span>}
-                      {!overviewData.connectionStatus?.facebookAds && <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[8px] font-black uppercase border border-blue-100/50">Meta Ads Missing</span>}
-                      <span className="px-4 py-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 rounded-full text-[10px] font-black uppercase tracking-widest border border-neutral-200/50 dark:border-neutral-700/50">Cumulative Data</span>
+                      )}
                     </div>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-neutral-100 dark:border-neutral-800 text-[10px] font-black uppercase text-neutral-400 text-left">
-                          <th className="pb-4">Metric</th>
-                          <th className="pb-4">Google Ads</th>
-                          <th className="pb-4">Facebook Ads</th>
-                          <th className="pb-4 text-right pr-4">Winning Asset</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-neutral-50 dark:divide-neutral-800/50">
-                        {(!overviewData.connectionStatus?.googleAds && !overviewData.connectionStatus?.facebookAds) ? (
-                          <tr>
-                            <td colSpan="4" className="py-20 text-center">
-                              <div className="flex flex-col items-center gap-2">
-                                <p className="text-sm font-black text-neutral-900 dark:text-white uppercase tracking-wider">No Ad Sources Connected</p>
-                                <p className="text-xs font-bold text-neutral-400 mb-6">Connect your ad platforms to unlock competitive analysis.</p>
-                                <button onClick={() => navigate('/connect-accounts')} className="px-6 py-2.5 bg-brand-600 text-white text-[10px] font-black rounded-xl shadow-lg shadow-brand-500/20 active:scale-95 transition-all uppercase tracking-widest">Connect First Account</button>
-                              </div>
-                            </td>
-                          </tr>
-                        ) : (
-                          [
-                            { label: 'Total Spend', g: formatCurrency(overviewData.googleAds?.spend), f: formatCurrency(overviewData.facebookAds?.spend), w: overviewData.adWinners?.spend, gc: overviewData.connectionStatus?.googleAds, fc: overviewData.connectionStatus?.facebookAds },
-                            { label: 'Total Clicks', g: formatNumber(overviewData.googleAds?.clicks), f: formatNumber(overviewData.facebookAds?.clicks), w: overviewData.adWinners?.clicks, gc: overviewData.connectionStatus?.googleAds, fc: overviewData.connectionStatus?.facebookAds },
-                            { label: 'Conversions', g: formatNumber(overviewData.googleAds?.conversions), f: formatNumber(overviewData.facebookAds?.conversions), w: overviewData.adWinners?.conversions, gc: overviewData.connectionStatus?.googleAds, fc: overviewData.connectionStatus?.facebookAds },
-                            { label: 'Avg CPC', g: formatCurrency(overviewData.googleAds?.cpc), f: formatCurrency(overviewData.facebookAds?.cpc), w: overviewData.adWinners?.cpc, gc: overviewData.connectionStatus?.googleAds, fc: overviewData.connectionStatus?.facebookAds },
-                            { label: 'Avg CTR', g: formatPct((overviewData.googleAds?.ctr || 0) * 100), f: formatPct((overviewData.facebookAds?.ctr || 0) * 100), w: overviewData.adWinners?.ctr, gc: overviewData.connectionStatus?.googleAds, fc: overviewData.connectionStatus?.facebookAds }
-                          ].map((row, i) => (
-                            <tr key={i} className="group hover:bg-neutral-50/50 dark:hover:bg-neutral-800/20 transition-all">
-                              <td className="py-4 font-bold text-neutral-500 dark:text-neutral-400 flex items-center gap-2 uppercase text-[10px] tracking-wide">{row.label}</td>
-                              <td className={`py-4 font-black tabular-nums ${!row.gc ? 'text-neutral-300 dark:text-neutral-700 italic font-bold text-[10px]' : 'text-neutral-900 dark:text-white'}`}>
-                                {row.gc ? row.g : 'NOT LINKED'}
-                              </td>
-                              <td className={`py-4 font-black tabular-nums ${!row.fc ? 'text-neutral-300 dark:text-neutral-700 italic font-bold text-[10px]' : 'text-neutral-900 dark:text-white'}`}>
-                                {row.fc ? row.f : 'NOT LINKED'}
-                              </td>
-                              <td className="py-4 text-right pr-4">
-                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tight ${row.w === 'Google Ads' && row.gc ? 'bg-amber-50 text-amber-600 border border-amber-100' : row.w === 'Facebook Ads' && row.fc ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-neutral-50 text-neutral-400 border border-neutral-100'}`}>
-                                  {(row.gc && row.fc) ? (row.w || 'Analyzing...') : 'N/A'}
-                                </span>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-
-              <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-8 mb-8">
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-6 mb-8">
-                  <div className="space-y-1">
-                    <h3 className="text-xl font-black uppercase tracking-tight">Growth Trajectory</h3>
-                    <p className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400">
-                      {overviewData.intelligence?.growthMatrixInsight || "Real-time performance distribution across timeframe."}
-                    </p>
-                  </div>
-                  <div className="flex bg-neutral-100 dark:bg-neutral-800 rounded-2xl p-1.5 overflow-x-auto w-full sm:w-auto">
-                    {['Sessions', 'Clicks', 'Impressions', 'Spend', 'Conversions'].map((m) => (
-                      <button key={m} onClick={() => setSelectedMetric(m)} className={`px-5 py-2 rounded-xl text-[10px] font-black transition-all ${selectedMetric === m ? 'bg-white dark:bg-dark-card text-brand-600 shadow-sm' : 'text-neutral-500 hover:text-neutral-400'}`}>{m}</button>
-                    ))}
-                  </div>
-                </div>
-                <div className="h-[350px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartDataToUse}>
-                      <defs><linearGradient id="colorMetric" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={metricColor} stopOpacity={0.25} /><stop offset="95%" stopColor={metricColor} stopOpacity={0} /></linearGradient></defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" className="dark:stroke-neutral-800/20" />
-                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} tickFormatter={(str) => { const d = new Date(str); return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }} minTickGap={30} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} />
-                      <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', background: '#FFFFFF', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                      <Area type="monotone" dataKey={selectedMetric} stroke={metricColor} strokeWidth={4} fill="url(#colorMetric)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* AI Performance Insight Footer */}
-                <div className="mt-8 p-4 bg-blue-50/30 dark:bg-blue-500/5 border border-blue-100/50 dark:border-blue-500/20 rounded-2xl flex items-center gap-3">
-                   <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-lg shadow-blue-600/20">
-                      <ArrowTrendingUpIcon className="w-4 h-4" />
-                   </div>
-                   <p className="text-[11px] font-bold text-neutral-600 dark:text-neutral-300 leading-relaxed">
-                      <span className="text-blue-600 dark:text-blue-400 font-black uppercase tracking-widest mr-2 text-[9px]">Growth Analysis:</span>
-                      {overviewData.intelligence?.growthMatrixInsight || "Organic and paid growth trends are being correlated to identify scaling triggers."}
-                   </p>
+                  )}
                 </div>
               </div>
 
-
-
-              <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-800 rounded-3xl overflow-hidden shadow-sm mb-8">
-                <div className="px-8 py-6 border-b border-neutral-100 dark:border-neutral-800 flex justify-between items-center">
-                  <div className="space-y-1">
-                    <h3 className="text-lg font-black text-neutral-900 dark:text-white uppercase">Engagement & Audit</h3>
-                    <p className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400">🕵️ Analyzing your most valuable landing pages & audit status.</p>
+              <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 mb-6 shadow-sm overflow-hidden">
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+                  <h3 className="text-base font-black uppercase tracking-tight">Ad Platform Comparison</h3>
+                  <div className="flex items-center gap-2">
+                    {!overviewData.connectionStatus?.googleAds && <span className="px-2 py-0.5 bg-amber-50 text-amber-600 rounded-full text-[7px] font-black uppercase border border-amber-100/30">Google Missing</span>}
+                    {!overviewData.connectionStatus?.facebookAds && <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full text-[7px] font-black uppercase border border-blue-100/30">Meta Missing</span>}
+                    <span className="px-3 py-1 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 rounded-full text-[9px] font-black uppercase tracking-widest border border-neutral-200/50">Cumulative</span>
                   </div>
-                  <button onClick={downloadCSV} className="text-[10px] font-black px-4 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-xl uppercase">Export CSV</button>
-                </div>
-                <div className="p-4">
-                    <DataTable columns={pageColumns} data={filteredPages} loading={loading} initialLimit={5} className="border-none" />
-                </div>
-
-                {/* Strategic Page Insight Footer */}
-                <div className="mx-6 mb-6 p-4 bg-emerald-50/30 dark:bg-emerald-500/5 border border-emerald-100/50 dark:border-emerald-500/20 rounded-2xl flex items-center gap-3">
-                   <div className="w-8 h-8 rounded-xl bg-emerald-600 flex items-center justify-center text-white shrink-0 shadow-lg shadow-emerald-600/20">
-                      <MagnifyingGlassIcon className="w-4 h-4" />
-                   </div>
-                   <p className="text-[11px] font-bold text-neutral-600 dark:text-neutral-300 leading-relaxed">
-                      <span className="text-emerald-600 dark:text-emerald-500 font-black uppercase tracking-widest mr-2 text-[9px]">SEO Strategy:</span>
-                      {overviewData.intelligence?.topPagesInsight || "Engaging content distribution is being analyzed to identify high-potential growth opportunities."}
-                   </p>
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-8 mb-8 pb-4">
-                <div className="flex items-center justify-between mb-8">
-                  <div>
-                    <h3 className="text-xl font-black uppercase tracking-tight">Overall Period Comparison</h3>
-                    <p className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 mt-1">
-                      Detailed performance mapping across your marketing stack.
-                    </p>
-                  </div>
-                   <span className="text-[10px] font-black bg-purple-50 text-purple-600 px-3 py-1 rounded-full border border-purple-100 uppercase tracking-widest flex items-center gap-2">
-                     <SparklesIcon className="w-3 h-3" /> vs Last Period
-                   </span>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead><tr className="border-b border-neutral-100 dark:border-neutral-800 text-[10px] font-black uppercase text-neutral-400 text-left"><th className="pb-4">Source</th><th className="pb-4">Metric</th><th className="pb-4">THIS PERIOD</th><th className="pb-4">LAST PERIOD</th><th className="pb-4">CHANGE</th></tr></thead>
+                    <thead>
+                      <tr className="border-b border-neutral-100 dark:border-neutral-800 text-[9px] font-black uppercase text-neutral-400 text-left">
+                        <th className="pb-3 px-1">Metric</th>
+                        <th className="pb-3 px-1">Google Ads</th>
+                        <th className="pb-3 px-1">Facebook Ads</th>
+                        <th className="pb-3 px-1 text-right pr-2">Winner</th>
+                      </tr>
+                    </thead>
                     <tbody className="divide-y divide-neutral-50 dark:divide-neutral-800/50">
-                       {[
-                         { s: '📈 GA4', m: 'Sessions', val: overviewData.ga4?.sessions, prior: overviewData.ga4?.priorSessions, grow: overviewData.ga4?.growthSessions },
-                         { s: '📈 GA4', m: 'Users', val: overviewData.ga4?.users, prior: overviewData.ga4?.priorUsers, grow: overviewData.ga4?.growthUsers },
-                         { s: '🔍 GSC', m: 'Impressions', val: overviewData.gsc?.impressions, prior: overviewData.gsc?.priorImpressions, grow: overviewData.gsc?.growthImpressions },
-                         { s: '🔍 GSC', m: 'Clicks', val: overviewData.gsc?.clicks, prior: overviewData.gsc?.priorClicks, grow: overviewData.gsc?.growthClicks },
-                         { s: '💰 Google Ads', m: 'Spend', val: overviewData.googleAds?.spend, prior: overviewData.googleAds?.priorSpend, grow: overviewData.googleAds?.growthSpend, isCurr: true },
-                         { s: '💰 Google Ads', m: 'Conversions', val: overviewData.googleAds?.conversions, prior: overviewData.googleAds?.priorConversions, grow: overviewData.googleAds?.growthConversions },
-                         { s: '📘 Facebook Ads', m: 'Spend', val: overviewData.facebookAds?.spend, prior: overviewData.facebookAds?.priorSpend, grow: overviewData.facebookAds?.growthSpend, isCurr: true },
-                         { s: '📱 Facebook Ads', m: 'Reach', val: overviewData.facebookAds?.reach, prior: overviewData.facebookAds?.priorReach, grow: overviewData.facebookAds?.growthReach },
-                       ].map((row, i) => {
-                         const priorValue = row.prior || 0;
-                         return (
-                           <tr key={i} className="hover:bg-neutral-50/50 transition-colors">
-                             <td className="py-4 font-black text-neutral-500 text-[11px]">{row.s}</td>
-                             <td className="py-4 font-bold text-neutral-700 dark:text-neutral-300">{row.m}</td>
-                             <td className="py-4 font-black tabular-nums">{loading ? '—' : row.isCurr ? formatCurrency(row.val) : formatNumber(row.val)}</td>
-                             <td className="py-4 font-bold text-neutral-400 tabular-nums">{loading ? '—' : row.isCurr ? formatCurrency(priorValue) : formatNumber(priorValue)}</td>
-                             <td className="py-4">
-                               <span className={`px-2 py-0.5 rounded-full text-[10px] font-black flex items-center gap-1 w-fit ${row.grow >= 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
-                                 {row.grow >= 0 ? <ArrowUpIcon className="w-2.5 h-2.5" /> : <ArrowDownIcon className="w-2.5 h-2.5" />}
-                                 {Math.abs(row.grow || 0).toFixed(1)}%
-                               </span>
-                             </td>
-                           </tr>
-                         );
-                       })}
+                      {loading ? (
+                        [1, 2, 3, 4].map((i) => (
+                          <tr key={i} className="animate-pulse">
+                            <td className="py-4"><div className="w-16 h-3 bg-neutral-100 dark:bg-neutral-800 rounded-full" /></td>
+                            <td className="py-4"><div className="w-12 h-3 bg-neutral-100 dark:bg-neutral-800 rounded-full" /></td>
+                            <td className="py-4"><div className="w-12 h-3 bg-neutral-100 dark:bg-neutral-800 rounded-full" /></td>
+                            <td className="py-4"><div className="w-20 h-3 bg-neutral-100 dark:bg-neutral-800 rounded-full ml-auto" /></td>
+                          </tr>
+                        ))
+                      ) : (!overviewData.connectionStatus?.googleAds && !overviewData.connectionStatus?.facebookAds) ? (
+                        <tr>
+                          <td colSpan="4" className="py-12 text-center">
+                            <div className="flex flex-col items-center gap-2">
+                              <p className="text-[11px] font-black text-neutral-900 dark:text-white uppercase tracking-wider">No Ad Sources Connected</p>
+                              <p className="text-[10px] font-bold text-neutral-400 mb-4">Connect platforms for competitive analysis.</p>
+                              <button onClick={() => navigate('/connect-accounts')} className="px-4 py-2 bg-brand-600 text-white text-[9px] font-black rounded-lg shadow-lg shadow-brand-500/10 uppercase tracking-widest transition-all">Connect First Account</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        [
+                          { label: 'Total Spend', g: formatCurrency(overviewData.googleAds?.spend), f: formatCurrency(overviewData.facebookAds?.spend), w: overviewData.adWinners?.spend, gc: overviewData.connectionStatus?.googleAds, fc: overviewData.connectionStatus?.facebookAds },
+                          { label: 'Total Clicks', g: formatNumber(overviewData.googleAds?.clicks), f: formatNumber(overviewData.facebookAds?.clicks), w: overviewData.adWinners?.clicks, gc: overviewData.connectionStatus?.googleAds, fc: overviewData.connectionStatus?.facebookAds },
+                          { label: 'Conversions', g: formatNumber(overviewData.googleAds?.conversions), f: formatNumber(overviewData.facebookAds?.conversions), w: overviewData.adWinners?.conversions, gc: overviewData.connectionStatus?.googleAds, fc: overviewData.connectionStatus?.facebookAds },
+                          { label: 'Avg CPC', g: formatCurrency(overviewData.googleAds?.cpc), f: formatCurrency(overviewData.facebookAds?.cpc), w: overviewData.adWinners?.cpc, gc: overviewData.connectionStatus?.googleAds, fc: overviewData.connectionStatus?.facebookAds },
+                          { label: 'Avg CTR', g: formatPct((overviewData.googleAds?.ctr || 0) * 100), f: formatPct((overviewData.facebookAds?.ctr || 0) * 100), w: overviewData.adWinners?.ctr, gc: overviewData.connectionStatus?.googleAds, fc: overviewData.connectionStatus?.facebookAds }
+                        ].map((row, i) => (
+                          <tr key={i} className="group hover:bg-neutral-50/50 dark:hover:bg-neutral-800/20 transition-all">
+                            <td className="py-2.5 px-1 font-bold text-neutral-500 dark:text-neutral-400 flex items-center gap-2 uppercase text-[9px] tracking-wide">{row.label}</td>
+                            <td className={`py-2.5 px-1 font-black tabular-nums text-[10px] ${!row.gc ? 'text-neutral-300 dark:text-neutral-700 italic' : 'text-neutral-900 dark:text-white'}`}>
+                              {row.gc ? row.g : 'OFFLINE'}
+                            </td>
+                            <td className={`py-2.5 px-1 font-black tabular-nums text-[10px] ${!row.fc ? 'text-neutral-300 dark:text-neutral-700 italic' : 'text-neutral-900 dark:text-white'}`}>
+                              {row.fc ? row.f : 'OFFLINE'}
+                            </td>
+                            <td className="py-2.5 px-1 text-right pr-2">
+                              <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter ${row.w === 'Google Ads' && row.gc ? 'bg-amber-50 text-amber-600 border border-amber-100' : row.w === 'Facebook Ads' && row.fc ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-neutral-50 text-neutral-400 border border-neutral-100'}`}>
+                                {(row.gc && row.fc) ? (row.w || 'Analyzing...') : 'N/A'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
 
-                {/* AI Footer Insight for Comparison */}
-                <div className="mt-8 p-4 bg-brand-50/30 dark:bg-brand-500/5 border border-brand-100/50 dark:border-brand-500/20 rounded-2xl flex items-center gap-3 animate-pulse-slow">
-                   <div className="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center text-white shrink-0 shadow-lg shadow-brand-600/20">
-                      <SparklesIcon className="w-4 h-4" />
-                   </div>
-                   <p className="text-[11px] font-bold text-neutral-600 dark:text-neutral-300 leading-relaxed">
-                      <span className="text-brand-600 dark:text-brand-400 font-black uppercase tracking-widest mr-2 text-[9px]">AI Analysis:</span>
-                      {overviewData.intelligence?.comparisonInsight || "Historical performance growth is being mapped against previous cycle benchmarks."}
-                   </p>
+                {(activeGoogleAdsCustomerId || activeFacebookAdAccountId) && (
+                  <div className="mt-4 p-3.5 bg-brand-50/20 dark:bg-brand-500/5 border border-brand-100/50 dark:border-brand-500/20 rounded-2xl">
+                    <h4 className="text-[10px] font-black text-neutral-900 dark:text-white mb-1.5 uppercase tracking-wider">AI Summary</h4>
+                    {loading ? (
+                      <div className="space-y-1.5 animate-pulse">
+                        <div className="h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full w-full" />
+                        <div className="h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full w-[80%]" />
+                      </div>
+                    ) : (
+                    <div className="flex flex-col items-start gap-2.5">
+                        <p className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                          {overviewData.intelligence?.adWinnerInsight || "Platform performance comparison shows clear efficiency leaders."}
+                        </p>
+                        <button 
+                            onClick={() => openWithQuestion(`Which platform should I prioritize according to this? ${overviewData.intelligence?.adWinnerInsight || 'Ad platform comparison'}`)}
+                            className="flex items-center gap-1.5 px-3 py-1 bg-brand-600/10 hover:bg-brand-600/20 text-brand-600 dark:text-brand-400 text-[10px] font-black rounded-lg transition-all active:scale-95 uppercase tracking-wider"
+                        >
+                            <SparklesIcon className="w-3 h-3" />
+                            Ask AI
+                        </button>
+                    </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+
+              <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 mb-6 shadow-sm">
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-5">
+                  <h3 className="text-base font-black uppercase tracking-tight">Growth Trajectory</h3>
+                  <div className="flex bg-neutral-100 dark:bg-neutral-800 rounded-xl p-1 overflow-x-auto w-full sm:w-auto">
+                    {['Sessions', 'Clicks', 'Impressions', 'Spend', 'Conversions'].map((m) => (
+                      <button key={m} onClick={() => setSelectedMetric(m)} className={`px-3 py-1.5 rounded-lg text-[9px] font-black transition-all ${selectedMetric === m ? 'bg-white dark:bg-dark-card text-brand-600 shadow-sm' : 'text-neutral-500 hover:text-neutral-400'}`}>{m}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="h-[200px] w-full">
+                  {loading ? (
+                    <div className="w-full h-full bg-neutral-50 dark:bg-neutral-800/20 animate-pulse rounded-2xl flex items-end p-8 gap-4 overflow-hidden">
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map((i) => (
+                        <div key={i} className="flex-1 bg-neutral-100 dark:bg-neutral-800/50 rounded-lg" style={{ height: `${20 + (i * 7) % 60}%` }} />
+                      ))}
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={chartDataToUse}>
+                        <defs><linearGradient id="colorMetric" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={metricColor} stopOpacity={0.25} /><stop offset="95%" stopColor={metricColor} stopOpacity={0} /></linearGradient></defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" className="dark:stroke-neutral-800/20" />
+                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} tickFormatter={(str) => { const d = new Date(str); return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }} minTickGap={30} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} />
+                        <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', background: '#FFFFFF', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                        <Area type="monotone" dataKey={selectedMetric} stroke={metricColor} strokeWidth={4} fill="url(#colorMetric)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+
+                <div className="mt-4 p-3.5 bg-brand-50/20 dark:bg-brand-500/5 border border-brand-100/50 dark:border-brand-500/20 rounded-2xl">
+                  <h4 className="text-[10px] font-black text-neutral-900 dark:text-white mb-1.5 uppercase tracking-wider">AI Summary</h4>
+                  {loading ? (
+                    <div className="space-y-1.5 animate-pulse">
+                      <div className="h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full w-full" />
+                      <div className="h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full w-[90%]" />
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-start gap-2.5">
+                        <p className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                          {overviewData.intelligence?.growthMatrixInsight || "Organic and paid growth trends are being correlated to identify scaling triggers."}
+                        </p>
+                        <button 
+                            onClick={() => openWithQuestion(`Tell me more about this growth matrix insight: ${overviewData.intelligence?.growthMatrixInsight || 'Growth trends'}`)}
+                            className="flex items-center gap-1.5 px-3 py-1 bg-brand-600/10 hover:bg-brand-600/20 text-brand-600 dark:text-brand-400 text-[10px] font-black rounded-lg transition-all active:scale-95 uppercase tracking-wider"
+                        >
+                            <SparklesIcon className="w-3 h-3" />
+                            Ask AI
+                        </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+
+
+               <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden mb-6">
+                <div className="px-6 py-4 border-b border-neutral-100 dark:border-neutral-800 flex justify-between items-center">
+                  <div className="space-y-0.5">
+                    <h3 className="text-base font-black text-neutral-900 dark:text-white uppercase tracking-tight">Engagement & Audit</h3>
+                    <p className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400">Analyzing landing pages & audit status.</p>
+                  </div>
+                  <button onClick={downloadCSV} className="text-[9px] font-black px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-lg uppercase tracking-wider">Export CSV</button>
+                </div>
+                <div className="p-2">
+                  <DataTable columns={pageColumns} data={filteredPages} loading={loading} initialLimit={5} className="border-none" rowClassName="py-2" />
+                </div>
+
+                <div className="mx-4 mb-4 p-3.5 bg-brand-50/20 dark:bg-brand-500/5 border border-brand-100/50 dark:border-brand-500/20 rounded-2xl">
+                  <h4 className="text-[10px] font-black text-neutral-900 dark:text-white mb-1.5 uppercase tracking-wider">AI Summary</h4>
+                  {loading ? (
+                    <div className="space-y-1.5 animate-pulse">
+                      <div className="h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full w-full" />
+                      <div className="h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full w-[80%]" />
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-start gap-2.5">
+                        <p className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                          {overviewData.intelligence?.topPagesInsight || "Landing page performance and growth bottlenecks."}
+                        </p>
+                        <button 
+                            onClick={() => openWithQuestion(`Analyze these top pages further: ${overviewData.intelligence?.topPagesInsight || 'Page performance'}`)}
+                            className="flex items-center gap-1.5 px-3 py-1 bg-brand-600/10 hover:bg-brand-600/20 text-brand-600 dark:text-brand-400 text-[10px] font-black rounded-lg transition-all active:scale-95 uppercase tracking-wider"
+                        >
+                            <SparklesIcon className="w-3 h-3" />
+                            Ask AI
+                        </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-base font-black uppercase tracking-tight">Period Comparison</h3>
+                    <p className="text-[9px] font-bold text-neutral-500 dark:text-neutral-400">
+                      Performance mapping across marketing stack.
+                    </p>
+                  </div>
+                  <span className="text-[8px] font-black bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full border border-purple-100 uppercase tracking-widest flex items-center gap-1 shrink-0">
+                    <SparklesIcon className="w-2.5 h-2.5" /> vs Last Period
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead><tr className="border-b border-neutral-100 dark:border-neutral-800 text-[9px] font-black uppercase text-neutral-400 text-left"><th className="pb-3 px-1">Source</th><th className="pb-3 px-1">Metric</th><th className="pb-3 px-1 text-right">THIS</th><th className="pb-3 px-1 text-right">PRIOR</th><th className="pb-3 px-1 text-right">CHANGE</th></tr></thead>
+                    <tbody className="divide-y divide-neutral-50 dark:divide-neutral-800/50">
+                      {loading ? (
+                        [1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                          <tr key={i} className="animate-pulse">
+                            <td className="py-5"><div className="h-2.5 w-20 bg-neutral-100 dark:bg-neutral-800 rounded-full" /></td>
+                            <td className="py-5"><div className="h-2.5 w-16 bg-neutral-100 dark:bg-neutral-800 rounded-full" /></td>
+                            <td className="py-5"><div className="h-2.5 w-12 bg-neutral-100 dark:bg-neutral-800 rounded-full" /></td>
+                            <td className="py-5"><div className="h-2.5 w-12 bg-neutral-100 dark:bg-neutral-800 rounded-full" /></td>
+                            <td className="py-5"><div className="h-5 w-14 bg-neutral-100 dark:bg-neutral-800 rounded-full" /></td>
+                          </tr>
+                        ))
+                      ) : (
+                        [
+                          { logo: <Ga4Logo className="w-3.5 h-3.5" />, s: 'GA4', m: 'Sessions', val: overviewData.ga4?.sessions, prior: overviewData.ga4?.priorSessions, grow: overviewData.ga4?.growthSessions },
+                          { logo: <Ga4Logo className="w-3.5 h-3.5" />, s: 'GA4', m: 'Users', val: overviewData.ga4?.users, prior: overviewData.ga4?.priorUsers, grow: overviewData.ga4?.growthUsers },
+                          { logo: <GscLogo className="w-3.5 h-3.5" />, s: 'GSC', m: 'Impressions', val: overviewData.gsc?.impressions, prior: overviewData.gsc?.priorImpressions, grow: overviewData.gsc?.growthImpressions },
+                          { logo: <GscLogo className="w-3.5 h-3.5" />, s: 'GSC', m: 'Clicks', val: overviewData.gsc?.clicks, prior: overviewData.gsc?.priorClicks, grow: overviewData.gsc?.growthClicks },
+                          { logo: <GoogleAdsLogo className="w-3.5 h-3.5" />, s: 'Google Ads', m: 'Spend', val: overviewData.googleAds?.spend, prior: overviewData.googleAds?.priorSpend, grow: overviewData.googleAds?.growthSpend, isCurr: true },
+                          { logo: <GoogleAdsLogo className="w-3.5 h-3.5" />, s: 'Google Ads', m: 'Conversions', val: overviewData.googleAds?.conversions, prior: overviewData.googleAds?.priorConversions, grow: overviewData.googleAds?.growthConversions },
+                          { logo: <FacebookAdsLogo className="w-3.5 h-3.5" />, s: 'Meta Ads', m: 'Spend', val: overviewData.facebookAds?.spend, prior: overviewData.facebookAds?.priorSpend, grow: overviewData.facebookAds?.growthSpend, isCurr: true },
+                          { logo: <FacebookAdsLogo className="w-3.5 h-3.5" />, s: 'Meta Ads', m: 'Reach', val: overviewData.facebookAds?.reach, prior: overviewData.facebookAds?.priorReach, grow: overviewData.facebookAds?.growthReach },
+                        ].map((row, i) => {
+                          const priorValue = row.prior || 0;
+                          return (
+                            <tr key={i} className="hover:bg-neutral-50/50 transition-colors">
+                              <td className="py-2 px-1 font-black text-neutral-500 text-[9px] flex items-center gap-1.5">
+                                <div className="w-6 h-6 flex items-center justify-center bg-neutral-50 dark:bg-neutral-800 rounded-lg shrink-0 border border-neutral-100 dark:border-neutral-700/50">{row.logo}</div>
+                                {row.s}
+                              </td>
+                              <td className="py-2 px-1 font-bold text-neutral-700 dark:text-neutral-300 text-[10px]">{row.m}</td>
+                              <td className="py-2 px-1 font-black tabular-nums text-[11px] text-right">{row.isCurr ? formatCurrency(row.val) : formatNumber(row.val)}</td>
+                              <td className="py-2 px-1 font-bold text-neutral-400 tabular-nums text-[10px] text-right">{row.isCurr ? formatCurrency(priorValue) : formatNumber(priorValue)}</td>
+                              <td className="py-2 px-1 text-right">
+                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black inline-flex items-center gap-0.5 ${row.grow >= 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                                  {row.grow >= 0 ? <ArrowUpIcon className="w-2 h-2" /> : <ArrowDownIcon className="w-2 h-2" />}
+                                  {Math.abs(row.grow || 0).toFixed(1)}%
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="mt-4 p-4 bg-brand-50/40 dark:bg-brand-500/5 border border-brand-100/30 dark:border-brand-500/10 rounded-2xl">
+                  <h4 className="text-[10px] font-black text-neutral-900 dark:text-white mb-1">AI Summary</h4>
+                  {loading ? (
+                    <div className="space-y-1.5 animate-pulse">
+                      <div className="h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full w-full" />
+                      <div className="h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full w-[90%]" />
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-start gap-2.5">
+                        <p className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 leading-tight">
+                          {overviewData.intelligence?.comparisonInsight || "Historical performance growth benchmarks."}
+                        </p>
+                        <button 
+                            onClick={() => openWithQuestion(`What should I do about these period comparisons? ${overviewData.intelligence?.comparisonInsight || 'Comparison trends'}`)}
+                            className="flex items-center gap-1.5 px-3 py-1 bg-brand-600/10 hover:bg-brand-600/20 text-brand-600 dark:text-brand-400 text-[10px] font-black rounded-lg transition-all active:scale-95 uppercase tracking-wider"
+                        >
+                            <SparklesIcon className="w-3 h-3" />
+                            Ask AI
+                        </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </>
