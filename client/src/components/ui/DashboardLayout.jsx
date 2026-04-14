@@ -212,6 +212,7 @@ const DashboardLayout = ({ children, noScroll = false }) => {
 
     const { searchQuery, setSearchQuery } = useFilterStore();
     const searchInputRef = React.useRef(null);
+    const [isSearchFocused, setIsSearchFocused] = useState(false);
 
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -386,6 +387,8 @@ const DashboardLayout = ({ children, noScroll = false }) => {
                                     type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
+                                    onFocus={() => setIsSearchFocused(true)}
+                                    onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
                                     placeholder="Press / to search anything..."
                                     className="bg-transparent border-none focus:ring-0 text-sm font-bold w-full ml-3 text-neutral-900 dark:text-white placeholder:text-neutral-400"
                                 />
@@ -403,7 +406,7 @@ const DashboardLayout = ({ children, noScroll = false }) => {
                             </div>
 
                             {/* Global Search Results Dropdown */}
-                            {searchQuery && (
+                            {searchQuery && isSearchFocused && (
                                 <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-3xl shadow-2xl p-4 z-20 animate-slide-up origin-top overflow-hidden">
                                     <div className="max-h-[400px] overflow-y-auto custom-scrollbar space-y-4">
                                         <div className="px-4 py-2">

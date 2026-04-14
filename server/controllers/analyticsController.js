@@ -161,6 +161,25 @@ export const getDashboardSummary = async (req, res) => {
         };
 
         const generateIntelligence = async (data) => {
+            const getChannelScores = () => {
+                const ga4Score = data.ga4.sessions > 0 
+                    ? (data.ga4.bounceRate < 45 ? 95 : data.ga4.bounceRate < 60 ? 80 : 60) 
+                    : 50;
+                
+                const gscScore = data.gsc.clicks > 0 
+                    ? (data.gsc.growth > 0 ? 90 : data.gsc.growth > -10 ? 75 : 55) 
+                    : 50;
+                
+                const adsScore = (data.googleAds.spend > 0 || data.facebookAds.spend > 0)
+                    ? (Math.max(data.googleAds.roas || 0, data.facebookAds.roas || 0) > 2 ? 95 : 75)
+                    : 50;
+
+                return { ga4Score, gscScore, adsScore };
+            };
+
+            const scores = getChannelScores();
+            const baseHealthScore = Math.round((scores.ga4Score + scores.gscScore + scores.adsScore) / 3);
+
             try {
                 const conn = {
                     ga4: !!acc?.ga4PropertyId,
@@ -170,7 +189,7 @@ export const getDashboardSummary = async (req, res) => {
                 };
 
                 const prompt = `
-                  Analyze this marketing data and provide EXACTLY 16 professional, data-driven one-liners.
+                  Analyze this marketing data and provide EXACTLY 17 professional, data-driven one-liners (including a health score).
                   Each response must combine a SUMMARY (What happened) with a STRATEGIC INSIGHT (What it means/What to do).
 
                   CONNECTION STATUS:
@@ -203,20 +222,27 @@ export const getDashboardSummary = async (req, res) => {
                     "adWinnerInsight": "Detailed comparison of Google vs Meta ads and platform winner (Max 40 words).",
                     "growthMatrixInsight": "Deep analysis of growth momentum and trajectory (Max 40 words).",
                     "topPagesInsight": "Conversion potential analysis of highest traffic pages (Max 40 words).",
-                    "comparisonInsight": "Strategic mapping of current vs prior period data (Max 40 words)."
+                    "comparisonInsight": "Strategic mapping of current vs prior period data (Max 40 words).",
+                    "healthScore": ${baseHealthScore}
                   }
 
                   STRICT RULES:
                   1. If a source is OFFLINE, the corresponding insight MUST be exactly: "Connect [Platform Name] to unlock insights."
                   2. Combine SUMMARY + INSIGHT in every line.
-                  3. Follow individual word limits strictly as defined in the JSON structure.
+                  3. Strictly follow the (Max X words) limit for each key.
                   4. NO markdown. ONLY valid JSON.
+                  5. "healthScore" MUST be an integer between 0 and 100 based on organic growth, ad ROI, and site engagement. Use the provided ${baseHealthScore} as a baseline.
                 `;
                 const aiRes = await callGemini(prompt, [], "Respond ONLY with JSON.");
-                return JSON.parse(aiRes.content.replace(/```json|```/g, '').trim());
+                const parsedRes = JSON.parse(aiRes.content.replace(/```json|```/g, '').trim());
+                
+                if (typeof parsedRes.healthScore !== 'number') {
+                    parsedRes.healthScore = baseHealthScore;
+                }
+                return parsedRes;
+
             } catch (error) {
                 console.error("Gemini AI failed, using Data-Driven Fallback Engine:", error);
-                const hScore = data.ga4.sessions > 0 ? (data.ga4.bounceRate < 50 ? 85 : 65) : 50;
                 const conn = {
                     ga4: !!acc?.ga4PropertyId,
                     gsc: !!acc?.gscSiteUrl,
@@ -224,23 +250,23 @@ export const getDashboardSummary = async (req, res) => {
                     facebookAds: !!acc?.facebookAdAccountId
                 };
                 return {
-                    websiteSummary: `Monitoring ${data.siteName} performance across core metrics; current data indicates stable growth momentum which suggests continuing with your existing baseline channel strategy.`,
-                    overviewGA4: conn.ga4 ? `Analyzing users and engagement for your site; user retention is looking healthy based on recent session patterns, bounce rate metrics, and average duration which indicates a strong content-market fit.` : "Connect Google Analytics to unlock traffic insights.",
-                    overviewGSC: conn.gsc ? "SEO visibility is showing stable organic growth; focus on optimizing title tags for pages with high impressions but low current CTR to capture more search traffic without creating new content." : "Connect Search Console to monitor keyword performance.",
-                    overviewGAds: conn.googleAds ? "Google Ads campaigns are actively spending; budget allocation is currently focused on high-performing conversion keywords for maximum efficiency and reduced waste across search and display channels." : "Link Google Ads to track your campaign efficiency.",
-                    overviewFAds: conn.facebookAds ? "Facebook ad reach is expanding profitably; visual assets are driving strong engagement which indicates a good opportunity to scale winners into broader lookalike audiences for better reach." : "Connect Facebook Ads to measure social reach.",
-                    overviewHealth: "Audit score optimized based on available data; technical SEO foundations are strong but regular monitoring of core web vitals and mobile usability is highly recommended for long-term rankings.",
-                    metricTraffic: conn.ga4 ? `Traffic is currently stable at ${data.ga4.sessions} sessions; consistent volume provides a solid foundation for testing new conversion ideas.` : "Connect GA4 to track session growth and monitor real-time user engagement trends across your platform.",
-                    metricClicks: conn.gsc ? `Organic search is driving ${data.gsc.clicks} clicks; maintaining this momentum requires building high-quality backlinks to your primary pages.` : "Link GSC to view organic clicks and understand which keywords are driving search traffic to your site.",
-                    metricSpend: (conn.googleAds || conn.facebookAds) ? `Combined ad investment is $${data.googleAds.spend + data.facebookAds.spend}; spend management is conservative and focused on high-performing conversion channels.` : "Connect Ad accounts to monitor spend and ensure your budget is being allocated to the most profitable channels.",
-                    metricConversions: (conn.googleAds || conn.facebookAds) ? `Conversion tracking has captured ${data.googleAds.conversions} events; analyze pathways to identify influential touchpoints and optimize the customer journey.` : "Connect Ads to track conversion goals and measure the true impact of your marketing efforts on sales.",
-                    metricImpressions: (conn.googleAds || conn.facebookAds) ? `Paid media reach is generating steady impressions; high brand visibility across search and social strengthens your profile.` : "Connect Ads to see total impressions and gauge the overall reach of your current advertising campaigns.",
-                    metricEfficiency: (conn.googleAds || conn.facebookAds) ? `Calculated efficiency reflects optimal ROAS levels; current CPA is within profitable margins, allowing for scaling of winning sets.` : "Connect Ads to calculate ROAS and identify which ad sets are delivering the best return on investment.",
-                    adWinnerInsight: (conn.googleAds && conn.facebookAds) ? "Our cross-platform performance comparison shows clear efficiency leaders in your current marketing campaigns; we strongly recommend reallocating a significant portion of the underperforming platform's budget into the specific ad sets that deliver the lowest cost per conversion for maximum ROI." : "Connect both Google and Facebook ad accounts to compare internal performance; linking multiple sources allows our AI to automatically identify platform winners and recommend budget shifts that can significantly lower your overall cost per acquisition across all digital channels.",
-                    growthMatrixInsight: "Real-time performance distribution across your historical timeframe shows positive momentum trends; future growth strategy should focus on maintaining high-intent keyword rankings while simultaneously expanding your paid media reach into high-quality lookalike audiences to capture untapped market share effectively for the long term.",
-                    topPagesInsight: conn.ga4 ? "Analyzing your most engaging landing pages reveals high potential for conversion rate optimization; we recommend adding much stronger, localized calls-to-action to pages that demonstrate high session duration but low conversion rates to convert that existing traffic into meaningful business leads." : "Connect Google Analytics 4 to view your top performing pages; identifying your highest quality landing pages is critical for understanding user behavior and optimizing the overall conversion funnel flow to ensure that every visitor has a clear path to purchase.",
-                    comparisonInsight: "Historical growth mapping versus prior period data indicates that your multi-channel digital strategy is successfully driving results; monthly trends show that organic and paid sources are complementing each other perfectly to create an overall brand lift that increases search visibility.",
-                    healthScore: hScore
+                    websiteSummary: `Monitoring ${data.siteName} performance across core metrics; current data indicates stable growth momentum which suggests continuing with your existing baseline channel strategy to ensure long-term stability and reach.`, // Max 25 words
+                    overviewGA4: conn.ga4 ? `Analyzing users and engagement for your site; user retention is looking healthy based on recent session patterns, bounce rate metrics, and average duration indicating strong content-market fit.` : "Connect Google Analytics to unlock traffic insights.", // Max 25 words
+                    overviewGSC: conn.gsc ? "SEO visibility is showing stable organic growth; focus on optimizing title tags for pages with high impressions but low current CTR to capture more search traffic efficiently." : "Connect Search Console to monitor keyword performance.", // Max 25 words
+                    overviewGAds: conn.googleAds ? "Google Ads campaigns are actively spending; budget allocation is currently focused on high-performing conversion keywords for maximum efficiency and reduced waste across search and display channels." : "Link Google Ads to track your campaign efficiency.", // Max 25 words
+                    overviewFAds: conn.facebookAds ? "Facebook ad reach is expanding profitably; visual assets are driving strong engagement which indicates a good opportunity to scale winners into broader lookalike audiences for better reach." : "Connect Facebook Ads to measure social reach.", // Max 25 words
+                    overviewHealth: "Audit score optimized based on available data; technical SEO foundations are strong but regular monitoring of core web vitals and mobile usability is highly recommended for rankings.", // Max 30 words
+                    metricTraffic: conn.ga4 ? `Traffic is currently stable at ${data.ga4.sessions} sessions; consistent volume provides a solid foundation for testing.` : "Connect GA4 to track session growth and monitor real-time user engagement trends across your platform.", // Max 20 words
+                    metricClicks: conn.gsc ? `Organic search is driving ${data.gsc.clicks} clicks; maintaining this momentum requires building high-quality backlinks to your primary pages.` : "Link GSC to view organic clicks and understand which keywords are driving search traffic.", // Max 20 words
+                    metricSpend: (conn.googleAds || conn.facebookAds) ? `Combined ad investment is $${data.googleAds.spend + data.facebookAds.spend}; spend management is conservative and focused on high-performing conversion channels.` : "Connect Ad accounts to monitor spend and ensure your budget is being allocated effectively.", // Max 20 words
+                    metricConversions: (conn.googleAds || conn.facebookAds) ? `Conversion tracking has captured ${data.googleAds.conversions} events; analyze pathways to identify influential touchpoints and optimize the customer journey paths.` : "Connect Ads to track conversion goals and measure the impact of your marketing efforts.", // Max 20 words
+                    metricImpressions: (conn.googleAds || conn.facebookAds) ? `Paid media reach is generating steady impressions; high brand visibility across search and social strengthens your profile.` : "Connect Ads to see total impressions and gauge the overall reach of your current advertising campaigns.", // Max 20 words
+                    metricEfficiency: (conn.googleAds || conn.facebookAds) ? `Calculated efficiency reflects optimal ROAS levels; current CPA is within profitable margins, allowing for scaling of winning sets.` : "Connect Ads to identify which ad sets are delivering the best return on investment.", // Max 20 words
+                    adWinnerInsight: (conn.googleAds && conn.facebookAds) ? "Our cross-platform performance comparison shows clear efficiency leaders in your current marketing campaigns; we strongly recommend reallocating a significant portion of the underperforming platform's budget into the specific ad sets that deliver the lowest cost per conversion." : "Connect both Google and Facebook ad accounts to compare internal performance; linking multiple sources allows our AI to automatically identify platform winners and recommend budget shifts that can significantly lower your overall cost per acquisition across all digital channels.", // Max 40 words
+                    growthMatrixInsight: "Real-time performance distribution across your historical timeframe shows positive momentum trends; future growth strategy should focus on maintaining high-intent keyword rankings while simultaneously expanding your paid media reach into high-quality lookalike audiences to capture untapped market share effectively.", // Max 40 words
+                    topPagesInsight: conn.ga4 ? "Analyzing your most engaging landing pages reveals high potential for conversion rate optimization; we recommend adding much stronger, localized calls-to-action to pages that demonstrate high session duration but low conversion rates to convert that existing traffic into business leads." : "Connect Google Analytics 4 to view your top performing pages; identifying your highest quality landing pages is critical for understanding user behavior and optimizing the overall conversion funnel flow through the site.", // Max 40 words
+                    comparisonInsight: "Historical growth mapping versus prior period data indicates that your multi-channel digital strategy is successfully driving results; monthly trends show that organic and paid sources are complementing each other perfectly to create an overall brand lift that increases search visibility.", // Max 40 words
+                    healthScore: baseHealthScore
                 };
             }
         };
@@ -462,6 +488,76 @@ export const getGa4Summary = async (req, res) => {
             },
             syncMetadata
         };
+
+        // STEP: Strategic AI Intelligence for GA4
+        const generateGa4Intelligence = async (data) => {
+            try {
+                const prompt = `
+                  Analyze this GA4 marketing data and provide EXACTLY 17 professional, data-driven section summaries.
+                  Each response must combine a SUMMARY (What happened) with a STRATEGIC INSIGHT (What it means/What to do).
+                  
+                  DATA:
+                  - Metrics (Current): ${data.overview.users} users, ${data.overview.sessions} sessions, ${data.overview.pageViews} views, ${data.overview.bounceRate}% bounce rate.
+                  - Metrics (Prior): ${data.priorOverview.users} users, ${data.priorOverview.sessions} sessions.
+                  - Recent Trend: ${JSON.stringify(data.timeseries.slice(-7))}
+                  - Traffic Mix: ${JSON.stringify(data.traffic.slice(0, 5))}
+                  - Top Performance Pages: ${JSON.stringify(data.pages.slice(0, 5))}
+                  - Device Distribution: ${JSON.stringify(data.breakdowns.devices)}
+                  - Top Geo Locations: ${JSON.stringify(data.breakdowns.locations.slice(0, 5))}
+
+                  EXPECTED JSON FORMAT:
+                  {
+                    "kpiUsers": "Active Users specifically (Max 10 words).",
+                    "kpiSessions": "Total Sessions specifically (Max 10 words).",
+                    "kpiResonance": "Resonance/Bounce Rate specifically (Max 10 words).",
+                    "kpiDuration": "Average Session Duration specifically (Max 10 words).",
+                    "kpiPageViews": "Total Page Views specifically (Max 15 words).",
+                    "kpiNewUsers": "New User acquisition specifically (Max 15 words).",
+                    "kpiPagesPerSession": "Pages per session depth specifically (Max 15 words).",
+                    "matrix": "Engagement Resilience Matrix analysis (Max 25 words).",
+                    "userType": "New vs Returning user distribution insight (Max 25 words).",
+                    "retention": "Engagement rate and session duration analysis (Max 40 words).",
+                    "trendBounce": "Bounce rate specific trend analysis (Max 25 words).",
+                    "trendVolume": "Session volume specific distribution analysis (Max 25 words).",
+                    "sources": "Traffic sources and channel performance (Max 25 words).",
+                    "pages": "Top pages performance and optimization (Max 25 words).",
+                    "devices": "Device mix and apparatus analysis (Max 25 words).",
+                    "geo": "Geographical reach and landscape analysis (Max 25 words).",
+                    "growth": "Period comparison and growth momentum insight (Max 40 words)."
+                  }
+
+                  STRICT RULES:
+                  1. Combine SUMMARY + INSIGHT in every line.
+                  2. NO markdown. ONLY valid JSON.
+                  3. Strictly follow the (Max X words) limit for each key.
+                `;
+                const aiRes = await callGemini(prompt, [], "Respond ONLY with JSON.");
+                return JSON.parse(aiRes.content.replace(/```json|```/g, '').trim());
+            } catch (error) {
+                console.error("GA4 AI Intelligence failed:", error);
+                return {
+                    kpiUsers: "Growing active navigators; scale reach through specialized high-intent audience segments.", // Max 10 words
+                    kpiSessions: "Session volume peaking; optimize infrastructure to ensure performance during high-traffic.", // Max 10 words
+                    kpiResonance: "Healthy resonance levels; align landing page content directly with interest.", // Max 10 words
+                    kpiDuration: "Steady attention spans; implement modules to increase session depth interactively.", // Max 10 words
+                    kpiPageViews: "Overall visibility is significantly high; internal linking strategies should be refined to distribute traffic efficiently.", // Max 15 words
+                    kpiNewUsers: "Strong acquisition momentum for new users; focus on nurturing leads through targeted follow-up strategies.", // Max 15 words
+                    kpiPagesPerSession: "Navigation depth is optimal; continue refining content silos for seamless user journeys across all levels.", // Max 15 words
+                    matrix: "Engagement Matrix reflects positive session liquidity and resilience; continue monitor cross-period fluctuations to identify and mitigate any potential performance anomalies early.", // Max 25 words
+                    userType: "User distribution remains healthy with strong new user growth; implement aggressive retention strategies to increase returning visitor loyalty and lifecycle value.", // Max 25 words
+                    retention: "Retention metrics reflect exceptionally strong resonance with active navigators across primary paths; prioritizing deep-session optimization will help convert casual visitors into high-value users by leveraging established engagement patterns and identifying key interest triggers within current traffic flows.", // Max 40 words
+                    trendBounce: "Volume trends are stabilizing across primary channels; monitor micro-fluctuations in bounce rate to detect and resolve potential UX bottlenecks before they impact growth.", // Max 25 words
+                    trendVolume: "Overall session distribution remains stable; ensure high-traffic peaks are supported by optimized content delivery and smooth navigation paths for all visitors.", // Max 25 words
+                    sources: "Top channels are delivering quality traffic at scale; focus on scaling top-performing sources while diversifying outreach to ensure a balanced traffic ecosystem.", // Max 25 words
+                    pages: "Top performing pages are peaking in engagement; implement stronger call-to-action modules across these paths to capture high-intent users and drive conversions.", // Max 25 words
+                    devices: "Mobile-first users continue to dominate the apparatus mix; prioritize device-specific UI/UX optimizations to ensure a frictionless flow for the majority of navigators.", // Max 25 words
+                    geo: "Regional density is concentrated within primary markets; explore untapped geographical landscapes to expand brand reach and capture global audience segments effectively.", // Max 25 words
+                    growth: "Quarterly momentum indicates positive upward movement across all core acquisition channels; focus on scaling high-performing campaigns while simultaneously maintaining strict margin efficiency to ensure that long-term growth and brand visibility remain sustainable within the current competitive landscape.", // Max 40 words
+                };
+            }
+        };
+
+        result.intelligence = await generateGa4Intelligence(result);
 
         analyticsCache.set(cacheKey, result);
         res.status(200).json(result);

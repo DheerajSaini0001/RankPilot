@@ -478,22 +478,22 @@ export const askAi = async (req, res) => {
         const getFriendlyError = (err) => {
             const msg = err?.message || "";
             if (msg.includes('429') || msg.includes('Quota')) {
-                return "The AI is currently catching its breath due to high demand. 🧘‍♂️ Please wait about **60 seconds** and try your question again.";
+                return "AI is busy. Please try again in 60 seconds.";
             }
             if (msg.includes('getaddrinfo') || msg.includes('ENOTFOUND') || msg.includes('redis') || msg.includes('connect')) {
-                return "The analytics engine is having a momentary connection glitch. 🔌 Our team has been notified. Please try again in 2-3 minutes.";
+                return "Connection glitch. Please try again in 2-3 minutes.";
             }
             if (msg.includes('API_KEY_INVALID') || msg.includes('auth')) {
-                return "There's a configuration issue with the AI's credentials. 🔑 Please contact support to restore access.";
+                return "Configuration error. Please contact support.";
             }
             if (msg.includes('safety') || msg.includes('blocked')) {
-                return "This request falls outside our safety guidelines. 🛡️ Please rephrase your question to be more marketing-focused.";
+                return "Question blocked for safety. Please rephrase.";
             }
-            return "Something unexpected happened in our AI engine. 🔧 A quick refresh of the page usually fix this!";
+            return "Something went wrong. Please refresh the page.";
         };
 
         const friendlyMsg = getFriendlyError(err);
-        const errorMessage = `### 💌 A Quick Note\n\n${friendlyMsg}\n\n---\n*Technical ID: ${err?.message?.substring(0, 50) || "Unknown"}*`;
+        const errorMessage = friendlyMsg;
         
         if (convId) {
             await Message.create({

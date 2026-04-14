@@ -7,6 +7,7 @@ import {
     ArrowPathIcon,
     ChatBubbleLeftRightIcon,
     MinusIcon,
+    ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -32,17 +33,36 @@ const MD = {
             : <pre className="bg-neutral-900 text-neutral-100 p-2 rounded-lg text-[11px] overflow-x-auto my-2 border border-neutral-800 tracking-tight font-mono">{children}</pre>,
 };
 
-const TypingDots = () => (
-    <div className="flex items-center gap-1.5 py-2">
-        {[0, 150, 300].map(delay => (
-            <span
-                key={delay}
-                className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-bounce"
-                style={{ animationDelay: `${delay}ms` }}
-            />
-        ))}
-    </div>
-);
+const TypingIndicator = () => {
+    const [phrase, setPhrase] = useState("Thinking");
+    const phrases = ["Thinking", "Analyzing Data", "Drafting Response", "Refining Insights"];
+
+    useEffect(() => {
+        let i = 0;
+        const interval = setInterval(() => {
+            i = (i + 1) % phrases.length;
+            setPhrase(phrases[i]);
+        }, 1500);
+        return () => clearInterval(interval);
+    }, []);
+
+    return (
+        <div className="flex items-center gap-3 py-1">
+            <div className="flex items-center gap-1">
+                {[0, 150, 300].map(delay => (
+                    <span
+                        key={delay}
+                        className="w-1 h-1 rounded-full bg-brand-500 animate-bounce"
+                        style={{ animationDelay: `${delay}ms` }}
+                    />
+                ))}
+            </div>
+            <span className="text-[10px] font-black text-brand-600/60 dark:text-brand-400/60 uppercase tracking-[0.15em] animate-pulse">
+                {phrase}
+            </span>
+        </div>
+    );
+};
 
 /**
  * GlobalAiChat — Floating bubble chat for the entire project
@@ -106,7 +126,7 @@ const GlobalAiChat = () => {
                     if (!line.startsWith('data: ')) continue;
                     try {
                         const data = JSON.parse(line.slice(6));
-                        
+
                         if (data.conversationId && !conversationId) {
                             setConversationId(data.conversationId);
                         }
@@ -125,6 +145,23 @@ const GlobalAiChat = () => {
                                 }
                                 return updated;
                             });
+                        }
+
+                        if (data.error) {
+                            setMessages(prev => {
+                                const updated = [...prev];
+                                const last = updated[updated.length - 1];
+                                if (last?.role === 'assistant') {
+                                    updated[updated.length - 1] = {
+                                        ...last,
+                                        content: data.error,
+                                        isLoading: false,
+                                        isError: true
+                                    };
+                                }
+                                return updated;
+                            });
+                            break;
                         }
                     } catch { }
                 }
@@ -192,17 +229,16 @@ const GlobalAiChat = () => {
             <div className="fixed bottom-6 right-6 z-[99999]">
                 <button
                     onClick={() => setIsOpen(!isOpen)}
-                    className={`relative w-16 h-16 rounded-full flex items-center justify-center transition-all duration-500 hover:scale-110 active:scale-90 group ${
-                        isOpen 
-                        ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rotate-[360deg]' 
-                        : 'bg-white dark:bg-neutral-800 shadow-[0_20px_50px_rgba(59,130,246,0.25)]'
-                    }`}
+                    className={`relative w-16 h-16 rounded-full flex items-center justify-center transition-all duration-500 hover:scale-110 active:scale-90 group ${isOpen
+                            ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rotate-[360deg]'
+                            : 'bg-white dark:bg-neutral-800 shadow-[0_20px_50px_rgba(59,130,246,0.25)]'
+                        }`}
                 >
                     {/* Animated Gradient Border */}
                     {!isOpen && (
                         <div className="absolute -inset-[2px] rounded-full bg-gradient-to-tr from-brand-600 via-blue-500 to-cyan-400 opacity-20 group-hover:opacity-100 transition-opacity duration-500 -z-10 animate-pulse-slow"></div>
                     )}
-                    
+
                     {/* Glass Overlay */}
                     <div className="absolute inset-0 rounded-full border border-neutral-100 dark:border-neutral-700 pointer-events-none"></div>
 
@@ -210,10 +246,10 @@ const GlobalAiChat = () => {
                         <XMarkIcon className="w-8 h-8 relative z-10" />
                     ) : (
                         <div className="relative z-10 w-11 h-11 flex items-center justify-center">
-                            <img 
-                                src="/favicon.png" 
-                                alt="AI" 
-                                className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110" 
+                            <img
+                                src="/favicon.png"
+                                alt="AI"
+                                className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110"
                             />
                             {/* AI Badge */}
                             <div className="absolute -bottom-1 -right-1 bg-brand-600 rounded-full p-1 border-2 border-white dark:border-neutral-800 shadow-md transform group-hover:translate-x-1 group-hover:translate-y-1 transition-transform">
@@ -226,7 +262,7 @@ const GlobalAiChat = () => {
 
             {/* Chat Panel */}
             {isOpen && (
-                <div 
+                <div
                     className="fixed bottom-24 right-6 z-[99998] w-[calc(100vw-48px)] sm:w-[400px] h-[550px] max-h-[calc(100vh-120px)] bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/60 rounded-[2rem] shadow-[0_32px_80px_-12px_rgba(0,0,0,0.4)] flex flex-col overflow-hidden transition-all duration-300"
                     style={{ animation: 'slideIn 0.3s cubic-bezier(0.22,1,0.36,1)' }}
                 >
@@ -277,8 +313,8 @@ const GlobalAiChat = () => {
                                         "Top 5 organic keywords?",
                                         "Where is my traffic leaving?",
                                     ].map((q, i) => (
-                                        <button 
-                                            key={i} 
+                                        <button
+                                            key={i}
                                             onClick={() => sendMessage(q)}
                                             className="px-4 py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-[11px] font-bold text-neutral-500 hover:text-brand-600 hover:border-brand-500 transition-all text-left shadow-sm active:scale-95"
                                         >
@@ -296,22 +332,41 @@ const GlobalAiChat = () => {
                                 style={{ animation: 'fadeIn 0.2s ease-out' }}
                             >
                                 <div className={`flex items-start gap-2.5 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                    <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center shadow-sm text-[10px] font-black mt-1 overflow-hidden ${
-                                        msg.role === 'user' ? 'bg-neutral-800 text-white' : 'bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700'
-                                    }`}>
-                                        {msg.role === 'user' ? (user?.name?.charAt(0) || 'U') : <img src="/favicon.png" alt="AI" className="w-5 h-5 object-contain" />}
-                                    </div>
-                                    <div className={`px-4 py-3 rounded-2xl text-[13px] leading-relaxed font-medium ${
-                                        msg.role === 'user'
-                                        ? 'bg-brand-600 text-white rounded-tr-sm shadow-lg shadow-brand-500/20'
-                                        : 'bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700/50 text-neutral-800 dark:text-neutral-100 rounded-tl-sm shadow-sm'
-                                    }`}>
-                                        {msg.isLoading ? (
-                                            <TypingDots />
+                                    <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center shadow-sm text-[10px] font-black mt-1 overflow-hidden ${msg.role === 'user' ? 'bg-neutral-800 text-white' : 'bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700'
+                                        }`}>
+                                        {msg.role === 'user' ? (
+                                            user?.avatar ? (
+                                                <img src={user.avatar} alt="User" className="w-full h-full object-cover" />
+                                            ) : (
+                                                user?.name?.charAt(0) || 'U'
+                                            )
                                         ) : (
-                                            <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD}>
-                                                {msg.content}
-                                            </ReactMarkdown>
+                                            <img src="/favicon.png" alt="AI" className="w-5 h-5 object-contain" />
+                                        )}
+                                    </div>
+                                    <div className={`max-w-[85%] ${msg.role === 'user' ? 'bg-brand-600 text-white rounded-2xl rounded-tr-sm shadow-lg shadow-brand-500/20 px-4 py-3' : 'bg-transparent'}`}>
+                                        {msg.isLoading ? (
+                                            <div className="bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700/50 px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm">
+                                                <TypingIndicator />
+                                            </div>
+                                        ) : msg.isError ? (
+                                            <div className="flex items-center gap-3.5 p-3.5 bg-red-50/50 dark:bg-red-900/10 border border-red-100/50 dark:border-red-900/30 rounded-2xl shadow-sm animate-in fade-in zoom-in duration-300">
+                                                <div className="shrink-0 w-8 h-8 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                                                    <ExclamationTriangleIcon className="w-4 h-4 text-red-600 dark:text-red-400" />
+                                                </div>
+                                                <div className="flex flex-col gap-0.5">
+                                                    <span className="text-[9px] font-black uppercase tracking-[0.15em] text-red-500/60 dark:text-red-400/40">AI Exception</span>
+                                                    <p className="text-[12px] font-bold text-red-700 dark:text-red-300 leading-snug">
+                                                        {msg.content}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700/50 px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm text-neutral-800 dark:text-neutral-100 text-[13px] leading-relaxed font-medium">
+                                                <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD}>
+                                                    {msg.content}
+                                                </ReactMarkdown>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
@@ -341,9 +396,12 @@ const GlobalAiChat = () => {
                                 {loading ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <PaperAirplaneIcon className="w-4 h-4" />}
                             </button>
                         </div>
-                        <p className="text-center text-[9px] text-neutral-400 mt-2.5 font-bold uppercase tracking-widest opacity-60">
-                            Powered by Gemini Engine
-                        </p>
+                        <div className="flex items-center justify-center gap-2 mt-2.5 opacity-40 select-none">
+                            <SparklesIcon className="w-2.5 h-2.5 text-brand-500" />
+                            <p className="text-[9px] text-neutral-400 font-black uppercase tracking-[0.2em]">
+                                Powered by <span className="text-brand-600 dark:text-brand-400">RankPilot Intelligence</span>
+                            </p>
+                        </div>
                     </div>
                 </div>
             )}

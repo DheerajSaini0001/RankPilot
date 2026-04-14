@@ -1,24 +1,25 @@
-import React from 'react';
-import { ArrowUpIcon, ArrowDownIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { ArrowUpIcon, ArrowDownIcon, PlusIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
+import { useAiChatStore } from '../../store/aiChatStore';
 
-const KpiCard = ({ title, value, change, changeText, valueSuffix, isPositive, Icon, loading = false, chartData = [], disconnected = false, onClick, insight }) => {
+const KpiCard = ({ title, value, change, changeText, valueSuffix, isPositive, Icon, loading = false, chartData = [], disconnected = false, onClick, insight, contextPrompt }) => {
+  const { openWithQuestion } = useAiChatStore();
 
   // Loading state matching the updated dimensions
   if (loading) return (
     <div className="w-full rounded-2xl bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700/60 p-5 min-h-[190px] flex flex-col justify-between animate-pulse">
       <div className="flex justify-between items-start">
         <div className="space-y-2">
-          <div className="h-3 w-28 bg-neutral-200 dark:bg-neutral-700 rounded-full"/>
-          <div className="h-9 w-36 bg-neutral-200 dark:bg-neutral-700 rounded-xl"/>
+          <div className="h-3 w-28 bg-neutral-200 dark:bg-neutral-700 rounded-full" />
+          <div className="h-9 w-36 bg-neutral-200 dark:bg-neutral-700 rounded-xl" />
         </div>
-        <div className="w-9 h-9 bg-neutral-200 dark:bg-neutral-700 rounded-xl"/>
+        <div className="w-9 h-9 bg-neutral-200 dark:bg-neutral-700 rounded-xl" />
       </div>
-      <div className="h-10 w-full bg-neutral-100 dark:bg-neutral-800 rounded-xl mt-4"/>
-      <div className="h-3 w-full bg-neutral-50 dark:bg-neutral-800/50 rounded-full mt-3"/>
+      <div className="h-10 w-full bg-neutral-100 dark:bg-neutral-800 rounded-xl mt-4" />
+      <div className="h-3 w-full bg-neutral-50 dark:bg-neutral-800/50 rounded-full mt-3" />
       <div className="flex justify-between items-center mt-3 pt-3 border-t border-neutral-100 dark:border-neutral-800">
-        <div className="h-6 w-16 bg-neutral-200 dark:bg-neutral-700 rounded-full"/>
-        <div className="h-3 w-24 bg-neutral-100 dark:bg-neutral-800 rounded-full"/>
+        <div className="h-6 w-16 bg-neutral-200 dark:bg-neutral-700 rounded-full" />
+        <div className="h-3 w-24 bg-neutral-100 dark:bg-neutral-800 rounded-full" />
       </div>
     </div>
   );
@@ -27,25 +28,24 @@ const KpiCard = ({ title, value, change, changeText, valueSuffix, isPositive, Ic
   const sparkData = (chartData && chartData.length >= 2)
     ? chartData.map((v, i) => ({ i, v: Number(v) || 0 }))
     : Array.from({ length: 10 }, (_, i) => ({
-        i,
-        v: disconnected ? 20 : (isPositive
-          ? 20 + i * 3 + Math.sin(i) * 5
-          : 50 - i * 2 + Math.sin(i) * 5)
-      }));
+      i,
+      v: disconnected ? 20 : (isPositive
+        ? 20 + i * 3 + Math.sin(i) * 5
+        : 50 - i * 2 + Math.sin(i) * 5)
+    }));
 
   const gradientId = isPositive ? 'sparkGreen' : 'sparkRed';
   const strokeColor = disconnected ? '#94A3B8' : (isPositive ? '#10B981' : '#EF4444');
 
   return (
-    <div 
+    <div
       onClick={onClick}
       className={`group relative bg-white dark:bg-dark-card rounded-2xl border border-neutral-200/80 dark:border-neutral-700/60 p-5 overflow-hidden flex flex-col justify-between min-h-[190px] shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ${(disconnected || onClick) ? 'cursor-pointer' : 'cursor-default'} ${disconnected ? 'hover:border-brand-500/50' : ''}`}
     >
-      
+
       {/* Subtle background glow on hover */}
-      <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none ${
-        disconnected ? 'bg-brand-500/[0.05]' : (isPositive ? 'bg-green-400/[0.08]' : 'bg-red-400/[0.08]')
-      } -mr-16 -mt-16`}/>
+      <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none ${disconnected ? 'bg-brand-500/[0.05]' : (isPositive ? 'bg-green-400/[0.08]' : 'bg-red-400/[0.08]')
+        } -mr-16 -mt-16`} />
 
       {/* Header section: title + value + icon */}
       <div className="relative z-10 flex justify-between items-start mb-2">
@@ -55,9 +55,9 @@ const KpiCard = ({ title, value, change, changeText, valueSuffix, isPositive, Ic
           </span>
           <div className="flex items-baseline gap-2 mt-2">
             {disconnected ? (
-               <p className="text-[11px] font-bold text-neutral-400 dark:text-neutral-500 leading-relaxed mt-1 pr-10 italic">
-                 {insight}
-               </p>
+              <p className="text-[11px] font-bold text-neutral-400 dark:text-neutral-500 leading-relaxed mt-1 pr-10 italic">
+                {insight}
+              </p>
             ) : (
               <>
                 <h3 className="text-3xl font-black text-neutral-900 dark:text-white tabular-nums tracking-tight leading-none">
@@ -71,17 +71,30 @@ const KpiCard = ({ title, value, change, changeText, valueSuffix, isPositive, Ic
           </div>
         </div>
 
-        {Icon && (
-          <div className={`w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-sm ${
-            disconnected ? 'bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-700/50' : (
-            isPositive
-              ? 'bg-green-50 dark:bg-emerald-900/20 border border-green-100 dark:border-emerald-800/50'
-              : 'bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/50'
-            )
-          }`}>
-            <Icon className={`w-[18px] h-[18px] ${disconnected ? 'text-neutral-300' : (isPositive ? 'text-green-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400')}`}/>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {contextPrompt && !disconnected && (
+            <div 
+              onClick={(e) => {
+                e.stopPropagation();
+                openWithQuestion(contextPrompt);
+              }}
+              className="w-7 h-7 bg-brand-50 dark:bg-brand-500/10 rounded-full flex items-center justify-center cursor-pointer hover:bg-brand-100 dark:hover:bg-brand-500/20 transition-all border border-brand-100/50 dark:border-brand-500/20 text-brand-600 dark:text-brand-400 group/ai"
+            >
+              <SparklesIcon className="w-3.5 h-3.5 group-hover/ai:rotate-12 transition-transform" />
+            </div>
+          )}
+
+          {Icon && (
+            <div className={`w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-sm ${disconnected ? 'bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-700/50' : (
+                isPositive
+                  ? 'bg-green-50 dark:bg-emerald-900/20 border border-green-100 dark:border-emerald-800/50'
+                  : 'bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/50'
+              )
+              }`}>
+              <Icon className={`w-[18px] h-[18px] ${disconnected ? 'text-neutral-300' : (isPositive ? 'text-green-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400')}`} />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* AreaChart for gradient fill effect */}
@@ -90,8 +103,8 @@ const KpiCard = ({ title, value, change, changeText, valueSuffix, isPositive, Ic
           <AreaChart data={sparkData} margin={{ top: 3, right: 0, left: 0, bottom: 3 }}>
             <defs>
               <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={strokeColor} stopOpacity={0.15}/>
-                <stop offset="95%" stopColor={strokeColor} stopOpacity={0}/>
+                <stop offset="5%" stopColor={strokeColor} stopOpacity={0.15} />
+                <stop offset="95%" stopColor={strokeColor} stopOpacity={0} />
               </linearGradient>
             </defs>
             <Area
@@ -119,26 +132,25 @@ const KpiCard = ({ title, value, change, changeText, valueSuffix, isPositive, Ic
 
       {/* Bottom Row: change badge + context text */}
       <div className="relative z-10 flex items-center justify-between pt-3 border-t border-neutral-100 dark:border-neutral-800/80 mt-auto">
-        
+
         {/* Change Badge / Action */}
         {disconnected ? (
-           <div className="text-[10px] font-black text-brand-600 dark:text-brand-400 uppercase tracking-widest flex items-center gap-1.5 group-hover:gap-2.5 transition-all">
-             Unlock Insights <ArrowUpIcon className="w-3 h-3 rotate-45" />
-           </div>
+          <div className="text-[10px] font-black text-brand-600 dark:text-brand-400 uppercase tracking-widest flex items-center gap-1.5 group-hover:gap-2.5 transition-all">
+            Unlock Insights <ArrowUpIcon className="w-3 h-3 rotate-45" />
+          </div>
         ) : change !== undefined ? (
-          <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-black border ${
-            isPositive
+          <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-black border ${isPositive
               ? 'bg-green-50 text-green-700 border-green-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800/50'
               : 'bg-red-50 text-red-700 border-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800/50'
-          }`}>
+            }`}>
             {isPositive
-              ? <ArrowUpIcon className="w-3 h-3 stroke-[3]"/>
-              : <ArrowDownIcon className="w-3 h-3 stroke-[3]"/>
+              ? <ArrowUpIcon className="w-3 h-3 stroke-[3]" />
+              : <ArrowDownIcon className="w-3 h-3 stroke-[3]" />
             }
             {Math.abs(parseFloat(change || 0)).toFixed(1)}%
           </div>
         ) : (
-          <div className="h-7 w-16 bg-neutral-100 dark:bg-neutral-800 rounded-full animate-pulse"/>
+          <div className="h-7 w-16 bg-neutral-100 dark:bg-neutral-800 rounded-full animate-pulse" />
         )}
 
         {/* Context text */}
@@ -152,13 +164,12 @@ const KpiCard = ({ title, value, change, changeText, valueSuffix, isPositive, Ic
       {/* Bottom progress bar — visible on hover */}
       <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
         <div
-          className={`h-full transition-all duration-700 ease-out origin-left scale-x-0 group-hover:scale-x-100 ${
-            disconnected ? 'bg-brand-500' : (
-            isPositive
-              ? 'bg-gradient-to-r from-green-400 to-emerald-500'
-              : 'bg-gradient-to-r from-red-400 to-rose-500'
+          className={`h-full transition-all duration-700 ease-out origin-left scale-x-0 group-hover:scale-x-100 ${disconnected ? 'bg-brand-500' : (
+              isPositive
+                ? 'bg-gradient-to-r from-green-400 to-emerald-500'
+                : 'bg-gradient-to-r from-red-400 to-rose-500'
             )
-          }`}
+            }`}
           style={{ width: disconnected ? '100%' : `${Math.min(100, Math.abs(change || 50) + 20)}%` }}
         />
       </div>
