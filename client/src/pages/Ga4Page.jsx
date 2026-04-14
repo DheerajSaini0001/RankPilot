@@ -20,7 +20,14 @@ import {
     ClockIcon,
     ExclamationTriangleIcon,
     ChartBarIcon,
-    ChevronRightIcon
+    ChevronRightIcon,
+    ChevronDownIcon,
+    CalendarIcon,
+    ComputerDesktopIcon,
+    FunnelIcon,
+    DevicePhoneMobileIcon,
+    DeviceTabletIcon,
+    XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { exportToPdf } from '../utils/reportExport';
 import {
@@ -44,6 +51,10 @@ const formatTime = (secs) => {
     return `${min}m ${remainingSecs}s`;
 };
 
+const Ga4Logo = ({ className = "w-6 h-6" }) => (
+    <img src="https://www.vectorlogo.zone/logos/google_analytics/google_analytics-icon.svg" alt="GA4" className={`${className} object-contain`} />
+);
+
 const Ga4Page = () => {
     const { startDate, endDate } = useDateRangeStore();
     const { device, campaign, channel } = useFilterStore();
@@ -52,6 +63,13 @@ const Ga4Page = () => {
     const hasProperty = !!activeGa4PropertyId;
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
+
+    const { preset, setPreset } = useDateRangeStore();
+    const { setFilters } = useFilterStore();
+    const [isDateMenuOpen, setIsDateMenuOpen] = useState(false);
+    const [isDeviceMenuOpen, setIsDeviceMenuOpen] = useState(false);
+    const [isCustomDateMode, setIsCustomDateMode] = useState(false);
+    const [tempDateRange, setTempDateRange] = useState({ start: startDate, end: endDate });
 
     const [overview, setOverview] = useState(null);
     const [priorOverview, setPriorOverview] = useState(null);
@@ -148,6 +166,39 @@ const Ga4Page = () => {
         }
     };
 
+    const handleDatePresetSelect = (p) => {
+        if (p.value === 'custom') {
+            setIsCustomDateMode(true);
+            return;
+        }
+        const fmt = (d) => {
+            const date = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
+            return date.toISOString().split('T')[0];
+        };
+        let start = new Date();
+        let end = new Date();
+        if (p.value === 'yesterday') {
+            start.setDate(start.getDate() - 1);
+            end.setDate(end.getDate() - 1);
+        } else if (p.value !== 'today') {
+            start.setDate(start.getDate() - p.days);
+        }
+        setPreset(p.value, fmt(start), fmt(end));
+        setIsDateMenuOpen(false);
+        setIsCustomDateMode(false);
+    };
+
+    const handleApplyCustomDate = () => {
+        setPreset('custom', tempDateRange.start, tempDateRange.end);
+        setIsDateMenuOpen(false);
+        setIsCustomDateMode(false);
+    };
+
+    const handleDeviceSelect = (val) => {
+        setFilters({ device: val });
+        setIsDeviceMenuOpen(false);
+    };
+
     useEffect(() => {
         loadData();
     }, [loadData]);
@@ -200,7 +251,7 @@ const Ga4Page = () => {
         );
     }
 
-    const { searchQuery } = useFilterStore();
+    const { searchQuery, setSearchQuery } = useFilterStore();
 
     const filteredTraffic = traffic.filter(t =>
         (t.channel?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
@@ -262,18 +313,14 @@ const Ga4Page = () => {
         <DashboardLayout>
             <div id="ga4-report" className="flex flex-col space-y-8">
                 {/* Compact Professional Header */}
-                <div className="bg-white dark:bg-[#0d0d0d] px-6 py-4 rounded-[1.5rem] border border-neutral-100 dark:border-neutral-800 shadow-sm relative overflow-hidden">
+                <div className={`bg-white dark:bg-[#0d0d0d] px-6 py-4 rounded-[1.5rem] border border-neutral-100 dark:border-neutral-800 shadow-sm relative transition-all duration-300 ${(isDateMenuOpen || isDeviceMenuOpen) ? 'z-50' : 'z-10'}`}>
 
                     <div className="relative z-10 flex flex-col xl:flex-row xl:items-center gap-6 xl:gap-10">
 
                         {/* 1. Logo & Identity Section */}
                         <div className="flex items-center gap-4 shrink-0">
                             <div className="w-12 h-12 bg-white dark:bg-neutral-800/80 rounded-xl flex items-center justify-center shrink-0 border border-neutral-100 dark:border-neutral-700 shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)]">
-                                <div className="flex items-end gap-[3px] h-6 mb-0.5">
-                                    <div className="w-[5px] h-[45%] bg-[#F9AB00] rounded-t-sm shadow-[0_1px_2px_rgba(249,171,0,0.2)]"></div>
-                                    <div className="w-[5px] h-[75%] bg-[#F57C00] rounded-t-sm shadow-[0_1px_2px_rgba(245,124,0,0.2)]"></div>
-                                    <div className="w-[5px] h-[100%] bg-[#E65100] rounded-t-sm shadow-[0_1px_2px_rgba(230,81,0,0.2)]"></div>
-                                </div>
+                                <Ga4Logo className="w-7 h-7" />
                             </div>
 
                             <div className="flex flex-col justify-center">
@@ -295,11 +342,136 @@ const Ga4Page = () => {
                                         <div className="w-1 h-1 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]"></div>
                                         <span className="text-[8px] font-black text-emerald-600 dark:text-emerald-500 uppercase tracking-widest">Active</span>
                                     </div>
-                                    <div className="flex items-center gap-1.5 text-[9px] text-neutral-400 font-bold uppercase tracking-widest">
-                                        Synced: <span className="text-neutral-700 dark:text-neutral-300 tabular-nums font-black">{syncMetadata?.lastDailySyncAt ? new Date(syncMetadata.lastDailySyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}</span>
-                                        <button onClick={handleManualRefresh} className="hover:text-brand-500 transition-all active:rotate-180">
-                                            <ArrowPathIcon className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
-                                        </button>
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-1.5 text-[9px] text-neutral-400 font-bold uppercase tracking-widest">
+                                            Synced: <span className="text-neutral-700 dark:text-neutral-300 tabular-nums font-black">{syncMetadata?.lastDailySyncAt ? new Date(syncMetadata.lastDailySyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}</span>
+                                            <button onClick={handleManualRefresh} className="hover:text-brand-500 transition-all active:rotate-180 ml-1">
+                                                <ArrowPathIcon className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+                                            </button>
+                                        </div>
+
+                                        {/* Date Selector Integration */}
+                                        <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-800 hidden sm:block"></div>
+
+                                        <div className="relative">
+                                            <button
+                                                onClick={() => { setIsDateMenuOpen(!isDateMenuOpen); setIsDeviceMenuOpen(false); }}
+                                                className={`flex items-center gap-2 px-2.5 py-1 transition-all active:scale-95 group/date rounded-full border shadow-sm ${isDateMenuOpen
+                                                    ? 'bg-brand-600 border-brand-500 text-white'
+                                                    : 'bg-white/50 dark:bg-dark-surface/50 border-neutral-200/50 dark:border-neutral-800/60'
+                                                    }`}
+                                            >
+                                                <CalendarIcon className={`w-3.5 h-3.5 ${isDateMenuOpen ? 'text-white' : 'text-brand-600'}`} />
+                                                <span className={`text-[9px] font-black uppercase tracking-widest ${isDateMenuOpen ? 'text-white' : 'text-neutral-600 dark:text-neutral-300'}`}>
+                                                    {preset === 'custom' ? 'Range' : preset}
+                                                </span>
+                                                <ChevronDownIcon className={`w-3 h-3 transition-transform ${isDateMenuOpen ? 'rotate-180 opacity-100' : 'opacity-40'}`} />
+                                            </button>
+
+                                            {isDateMenuOpen && (
+                                                <div className="absolute top-full left-0 mt-2 z-[100] bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl p-1.5 min-w-[160px] animate-in fade-in zoom-in-95 duration-200 normal-case tracking-normal">
+                                                    {!isCustomDateMode ? (
+                                                        <>
+                                                            {[
+                                                                { label: 'Today', value: 'today', days: 0 },
+                                                                { label: 'Yesterday', value: 'yesterday', days: 1 },
+                                                                { label: 'Last 7 Days', value: '7d', days: 7 },
+                                                                { label: 'Last 28 Days', value: '28d', days: 28 },
+                                                                { label: 'Last 90 Days', value: '90d', days: 90 },
+                                                                { label: 'Last Year', value: '1y', days: 365 },
+                                                                { label: 'Custom Range', value: 'custom', icon: CalendarIcon },
+                                                            ].map((p) => (
+                                                                <button
+                                                                    key={p.value}
+                                                                    onClick={() => handleDatePresetSelect(p)}
+                                                                    className={`w-full text-left px-3 py-2 rounded-xl text-[10px] font-bold transition-all flex items-center justify-between ${preset === p.value
+                                                                        ? 'bg-brand-600 text-white shadow-lg shadow-brand-500/20'
+                                                                        : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                                                                        }`}
+                                                                >
+                                                                    {p.label}
+                                                                    {p.value === 'custom' && <ChevronRightIcon className="w-3 h-3 opacity-50" />}
+                                                                </button>
+                                                            ))}
+                                                        </>
+                                                    ) : (
+                                                        <div className="p-2 space-y-3">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-[10px] font-black uppercase text-neutral-400">Custom</span>
+                                                                <button onClick={() => setIsCustomDateMode(false)} className="text-[10px] font-bold text-brand-600 hover:underline">Back</button>
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <div>
+                                                                    <label className="text-[8px] font-black text-neutral-400 uppercase ml-1">Start</label>
+                                                                    <input
+                                                                        type="date"
+                                                                        value={tempDateRange.start}
+                                                                        onChange={(e) => setTempDateRange({ ...tempDateRange, start: e.target.value })}
+                                                                        className="w-full bg-neutral-100 dark:bg-neutral-800 border-none rounded-lg px-2 py-1.5 text-[10px] font-bold outline-none text-neutral-900 dark:text-white"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="text-[8px] font-black text-neutral-400 uppercase ml-1">End</label>
+                                                                    <input
+                                                                        type="date"
+                                                                        value={tempDateRange.end}
+                                                                        onChange={(e) => setTempDateRange({ ...tempDateRange, end: e.target.value })}
+                                                                        className="w-full bg-neutral-100 dark:bg-neutral-800 border-none rounded-lg px-2 py-1.5 text-[10px] font-bold outline-none text-neutral-900 dark:text-white"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                onClick={handleApplyCustomDate}
+                                                                className="w-full py-2 bg-brand-600 text-white text-[10px] font-black rounded-lg shadow-lg shadow-brand-500/20 active:scale-95 transition-all"
+                                                            >
+                                                                APPLY RANGE
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-800 hidden sm:block"></div>
+
+                                        <div className="relative">
+                                            <button
+                                                onClick={() => { setIsDeviceMenuOpen(!isDeviceMenuOpen); setIsDateMenuOpen(false); }}
+                                                className={`flex items-center gap-2 px-2.5 py-1 transition-all active:scale-95 group/device rounded-full border shadow-sm ${isDeviceMenuOpen
+                                                    ? 'bg-amber-500 border-amber-400 text-white'
+                                                    : 'bg-white/50 dark:bg-dark-surface/50 border-neutral-200/50 dark:border-neutral-800/60'
+                                                    }`}
+                                            >
+                                                <ComputerDesktopIcon className={`w-3.5 h-3.5 ${isDeviceMenuOpen ? 'text-white' : 'text-amber-500'}`} />
+                                                <span className={`text-[9px] font-black uppercase tracking-widest ${isDeviceMenuOpen ? 'text-white' : 'text-neutral-600 dark:text-neutral-300'}`}>
+                                                    {device || 'All'}
+                                                </span>
+                                                <ChevronDownIcon className={`w-3 h-3 transition-transform ${isDeviceMenuOpen ? 'rotate-180 opacity-100' : 'opacity-40'}`} />
+                                            </button>
+
+                                            {isDeviceMenuOpen && (
+                                                <div className="absolute top-full left-0 mt-2 z-[100] bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl p-1.5 min-w-[120px] animate-in fade-in zoom-in-95 duration-200 normal-case tracking-normal">
+                                                    {[
+                                                        { label: 'All Devices', value: '', icon: FunnelIcon },
+                                                        { label: 'Mobile', value: 'mobile', icon: DevicePhoneMobileIcon },
+                                                        { label: 'Desktop', value: 'desktop', icon: ComputerDesktopIcon },
+                                                        { label: 'Tablet', value: 'tablet', icon: DeviceTabletIcon },
+                                                    ].map((d) => (
+                                                        <button
+                                                            key={d.value}
+                                                            onClick={() => handleDeviceSelect(d.value)}
+                                                            className={`w-full text-left px-3 py-2 rounded-xl text-[10px] font-bold transition-all flex items-center gap-2 ${(device || '') === d.value
+                                                                ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20'
+                                                                : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                                                                }`}
+                                                        >
+                                                            <d.icon className="w-3 h-3" />
+                                                            {d.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -330,7 +502,7 @@ const Ga4Page = () => {
                         {/* 4. Action Buttons */}
                         <div className="flex flex-col sm:flex-row gap-2 shrink-0">
                             <AiSectionChat
-                                label="GET AI SUMMARY"
+                                label="AI SUMMARY"
                                 sectionTitle="GA4 Dashboard Summary"
                                 activeSources={['ga4']}
                                 contextPrompt={`Analyze my GA4 performance for ${startDate} to ${endDate}. 
@@ -356,18 +528,34 @@ const Ga4Page = () => {
                     </div>
                 </div>
 
-                <FilterBar
-                    showChannel
-                    onRefresh={handleManualRefresh}
-                    loading={loading}
-                />
+                {/* Refined Search Bar */}
+                <div className="flex justify-start">
+                    <div className="group bg-white/70 dark:bg-dark-card/70 backdrop-blur-lg border border-neutral-200/60 dark:border-neutral-700/50 rounded-full px-4 py-2 shadow-sm flex items-center gap-3 w-full max-w-md transition-all hover:shadow-md hover:border-brand-500/30">
+                        <FunnelIcon className="w-4 h-4 text-neutral-400 group-focus-within:text-brand-500 transition-colors" />
+                        <input
+                            type="text"
+                            placeholder="Search channels, sources or pages..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="bg-transparent border-none outline-none text-xs font-bold text-neutral-900 dark:text-white placeholder:text-neutral-400 flex-1"
+                        />
+                        {searchQuery && (
+                            <button 
+                                onClick={() => setSearchQuery('')}
+                                className="text-neutral-400 hover:text-red-500 transition-colors"
+                            >
+                                <XMarkIcon className="w-3.5 h-3.5" />
+                            </button>
+                        )}
+                    </div>
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <KpiCard
                         title="Active Navigators"
                         value={overview ? formatNumber(overview.activeUsers || 0) : '0'}
                         loading={loading}
-                        Icon={UsersIcon}
+                        Icon={Ga4Logo}
                         change={12.4}
                         isPositive={true}
                         changeText="real-time reach"
@@ -377,7 +565,7 @@ const Ga4Page = () => {
                         title="Total Sessions"
                         value={overview ? formatNumber(overview.sessions || 0) : '0'}
                         loading={loading}
-                        Icon={CursorArrowRaysIcon}
+                        Icon={Ga4Logo}
                         change={7.2}
                         isPositive={true}
                         changeText="engagement volume"
@@ -387,7 +575,7 @@ const Ga4Page = () => {
                         title="Resonance Rate"
                         value={overview ? `${(100 - overview.bounceRate).toFixed(1)}%` : '0%'}
                         loading={loading}
-                        Icon={ArrowPathIcon}
+                        Icon={Ga4Logo}
                         change={2.1}
                         isPositive={true}
                         changeText="retention surge"
@@ -396,7 +584,7 @@ const Ga4Page = () => {
                         title="Avg. Session Time"
                         value={overview ? formatTime(overview.avgSessionDuration) : '0m 0s'}
                         loading={loading}
-                        Icon={ClockIcon}
+                        Icon={Ga4Logo}
                         change={-0.5}
                         isPositive={false}
                         changeText="attention span"
@@ -406,12 +594,14 @@ const Ga4Page = () => {
                 {/* ADD 2 — Summary Strip */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                     {[
-                        { label: 'Total Page Views', value: overview ? formatNumber(overview.pageViews) : '0', icon: '📄' },
-                        { label: 'New Users', value: formatNumber(newUsers), icon: '✨' },
-                        { label: 'Pages / Session', value: pagesPerSession, icon: '🎯' }
+                        { label: 'Total Page Views', value: overview ? formatNumber(overview.pageViews) : '0', icon: <ChartBarIcon className="w-5 h-5 text-blue-500" /> },
+                        { label: 'New Users', value: formatNumber(newUsers), icon: <UsersIcon className="w-5 h-5 text-emerald-500" /> },
+                        { label: 'Pages / Session', value: pagesPerSession, icon: <GlobeAltIcon className="w-5 h-5 text-purple-500" /> }
                     ].map((card, idx) => (
-                        <div key={idx} className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-4 flex items-center gap-4 shadow-sm">
-                            <span className="text-2xl">{card.icon}</span>
+                        <div key={idx} className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-4 flex items-center gap-4 shadow-sm group hover:border-brand-500/30 transition-all">
+                            <div className="w-10 h-10 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 flex items-center justify-center border border-neutral-100 dark:border-neutral-700/50 group-hover:scale-110 transition-transform">
+                                {card.icon}
+                            </div>
                             <div>
                                 <div className="text-xl font-black text-neutral-900 dark:text-white tabular-nums">
                                     {loading ? <div className="h-6 w-20 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse" /> : card.value}

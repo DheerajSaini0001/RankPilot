@@ -331,7 +331,6 @@ export const getGa4Summary = async (req, res) => {
     if (cachedData) return res.status(200).json(cachedData);
 
     try {
-        // Fetch account metadata if siteId is provided
         let syncMetadata = null;
         if (siteId) {
             const acc = await UserAccounts.findOne({ _id: siteId, userId }).select('lastDailySyncAt syncStatus isHistoricalSyncComplete');
