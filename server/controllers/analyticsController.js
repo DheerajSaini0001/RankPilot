@@ -229,9 +229,10 @@ export const getDashboardSummary = async (req, res) => {
                   STRICT RULES:
                   1. If a source is OFFLINE, the corresponding insight MUST be exactly: "Connect [Platform Name] to unlock insights."
                   2. Combine SUMMARY + INSIGHT in every line.
-                  3. Strictly follow the (Max X words) limit for each key.
-                  4. NO markdown. ONLY valid JSON.
-                  5. "healthScore" MUST be an integer between 0 and 100 based on organic growth, ad ROI, and site engagement. Use the provided ${baseHealthScore} as a baseline.
+                  3. Strictly follow the word limits.
+                  4. NEVER include word counts or bracketed limits like "(25 words)" in your response.
+                  5. NO markdown. ONLY valid JSON.
+                  6. "healthScore" MUST be an integer between 0 and 100 based on organic growth, ad ROI, and site engagement. Use the provided ${baseHealthScore} as a baseline.
                 `;
                 const aiRes = await callGemini(prompt, [], "Respond ONLY with JSON.");
                 const parsedRes = JSON.parse(aiRes.content.replace(/```json|```/g, '').trim());
@@ -529,7 +530,8 @@ export const getGa4Summary = async (req, res) => {
                   STRICT RULES:
                   1. Combine SUMMARY + INSIGHT in every line.
                   2. NO markdown. ONLY valid JSON.
-                  3. Strictly follow the (Max X words) limit for each key.
+                  3. Strictly follow the word limits.
+                  4. NEVER include word counts or bracketed limits like "(25 words)" in your response.
                 `;
                 const aiRes = await callGemini(prompt, [], "Respond ONLY with JSON.");
                 return JSON.parse(aiRes.content.replace(/```json|```/g, '').trim());
