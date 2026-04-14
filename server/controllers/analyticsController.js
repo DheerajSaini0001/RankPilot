@@ -153,11 +153,11 @@ export const getDashboardSummary = async (req, res) => {
         // STEP 5: Strategic AI Intelligence
         const dataForAI = {
             siteName: acc?.siteName || 'Site',
-            ga4: ga,
-            gsc: { ...gs, avgPosition: gsRaw.position },
-            googleAds: ad.google,
-            facebookAds: ad.facebook,
-            topPages: topPages
+            ga4: { ...ga, priorSessions: pGa.sessions, growth: calculateGrowth(ga.sessions, pGa.sessions) },
+            gsc: { ...gs, avgPosition: gsRaw.position, priorClicks: pGs.clicks, growth: calculateGrowth(gs.clicks, pGs.clicks) },
+            googleAds: { ...ad.google, priorSpend: pAd.google.spend, priorConversions: pAd.google.conversions, growth: calculateGrowth(ad.google.conversions, pAd.google.conversions) },
+            facebookAds: { ...ad.facebook, priorSpend: pAd.facebook.spend, priorReach: pAd.facebook.reach, growth: calculateGrowth(ad.facebook.spend, pAd.facebook.spend) },
+            topPages: topPages.map(p => ({ url: p._id || '/', views: p.views }))
         };
 
         const generateIntelligence = async (data) => {
@@ -180,11 +180,11 @@ export const getDashboardSummary = async (req, res) => {
                   - Facebook Ads: ${conn.facebookAds ? 'ONLINE' : 'OFFLINE'}
 
                   RAW DATA:
-                  - GA4: ${conn.ga4 ? `${data.ga4.sessions} sessions, ${data.ga4.bounceRate}% bounce` : 'NO DATA'}
-                  - GSC: ${conn.gsc ? `${data.gsc.clicks} clicks, #${data.gsc.avgPosition} position` : 'NO DATA'}
-                  - Google Ads: ${conn.googleAds ? `$${data.googleAds.spend} spend, ${data.googleAds.conversions} conversions` : 'NO DATA'}
-                  - FB Ads: ${conn.facebookAds ? `$${data.facebookAds.spend} spend, ${data.facebookAds.roas}x ROAS` : 'NO DATA'}
-                  - Top page: ${data.topPages[0]?.url || 'Home'}.
+                  - GA4: ${conn.ga4 ? `${data.ga4.sessions} sessions (${data.ga4.growth}% growth), ${data.ga4.bounceRate}% bounce (Prior: ${data.ga4.priorSessions})` : 'NO DATA'}
+                  - GSC: ${conn.gsc ? `${data.gsc.clicks} clicks (${data.gsc.growth}% growth), #${data.gsc.avgPosition} pos (Prior: ${data.gsc.priorClicks})` : 'NO DATA'}
+                  - Google Ads: ${conn.googleAds ? `$${data.googleAds.spend} spend, ${data.googleAds.conversions} conv (${data.googleAds.growth}% growth), ${data.googleAds.ctr}% CTR` : 'NO DATA'}
+                  - FB Ads: ${conn.facebookAds ? `$${data.facebookAds.spend} spend, ${data.facebookAds.roas}x ROAS, ${data.facebookAds.reach} reach` : 'NO DATA'}
+                  - Top page: ${data.topPages[0]?.url || 'Home'} (${data.topPages[0]?.views || 0} views).
 
                   EXPECTED JSON FORMAT:
                   {
