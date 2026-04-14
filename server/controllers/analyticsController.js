@@ -142,12 +142,12 @@ export const getDashboardSummary = async (req, res) => {
 
         ga4Ts.forEach(d => { if (tsMap[d._id]) tsMap[d._id].Sessions = d.sessions; });
         gscTs.forEach(d => { if (tsMap[d._id]) tsMap[d._id].Clicks = d.clicks; });
-        adsTs.forEach(d => { 
-            if (tsMap[d._id]) { 
-                tsMap[d._id].Spend = d.spend; 
-                tsMap[d._id].Conversions = d.conversions; 
-                tsMap[d._id].Impressions = d.impressions; 
-            } 
+        adsTs.forEach(d => {
+            if (tsMap[d._id]) {
+                tsMap[d._id].Spend = d.spend;
+                tsMap[d._id].Conversions = d.conversions;
+                tsMap[d._id].Impressions = d.impressions;
+            }
         });
 
         // STEP 5: Strategic AI Intelligence
@@ -162,62 +162,84 @@ export const getDashboardSummary = async (req, res) => {
 
         const generateIntelligence = async (data) => {
             try {
+                const conn = {
+                    ga4: !!acc?.ga4PropertyId,
+                    gsc: !!acc?.gscSiteUrl,
+                    googleAds: !!acc?.googleAdsCustomerId,
+                    facebookAds: !!acc?.facebookAdAccountId
+                };
+
                 const prompt = `
-                  Analyze this marketing data and provide EXACTLY 16 professional, punchy, one-liner summaries (Max 10 words each).
+                  Analyze this marketing data and provide EXACTLY 16 professional, data-driven one-liners.
+                  Each response must combine a SUMMARY (What happened) with a STRATEGIC INSIGHT (What it means/What to do).
+
+                  CONNECTION STATUS:
+                  - GA4: ${conn.ga4 ? 'ONLINE' : 'OFFLINE'}
+                  - GSC: ${conn.gsc ? 'ONLINE' : 'OFFLINE'}
+                  - Google Ads: ${conn.googleAds ? 'ONLINE' : 'OFFLINE'}
+                  - Facebook Ads: ${conn.facebookAds ? 'ONLINE' : 'OFFLINE'}
 
                   RAW DATA:
-                  - GA4: ${data.ga4.sessions} sessions, ${data.ga4.bounceRate}% bounce.
-                  - GSC: ${data.gsc.clicks} clicks, #${data.gsc.avgPosition} pos.
-                  - Google Ads: $${data.googleAds.spend} spend, ${data.googleAds.conversions} conv.
-                  - FB Ads: $${data.facebookAds.spend} spend, ${data.facebookAds.roas}x ROAS.
+                  - GA4: ${conn.ga4 ? `${data.ga4.sessions} sessions, ${data.ga4.bounceRate}% bounce` : 'NO DATA'}
+                  - GSC: ${conn.gsc ? `${data.gsc.clicks} clicks, #${data.gsc.avgPosition} position` : 'NO DATA'}
+                  - Google Ads: ${conn.googleAds ? `$${data.googleAds.spend} spend, ${data.googleAds.conversions} conversions` : 'NO DATA'}
+                  - FB Ads: ${conn.facebookAds ? `$${data.facebookAds.spend} spend, ${data.facebookAds.roas}x ROAS` : 'NO DATA'}
                   - Top page: ${data.topPages[0]?.url || 'Home'}.
 
-                  EXPECTED JSON FORMAT (Strictly 16 single-string fields):
+                  EXPECTED JSON FORMAT:
                   {
-                    "websiteSummary": "Overall site performance summary.",
-                    "overviewGA4": "GA4 card insight.",
-                    "overviewGSC": "GSC card insight.",
-                    "overviewGAds": "Google Ads card insight.",
-                    "overviewFAds": "FB Ads card insight.",
-                    "overviewHealth": "Audit score card insight.",
-                    "metricTraffic": "Total traffic card insight.",
-                    "metricClicks": "Organic clicks card insight.",
-                    "metricSpend": "Total ad spend card insight.",
-                    "metricConversions": "Total conversions card insight.",
-                    "metricImpressions": "Total ad impressions card insight.",
-                    "metricEfficiency": "Efficiency score card insight.",
-                    "adWinnerInsight": "Ads comparison table insight.",
-                    "growthMatrixInsight": "Growth matrix chart insight.",
-                    "topPagesInsight": "Top pages table insight.",
-                    "comparisonInsight": "Prior period comparison table insight."
+                    "websiteSummary": "Overall summary + Strategic takeaway (Max 25 words).",
+                    "overviewGA4": "GA4 data summary + Insight (Max 25 words).",
+                    "overviewGSC": "GSC data summary + Insight (Max 25 words).",
+                    "overviewGAds": "Google Ads data summary + Insight (Max 25 words).",
+                    "overviewFAds": "FB Ads data summary + Insight (Max 25 words).",
+                    "overviewHealth": "Audit score summary + SEO implication (Max 30 words).",
+                    "metricTraffic": "Traffic trend + Engagement insight (Max 20 words).",
+                    "metricClicks": "Organic trend + Keyword strategy (Max 20 words).",
+                    "metricSpend": "Spend summary + Budget efficiency insight (Max 20 words).",
+                    "metricConversions": "Conversion summary + Scaling advice (Max 20 words).",
+                    "metricImpressions": "Reach summary + Brand awareness insight (Max 20 words).",
+                    "metricEfficiency": "Efficiency trend + ROI optimization tip (Max 20 words).",
+                    "adWinnerInsight": "Detailed comparison of Google vs Meta ads and platform winner (Max 40 words).",
+                    "growthMatrixInsight": "Deep analysis of growth momentum and trajectory (Max 40 words).",
+                    "topPagesInsight": "Conversion potential analysis of highest traffic pages (Max 40 words).",
+                    "comparisonInsight": "Strategic mapping of current vs prior period data (Max 40 words)."
                   }
 
                   STRICT RULES:
-                  1. Each field must be a SINGLE punchy string (Max 10 words).
-                  2. NO arrays. NO markdown. ONLY valid JSON.
+                  1. If a source is OFFLINE, the corresponding insight MUST be exactly: "Connect [Platform Name] to unlock insights."
+                  2. Combine SUMMARY + INSIGHT in every line.
+                  3. Follow individual word limits strictly as defined in the JSON structure.
+                  4. NO markdown. ONLY valid JSON.
                 `;
                 const aiRes = await callGemini(prompt, [], "Respond ONLY with JSON.");
                 return JSON.parse(aiRes.content.replace(/```json|```/g, '').trim());
             } catch (error) {
                 console.error("Gemini AI failed, using Data-Driven Fallback Engine:", error);
                 const hScore = data.ga4.sessions > 0 ? (data.ga4.bounceRate < 50 ? 85 : 65) : 50;
+                const conn = {
+                    ga4: !!acc?.ga4PropertyId,
+                    gsc: !!acc?.gscSiteUrl,
+                    googleAds: !!acc?.googleAdsCustomerId,
+                    facebookAds: !!acc?.facebookAdAccountId
+                };
                 return {
-                    websiteSummary: `Monitoring ${data.siteName} performance across core metrics.`,
-                    overviewGA4: `Analyzing high-volume traffic across user engagement.`,
-                    overviewGSC: data.gsc.clicks > 0 ? "SEO visibility is showing stable organic growth." : "Connect GSC to monitor search performance.",
-                    overviewGAds: data.googleAds.spend > 0 ? "Google Ads campaigns are actively spending." : "Activate Google Ads to monitor paid performance.",
-                    overviewFAds: data.facebookAds.spend > 0 ? "Facebook ad reach is expanding profitably." : "Link Facebook Ads for social performance.",
-                    overviewHealth: "Exceptional health score optimized for delivery.",
-                    metricTraffic: `Traffic is currently stable at ${data.ga4.sessions} sessions.`,
-                    metricClicks: `Organic search is driving ${data.gsc.clicks} targeted clicks.`,
-                    metricSpend: `Combined ad investment is $${data.googleAds.spend + data.facebookAds.spend}.`,
-                    metricConversions: `Conversion tracking has captured ${data.googleAds.conversions} events.`,
-                    metricImpressions: `Paid media reach is generating steady impressions.`,
-                    metricEfficiency: `Calculated efficiency reflects optimal ROAS levels.`,
-                    adWinnerInsight: "Platform performance comparison shows clear efficiency leaders.",
-                    growthMatrixInsight: "Real-time performance distribution across timeframe.",
-                    topPagesInsight: "Analyzing most engaging landing pages for optimization.",
-                    comparisonInsight: "Historical growth mapping vs previous period data.",
+                    websiteSummary: `Monitoring ${data.siteName} performance across core metrics; current data indicates stable growth momentum which suggests continuing with your existing baseline channel strategy.`,
+                    overviewGA4: conn.ga4 ? `Analyzing users and engagement for your site; user retention is looking healthy based on recent session patterns, bounce rate metrics, and average duration which indicates a strong content-market fit.` : "Connect Google Analytics to unlock traffic insights.",
+                    overviewGSC: conn.gsc ? "SEO visibility is showing stable organic growth; focus on optimizing title tags for pages with high impressions but low current CTR to capture more search traffic without creating new content." : "Connect Search Console to monitor keyword performance.",
+                    overviewGAds: conn.googleAds ? "Google Ads campaigns are actively spending; budget allocation is currently focused on high-performing conversion keywords for maximum efficiency and reduced waste across search and display channels." : "Link Google Ads to track your campaign efficiency.",
+                    overviewFAds: conn.facebookAds ? "Facebook ad reach is expanding profitably; visual assets are driving strong engagement which indicates a good opportunity to scale winners into broader lookalike audiences for better reach." : "Connect Facebook Ads to measure social reach.",
+                    overviewHealth: "Audit score optimized based on available data; technical SEO foundations are strong but regular monitoring of core web vitals and mobile usability is highly recommended for long-term rankings.",
+                    metricTraffic: conn.ga4 ? `Traffic is currently stable at ${data.ga4.sessions} sessions; consistent volume provides a solid foundation for testing new conversion ideas.` : "Connect GA4 to track session growth and monitor real-time user engagement trends across your platform.",
+                    metricClicks: conn.gsc ? `Organic search is driving ${data.gsc.clicks} clicks; maintaining this momentum requires building high-quality backlinks to your primary pages.` : "Link GSC to view organic clicks and understand which keywords are driving search traffic to your site.",
+                    metricSpend: (conn.googleAds || conn.facebookAds) ? `Combined ad investment is $${data.googleAds.spend + data.facebookAds.spend}; spend management is conservative and focused on high-performing conversion channels.` : "Connect Ad accounts to monitor spend and ensure your budget is being allocated to the most profitable channels.",
+                    metricConversions: (conn.googleAds || conn.facebookAds) ? `Conversion tracking has captured ${data.googleAds.conversions} events; analyze pathways to identify influential touchpoints and optimize the customer journey.` : "Connect Ads to track conversion goals and measure the true impact of your marketing efforts on sales.",
+                    metricImpressions: (conn.googleAds || conn.facebookAds) ? `Paid media reach is generating steady impressions; high brand visibility across search and social strengthens your profile.` : "Connect Ads to see total impressions and gauge the overall reach of your current advertising campaigns.",
+                    metricEfficiency: (conn.googleAds || conn.facebookAds) ? `Calculated efficiency reflects optimal ROAS levels; current CPA is within profitable margins, allowing for scaling of winning sets.` : "Connect Ads to calculate ROAS and identify which ad sets are delivering the best return on investment.",
+                    adWinnerInsight: (conn.googleAds && conn.facebookAds) ? "Our cross-platform performance comparison shows clear efficiency leaders in your current marketing campaigns; we strongly recommend reallocating a significant portion of the underperforming platform's budget into the specific ad sets that deliver the lowest cost per conversion for maximum ROI." : "Connect both Google and Facebook ad accounts to compare internal performance; linking multiple sources allows our AI to automatically identify platform winners and recommend budget shifts that can significantly lower your overall cost per acquisition across all digital channels.",
+                    growthMatrixInsight: "Real-time performance distribution across your historical timeframe shows positive momentum trends; future growth strategy should focus on maintaining high-intent keyword rankings while simultaneously expanding your paid media reach into high-quality lookalike audiences to capture untapped market share effectively for the long term.",
+                    topPagesInsight: conn.ga4 ? "Analyzing your most engaging landing pages reveals high potential for conversion rate optimization; we recommend adding much stronger, localized calls-to-action to pages that demonstrate high session duration but low conversion rates to convert that existing traffic into meaningful business leads." : "Connect Google Analytics 4 to view your top performing pages; identifying your highest quality landing pages is critical for understanding user behavior and optimizing the overall conversion funnel flow to ensure that every visitor has a clear path to purchase.",
+                    comparisonInsight: "Historical growth mapping versus prior period data indicates that your multi-channel digital strategy is successfully driving results; monthly trends show that organic and paid sources are complementing each other perfectly to create an overall brand lift that increases search visibility.",
                     healthScore: hScore
                 };
             }
@@ -226,43 +248,43 @@ export const getDashboardSummary = async (req, res) => {
         const intelligence = await generateIntelligence(dataForAI);
         const totalSessions = ga.sessions || 0;
         const result = {
-            userName: req.user?.name || 'User',
+            userName: req.user?.displayName || 'User',
             siteName: acc?.siteName || 'Select Website',
             lastDailySyncAt: acc?.lastDailySyncAt,
             syncStatus: acc?.syncStatus || 'idle',
             isHistoricalSyncComplete: acc?.isHistoricalSyncComplete || false,
 
-            ga4: { 
-                ...ga, 
-                priorSessions: pGa.sessions, 
+            ga4: {
+                ...ga,
+                priorSessions: pGa.sessions,
                 priorUsers: pGa.users,
-                growthSessions: calculateGrowth(ga.sessions, pGa.sessions), 
-                growthUsers: calculateGrowth(ga.users, pGa.users), 
-                growthStatus: ga.sessions >= pGa.sessions ? 'positive' : 'negative' 
+                growthSessions: calculateGrowth(ga.sessions, pGa.sessions),
+                growthUsers: calculateGrowth(ga.users, pGa.users),
+                growthStatus: ga.sessions >= pGa.sessions ? 'positive' : 'negative'
             },
-            gsc: { 
-                ...gs, 
-                priorClicks: pGs.clicks, 
+            gsc: {
+                ...gs,
+                priorClicks: pGs.clicks,
                 priorImpressions: pGs.impressions,
                 growthClicks: calculateGrowth(gs.clicks, pGs.clicks),
-                growthImpressions: calculateGrowth(gs.impressions, pGs.impressions), 
-                growthStatus: gs.clicks >= pGs.clicks ? 'positive' : 'negative' 
+                growthImpressions: calculateGrowth(gs.impressions, pGs.impressions),
+                growthStatus: gs.clicks >= pGs.clicks ? 'positive' : 'negative'
             },
-            googleAds: { 
-                ...ad.google, 
-                priorConversions: pAd.google.conversions, 
+            googleAds: {
+                ...ad.google,
+                priorConversions: pAd.google.conversions,
                 priorSpend: pAd.google.spend,
-                growthConversions: calculateGrowth(ad.google.conversions, pAd.google.conversions), 
-                growthSpend: calculateGrowth(ad.google.spend, pAd.google.spend), 
-                growthStatus: ad.google.conversions >= pAd.google.conversions ? 'positive' : 'negative' 
+                growthConversions: calculateGrowth(ad.google.conversions, pAd.google.conversions),
+                growthSpend: calculateGrowth(ad.google.spend, pAd.google.spend),
+                growthStatus: ad.google.conversions >= pAd.google.conversions ? 'positive' : 'negative'
             },
-            facebookAds: { 
-                ...ad.facebook, 
-                priorSpend: pAd.facebook.spend, 
+            facebookAds: {
+                ...ad.facebook,
+                priorSpend: pAd.facebook.spend,
                 priorReach: pAd.facebook.reach,
-                growthSpend: calculateGrowth(ad.facebook.spend, pAd.facebook.spend), 
-                growthReach: calculateGrowth(ad.facebook.reach, pAd.facebook.reach), 
-                growthStatus: ad.facebook.spend <= pAd.facebook.spend ? 'positive' : 'negative' 
+                growthSpend: calculateGrowth(ad.facebook.spend, pAd.facebook.spend),
+                growthReach: calculateGrowth(ad.facebook.reach, pAd.facebook.reach),
+                growthStatus: ad.facebook.spend <= pAd.facebook.spend ? 'positive' : 'negative'
             },
 
             adWinners: {
@@ -276,12 +298,12 @@ export const getDashboardSummary = async (req, res) => {
 
             // Analytics Assets
             timeseries: Object.values(tsMap).sort((a, b) => a.date.localeCompare(b.date)),
-            topPages: topPages.map(p => ({ 
-                url: p._id || '/', 
-                visitors: p.users, 
-                views: p.views, 
-                bounce: (p.bounceRate || 0).toFixed(0) + '%', 
-                share: totalSessions > 0 ? ((p.users / totalSessions) * 100).toFixed(1) : 0 
+            topPages: topPages.map(p => ({
+                url: p._id || '/',
+                visitors: p.users,
+                views: p.views,
+                bounce: (p.bounceRate || 0).toFixed(0) + '%',
+                share: totalSessions > 0 ? ((p.users / totalSessions) * 100).toFixed(1) : 0
             })),
 
             // AI Intelligence Package

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import AiSectionChat from '../components/ai/AiSectionChat';
+
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/ui/DashboardLayout';
 import Logo from '../components/ui/Logo';
@@ -20,15 +20,12 @@ import {
   SparklesIcon,
   ChevronRightIcon,
   ChevronDownIcon,
-  PlusIcon,
   ArrowPathIcon,
   ArrowDownTrayIcon,
   CalendarIcon,
   ComputerDesktopIcon,
   ArrowUpIcon,
-  ArrowDownIcon,
-  MagnifyingGlassIcon,
-  ArrowTrendingUpIcon
+  ArrowDownIcon
 } from '@heroicons/react/24/outline';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import api from '../api';
@@ -291,17 +288,13 @@ const DashboardPage = () => {
   }, [isSyncingHistorical, setUserSites]);
 
   const { user } = useAuthStore();
-  const totalTraffic = (overviewData.ga4?.sessions || 0);
-  const searchClicks = (overviewData.gsc?.clicks || 0);
-  const totalAdSpend = (overviewData.facebookAds?.spend || 0) + (overviewData.googleAds?.spend || 0);
-  const totalAdImpressions = (overviewData.facebookAds?.impressions || 0) + (overviewData.googleAds?.impressions || 0);
-  const totalConversions = (overviewData.googleAds?.conversions || 0) + (overviewData.facebookAds?.conversions || 0);
+
 
   const filteredPages = topPages.filter(p =>
     (p.url?.toLowerCase() || '').includes(searchQuery.toLowerCase())
   );
 
-  const healthScore = overviewData.intelligence?.healthScore || 72;
+
 
   const pageColumns = [
     {
@@ -388,258 +381,6 @@ const DashboardPage = () => {
         )}
 
         <div id="dashboard-report" className="flex flex-col space-y-8 min-w-0">
-          <div className={`bg-white/60 dark:bg-dark-card/60 backdrop-blur-xl border border-neutral-200/60 dark:border-neutral-800/60 rounded-[2.5rem] shadow-sm relative group flex flex-col animate-in fade-in slide-in-from-bottom-5 duration-1000 ${(isDateMenuOpen || isDeviceMenuOpen) ? 'z-40' : 'z-10'}`}>
-            <div className="absolute inset-x-0 top-0 h-32 rounded-t-[2.5rem] overflow-hidden pointer-events-none">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 rounded-full blur-[100px] -mr-32 -mt-32 group-hover:bg-brand-500/10 transition-colors"></div>
-            </div>
-
-            <div className="p-4 md:py-5 md:px-8 relative z-10">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-                <div className="flex-1 space-y-4">
-                  <div className="space-y-0.5">
-                    <h1 className="text-xl lg:text-4xl font-black tracking-tight text-neutral-900 dark:text-white leading-none">
-                      Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'},
-                      <span className="ml-2 bg-gradient-to-r from-brand-600 to-accent-500 bg-clip-text text-transparent capitalize">
-                        {overviewData.userName || user?.name || 'Pilot'}
-                      </span>
-                    </h1>
-                  </div>
-
-                  <div className="space-y-1.5 border-l-2 border-brand-500/20 pl-4">
-                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-600 dark:text-brand-400 shrink-0">Website Summary</p>
-                    <h2 className="text-2xl lg:text-3xl font-black text-neutral-900 dark:text-white tracking-tight leading-none">{overviewData.siteName || activeSite?.siteName || 'RankPilot'}</h2>
-                    <p className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-sm mt-2">
-                          {overviewData.intelligence?.websiteSummary || `Monitoring ${overviewData.siteName || activeSite?.siteName} performance across your marketing channels.`}
-                        </p>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-3 pt-2">
-                    <div className="flex items-center gap-3">
-                      <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${syncMetadata?.syncStatus === 'syncing' ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-100/50 dark:border-blue-500/20' : 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100/50 dark:border-emerald-500/20'}`}>
-                        <div className={`w-1 h-1 rounded-full ${syncMetadata?.syncStatus === 'syncing' ? 'bg-blue-500 animate-spin' : 'bg-emerald-500 animate-pulse'}`}></div>
-                        <span className={`text-[8px] font-black uppercase tracking-widest ${syncMetadata?.syncStatus === 'syncing' ? 'text-blue-600 dark:text-blue-500' : 'text-emerald-600 dark:text-emerald-500'}`}>
-                          {syncMetadata?.syncStatus === 'syncing' ? 'Syncing...' : 'Active'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 border-l border-neutral-200 dark:border-neutral-800 pl-3">
-                        <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Synced:</span>
-                        <span className="text-[9px] font-black text-neutral-600 dark:text-neutral-300 uppercase">
-                          {syncMetadata?.lastDailySyncAt ? new Date(syncMetadata.lastDailySyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}
-                        </span>
-                        <button
-                          onClick={handleManualRefresh}
-                          disabled={loading || syncMetadata?.syncStatus === 'syncing'}
-                          className={`hover:rotate-180 transition-all duration-700 bg-neutral-100 dark:bg-neutral-800 p-1 rounded-lg ${loading || syncMetadata?.syncStatus === 'syncing' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                          <ArrowPathIcon className={`w-3 h-3 text-neutral-500 ${(loading || syncMetadata?.syncStatus === 'syncing') ? 'animate-spin' : ''}`} />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-800 mx-1 hidden sm:block"></div>
-
-                    <div className="relative">
-                      <button
-                        onClick={() => { setIsDateMenuOpen(!isDateMenuOpen); setIsDeviceMenuOpen(false); }}
-                        className={`flex items-center gap-2 px-2.5 py-1 transition-all active:scale-95 group/date rounded-full border shadow-sm ${isDateMenuOpen
-                          ? 'bg-brand-600 border-brand-500 text-white'
-                          : 'bg-white/50 dark:bg-dark-surface/50 border-neutral-200/50 dark:border-neutral-800'
-                          }`}
-                      >
-                        <CalendarIcon className={`w-3.5 h-3.5 ${isDateMenuOpen ? 'text-white' : 'text-brand-600'}`} />
-                        <span className={`text-[9px] font-black uppercase tracking-widest ${isDateMenuOpen ? 'text-white' : 'text-neutral-600 dark:text-neutral-300'}`}>
-                          {preset === 'custom' ? 'Range' : preset}
-                        </span>
-                        <ChevronDownIcon className={`w-3 h-3 transition-transform ${isDateMenuOpen ? 'rotate-180 opacity-100' : 'opacity-40'}`} />
-                      </button>
-
-                      {isDateMenuOpen && (
-                        <div className="absolute top-full left-0 mt-2 z-[100] bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl p-1.5 min-w-[160px] animate-in fade-in zoom-in-95 duration-200">
-                          {!isCustomDateMode ? (
-                            <>
-                              {[
-                                { label: 'Today', value: 'today', days: 0 },
-                                { label: 'Yesterday', value: 'yesterday', days: 1 },
-                                { label: 'Last 7 Days', value: '7d', days: 7 },
-                                { label: 'Last 28 Days', value: '28d', days: 28 },
-                                { label: 'Last 90 Days', value: '90d', days: 90 },
-                                { label: 'Last Year', value: '1y', days: 365 },
-                                { label: 'Custom Range', value: 'custom', icon: CalendarIcon },
-                              ].map((p) => (
-                                <button
-                                  key={p.value}
-                                  onClick={() => handleDatePresetSelect(p)}
-                                  className={`w-full text-left px-3 py-2 rounded-xl text-[10px] font-bold transition-all flex items-center justify-between ${preset === p.value
-                                    ? 'bg-brand-600 text-white shadow-lg shadow-brand-500/20'
-                                    : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                                    }`}
-                                >
-                                  {p.label}
-                                  {p.value === 'custom' && <ChevronRightIcon className="w-3 h-3 opacity-50" />}
-                                </button>
-                              ))}
-                            </>
-                          ) : (
-                            <div className="p-2 space-y-3">
-                              <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-black uppercase text-neutral-400">Custom</span>
-                                <button onClick={() => setIsCustomDateMode(false)} className="text-[10px] font-bold text-brand-600 hover:underline">Back</button>
-                              </div>
-                              <div className="space-y-2">
-                                <div>
-                                  <label className="text-[8px] font-black text-neutral-400 uppercase ml-1">Start</label>
-                                  <input
-                                    type="date"
-                                    value={tempDateRange.start}
-                                    onChange={(e) => setTempDateRange({ ...tempDateRange, start: e.target.value })}
-                                    className="w-full bg-neutral-100 dark:bg-neutral-800 border-none rounded-lg px-2 py-1.5 text-[10px] font-bold outline-none"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-[8px] font-black text-neutral-400 uppercase ml-1">End</label>
-                                  <input
-                                    type="date"
-                                    value={tempDateRange.end}
-                                    onChange={(e) => setTempDateRange({ ...tempDateRange, end: e.target.value })}
-                                    className="w-full bg-neutral-100 dark:bg-neutral-800 border-none rounded-lg px-2 py-1.5 text-[10px] font-bold outline-none"
-                                  />
-                                </div>
-                              </div>
-                              <button
-                                onClick={handleApplyCustomDate}
-                                className="w-full py-2 bg-brand-600 text-white text-[10px] font-black rounded-lg shadow-lg shadow-brand-500/20 active:scale-95 transition-all"
-                              >
-                                APPLY RANGE
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-800 mx-1 hidden sm:block"></div>
-
-                    <div className="relative">
-                      <button
-                        onClick={() => { setIsDeviceMenuOpen(!isDeviceMenuOpen); setIsDateMenuOpen(false); }}
-                        className={`flex items-center gap-2 px-2.5 py-1 transition-all active:scale-95 group/device rounded-full border shadow-sm ${isDeviceMenuOpen
-                          ? 'bg-amber-500 border-amber-400 text-white'
-                          : 'bg-white/50 dark:bg-dark-surface/50 border-neutral-200/50 dark:border-neutral-800'
-                          }`}
-                      >
-                        <ComputerDesktopIcon className={`w-3.5 h-3.5 ${isDeviceMenuOpen ? 'text-white' : 'text-amber-500'}`} />
-                        <span className={`text-[9px] font-black uppercase tracking-widest ${isDeviceMenuOpen ? 'text-white' : 'text-neutral-600 dark:text-neutral-300'}`}>
-                          {device || 'All'}
-                        </span>
-                        <ChevronDownIcon className={`w-3 h-3 transition-transform ${isDeviceMenuOpen ? 'rotate-180 opacity-100' : 'opacity-40'}`} />
-                      </button>
-
-                      {isDeviceMenuOpen && (
-                        <div className="absolute top-full left-0 mt-2 z-[100] bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl p-1.5 min-w-[120px] animate-in fade-in zoom-in-95 duration-200">
-                          {[
-                            { label: 'All Devices', value: '', icon: FunnelIcon },
-                            { label: 'Mobile', value: 'mobile', icon: DevicePhoneMobileIcon },
-                            { label: 'Desktop', value: 'desktop', icon: ComputerDesktopIcon },
-                            { label: 'Tablet', value: 'tablet', icon: DeviceTabletIcon },
-                          ].map((d) => (
-                            <button
-                              key={d.value}
-                              onClick={() => handleDeviceSelect(d.value)}
-                              className={`w-full text-left px-3 py-2 rounded-xl text-[10px] font-bold transition-all flex items-center gap-2 ${(device || '') === d.value
-                                ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20'
-                                : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                                }`}
-                            >
-                              <d.icon className="w-3 h-3" />
-                              {d.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-col md:flex-row gap-6 lg:items-center">
-                  <div className="grid grid-cols-2 gap-3 shrink-0">
-                    {[
-                      { id: 'ga4', active: !!activeGa4PropertyId, label: 'GA4 Analytics', logo: <Ga4Logo className="w-5 h-5" />, color: 'bg-orange-50' },
-                      { id: 'google-ads', active: !!activeGoogleAdsCustomerId, label: 'Google Ads', logo: <GoogleAdsLogo className="w-5 h-5" />, color: 'bg-amber-50' },
-                      { id: 'gsc', active: !!activeGscSite, label: 'Search Console', logo: <GscLogo className="w-5 h-5" />, color: 'bg-blue-50' },
-                      { id: 'facebook', active: !!activeFacebookAdAccountId, label: 'Facebook Ads', logo: <FacebookAdsLogo className="w-5 h-5" />, color: 'bg-blue-50' }
-                    ].map((card) => (
-                      <div key={card.id} className="flex flex-col gap-1.5 p-3 bg-white dark:bg-dark-surface border border-neutral-100 dark:border-neutral-800 rounded-2xl w-40 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md">
-                        <div className="flex items-center justify-between">
-                          <div className={`w-8 h-8 rounded-xl ${card.color} dark:bg-opacity-10 flex items-center justify-center shrink-0`}>{card.logo}</div>
-                          <div className={`w-2 h-2 rounded-full ${card.active ? 'bg-emerald-500 animate-pulse' : 'bg-neutral-300'}`}></div>
-                        </div>
-                        <div>
-                          <p className="text-[9px] font-black uppercase tracking-widest text-neutral-400 leading-none mb-1">{card.label}</p>
-                          <p className={`font-black uppercase tracking-tight ${card.active ? 'text-emerald-600 dark:text-emerald-400 text-[10px]' : 'text-neutral-400 text-[10px]'}`}>
-                            {card.active ? 'Connected' : 'Not Connected'}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="flex flex-col gap-2 min-w-[200px]">
-                    <AiSectionChat
-                      label="AI Summary"
-                      sectionTitle="Total Dashboard Summary"
-                      activeSources={['ga4', 'gsc', 'google-ads', 'facebook-ads']}
-                      contextPrompt={`Analyze complete brand dashboard for ${startDate} to ${endDate}. 
-                        - Total Web Traffic (GA4 Sessions): ${formatNumber(totalTraffic || 0)}
-                        - Total Organic Clicks (GSC): ${formatNumber(searchClicks || 0)}
-                        - Total Ad Spend (Meta + Google): ${formatCurrency(totalAdSpend || 0)}
-                        - Total Ad Conversions: ${formatNumber(totalConversions || 0)}
-                        - Overall Health Score: ${healthScore}/100.
-                        Strategic review: Brannd Performance, Efficiency, Strategy.`}
-                    />
-                    <button
-                      onClick={() => exportToPdf('dashboard-report', `RankPilot-Dashboard-${activeSite?.siteName || 'Report'}`)}
-                      className="px-4 py-2 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 rounded-2xl text-[10px] font-black flex items-center justify-center gap-2 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all shadow-sm active:scale-95 w-full uppercase tracking-wider"
-                    >
-                      <ArrowDownTrayIcon className="w-4 h-4" />
-                      Download PDF
-                    </button>
-                    <div className="flex flex-col gap-2.5 p-3.5 bg-brand-50/30 dark:bg-brand-500/5 border border-brand-100/50 dark:border-brand-500/20 rounded-2xl shadow-sm relative overflow-hidden group">
-                      {loading ? (
-                        <div className="animate-pulse flex items-center justify-between relative z-10">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-9 h-9 rounded-xl bg-neutral-200 dark:bg-neutral-800" />
-                            <div className="space-y-1.5">
-                              <div className="h-2 w-16 bg-neutral-200 dark:bg-neutral-800 rounded-full" />
-                              <div className="h-2 w-10 bg-neutral-100 dark:bg-neutral-900 rounded-full" />
-                            </div>
-                          </div>
-                          <div className="w-12 h-6 bg-neutral-200 dark:bg-neutral-800 rounded-lg" />
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between relative z-10">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-9 h-9 rounded-xl bg-brand-500 flex items-center justify-center text-white shadow-lg shadow-brand-500/20 font-black text-xs">H</div>
-                            <div className="space-y-0.5">
-                              <p className="text-[9px] font-black uppercase text-brand-600 dark:text-brand-400 tracking-widest leading-none">Audit Score</p>
-                              <div className={`px-1.5 py-0.5 rounded text-[6px] font-black uppercase tracking-tighter ${healthScore >= 80 ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'} w-fit`}>
-                                {healthScore >= 80 ? 'Optimal' : 'Needs Review'}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-2xl font-black text-brand-600 dark:text-brand-400 tracking-tighter leading-none">
-                              {healthScore}<span className="text-[8px] text-neutral-400 ml-0.5 font-bold">/100</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {!activeGscSite && !activeGa4PropertyId && !activeGoogleAdsCustomerId && !activeFacebookAdAccountId && !loading ? (
             <div className="flex flex-col items-center justify-center p-12 py-24 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-800 rounded-[3rem] text-center shadow-2xl relative overflow-hidden group/empty">
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-brand-500/5 rounded-full blur-[100px] pointer-events-none"></div>
@@ -651,55 +392,326 @@ const DashboardPage = () => {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8 mt-4">
-                {[
-                  { label: 'GA4 Source', title: 'Traffic + Trends', metric: activeGa4PropertyId ? (overviewData.ga4 ? formatNumber(overviewData.ga4.sessions) : '0') : null, desc: activeGa4PropertyId ? (overviewData.intelligence?.overviewGA4 || `Analyzing traffic across engagement.`) : 'Connect your GA4 property to activate traffic insights.', icon: <Ga4Logo className="w-3.5 h-3.5" />, color: 'bg-green-100/50 text-green-700 dark:bg-green-500/10 dark:text-green-400', active: !!activeGa4PropertyId, path: activeGa4PropertyId ? '/dashboard/ga4' : '/connect-accounts' },
-                  { label: 'Search Console', title: 'Organic Visibility', metric: activeGscSite ? (overviewData.gsc ? formatNumber(overviewData.gsc.impressions) : '0') : null, desc: activeGscSite ? (overviewData.intelligence?.overviewGSC || `Visibility on keywords.`) : 'Link GSC to track search impressions and organic clicks.', icon: <GscLogo className="w-3.5 h-3.5" />, color: 'bg-blue-100/50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400', active: !!activeGscSite, path: activeGscSite ? '/dashboard/gsc' : '/connect-accounts' },
-                  { label: 'Google Ads', title: 'Ad Performance', metric: activeGoogleAdsCustomerId ? (overviewData.googleAds ? formatNumber(overviewData.googleAds.clicks || 0) : '0') : null, desc: activeGoogleAdsCustomerId ? (overviewData.intelligence?.overviewGAds || `Monitoring ad campaigns.`) : 'Enable Google Ads to monitor total clicks and budget efficiency.', icon: <GoogleAdsLogo className="w-3.5 h-3.5" />, color: 'bg-amber-100/50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400', active: !!activeGoogleAdsCustomerId, path: activeGoogleAdsCustomerId ? '/dashboard/google-ads' : '/connect-accounts' },
-                  { label: 'Facebook Ads', title: 'Ad Reach', metric: activeFacebookAdAccountId ? (overviewData.facebookAds ? formatNumber(overviewData.facebookAds.reach || 0) : '0') : null, desc: activeFacebookAdAccountId ? (overviewData.intelligence?.overviewFAds || 'Reach from Facebook ads.') : 'Connect Facebook Ads to measure reach and total impressions.', icon: <FacebookAdsLogo className="w-3.5 h-3.5" />, color: 'bg-blue-100/50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400', active: !!activeFacebookAdAccountId, path: activeFacebookAdAccountId ? '/dashboard/facebook-ads' : '/connect-accounts' },
-                  { label: 'Site Health', title: 'Audit Score', metric: healthScore, desc: overviewData.intelligence?.overviewHealth || (healthScore >= 80 ? 'Exceptional health score optimized.' : 'Optimization required for issues.'), icon: <RankPilotLogo className="w-3.5 h-3.5" />, color: healthScore >= 80 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700', active: true, path: '/dashboard/site-audit' }
-                ].map((card, i) => (
-                  <div key={i} onClick={() => navigate(card.path)} className={`bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-800/60 rounded-[3rem] p-7 shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl group cursor-pointer overflow-hidden relative flex flex-col h-full min-h-[300px]`}>
-                    {loading ? (
-                      <div className="flex flex-col h-full animate-pulse">
-                        <div className="w-24 h-6 bg-neutral-100 dark:bg-neutral-800 rounded-full mb-6" />
-                        <div className="h-4 w-1/2 bg-neutral-100 dark:bg-neutral-800 rounded-lg mb-3" />
-                        <div className="h-10 w-3/4 bg-neutral-100 dark:bg-neutral-800 rounded-xl mb-6" />
-                        <div className="flex-grow space-y-2">
-                          <div className="h-3 w-full bg-neutral-50 dark:bg-neutral-800/50 rounded-lg" />
-                          <div className="h-3 w-full bg-neutral-50 dark:bg-neutral-800/50 rounded-lg" />
-                          <div className="h-3 w-2/3 bg-neutral-50 dark:bg-neutral-800/50 rounded-lg" />
+              <div className={`bg-white/60 dark:bg-dark-card/60 backdrop-blur-xl border border-neutral-200/60 dark:border-neutral-800/60 rounded-[2.5rem] shadow-sm relative group flex flex-col animate-in fade-in slide-in-from-bottom-5 duration-1000 ${(isDateMenuOpen || isDeviceMenuOpen) ? 'z-40' : 'z-10'}`}>
+                <div className="absolute inset-x-0 top-0 h-32 rounded-t-[2.5rem] overflow-hidden pointer-events-none">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 rounded-full blur-[100px] -mr-32 -mt-32 group-hover:bg-brand-500/10 transition-colors"></div>
+                </div>
+
+                <div className="p-4 md:py-5 md:px-8 relative z-10">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+                    <div className="flex-1 space-y-4">
+                      <div className="space-y-0.5">
+                        <h1 className="text-xl lg:text-4xl font-black tracking-tight text-neutral-900 dark:text-white leading-none">
+                          Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'},
+                          <span className="ml-2 bg-gradient-to-r from-brand-600 to-accent-500 bg-clip-text text-transparent capitalize">
+                            {overviewData.userName || user?.name || 'Pilot'}
+                          </span>
+                        </h1>
+                      </div>
+
+                      <div className="space-y-1.5 border-l-2 border-brand-500/20 pl-4">
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-600 dark:text-brand-400 shrink-0">Website Summary</p>
+                        <h2 className="text-2xl lg:text-3xl font-black text-neutral-900 dark:text-white tracking-tight leading-none">{overviewData.siteName || activeSite?.siteName || 'RankPilot'}</h2>
+                        <p className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-sm mt-2">
+                          {overviewData.intelligence?.websiteSummary || `Monitoring ${overviewData.siteName || activeSite?.siteName} performance across your marketing channels.`}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-3 pt-2">
+                        <div className="flex items-center gap-3">
+                          <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${syncMetadata?.syncStatus === 'syncing' ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-100/50 dark:border-blue-500/20' : 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100/50 dark:border-emerald-500/20'}`}>
+                            <div className={`w-1 h-1 rounded-full ${syncMetadata?.syncStatus === 'syncing' ? 'bg-blue-500 animate-spin' : 'bg-emerald-500 animate-pulse'}`}></div>
+                            <span className={`text-[8px] font-black uppercase tracking-widest ${syncMetadata?.syncStatus === 'syncing' ? 'text-blue-600 dark:text-blue-500' : 'text-emerald-600 dark:text-emerald-500'}`}>
+                              {syncMetadata?.syncStatus === 'syncing' ? 'Syncing...' : 'Active'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 border-l border-neutral-200 dark:border-neutral-800 pl-3">
+                            <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Synced:</span>
+                            <span className="text-[9px] font-black text-neutral-600 dark:text-neutral-300 uppercase">
+                              {syncMetadata?.lastDailySyncAt ? new Date(syncMetadata.lastDailySyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}
+                            </span>
+                            <button
+                              onClick={handleManualRefresh}
+                              disabled={loading || syncMetadata?.syncStatus === 'syncing'}
+                              className={`hover:rotate-180 transition-all duration-700 bg-neutral-100 dark:bg-neutral-800 p-1 rounded-lg ${loading || syncMetadata?.syncStatus === 'syncing' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                              <ArrowPathIcon className={`w-3 h-3 text-neutral-500 ${(loading || syncMetadata?.syncStatus === 'syncing') ? 'animate-spin' : ''}`} />
+                            </button>
+                          </div>
                         </div>
-                        <div className="mt-auto pt-6 border-t border-neutral-50 dark:border-neutral-800/50 flex justify-between items-center">
-                          <div className="w-24 h-3 bg-neutral-100 dark:bg-neutral-800 rounded-full" />
-                          <div className="w-4 h-4 bg-neutral-100 dark:bg-neutral-800 rounded-full" />
+
+                        <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-800 mx-1 hidden sm:block"></div>
+
+                        <div className="relative">
+                          <button
+                            onClick={() => { setIsDateMenuOpen(!isDateMenuOpen); setIsDeviceMenuOpen(false); }}
+                            className={`flex items-center gap-2 px-2.5 py-1 transition-all active:scale-95 group/date rounded-full border shadow-sm ${isDateMenuOpen
+                              ? 'bg-brand-600 border-brand-500 text-white'
+                              : 'bg-white/50 dark:bg-dark-surface/50 border-neutral-200/50 dark:border-neutral-800'
+                              }`}
+                          >
+                            <CalendarIcon className={`w-3.5 h-3.5 ${isDateMenuOpen ? 'text-white' : 'text-brand-600'}`} />
+                            <span className={`text-[9px] font-black uppercase tracking-widest ${isDateMenuOpen ? 'text-white' : 'text-neutral-600 dark:text-neutral-300'}`}>
+                              {preset === 'custom' ? 'Range' : preset}
+                            </span>
+                            <ChevronDownIcon className={`w-3 h-3 transition-transform ${isDateMenuOpen ? 'rotate-180 opacity-100' : 'opacity-40'}`} />
+                          </button>
+
+                          {isDateMenuOpen && (
+                            <div className="absolute top-full left-0 mt-2 z-[100] bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl p-1.5 min-w-[160px] animate-in fade-in zoom-in-95 duration-200">
+                              {!isCustomDateMode ? (
+                                <>
+                                  {[
+                                    { label: 'Today', value: 'today', days: 0 },
+                                    { label: 'Yesterday', value: 'yesterday', days: 1 },
+                                    { label: 'Last 7 Days', value: '7d', days: 7 },
+                                    { label: 'Last 28 Days', value: '28d', days: 28 },
+                                    { label: 'Last 90 Days', value: '90d', days: 90 },
+                                    { label: 'Last Year', value: '1y', days: 365 },
+                                    { label: 'Custom Range', value: 'custom', icon: CalendarIcon },
+                                  ].map((p) => (
+                                    <button
+                                      key={p.value}
+                                      onClick={() => handleDatePresetSelect(p)}
+                                      className={`w-full text-left px-3 py-2 rounded-xl text-[10px] font-bold transition-all flex items-center justify-between ${preset === p.value
+                                        ? 'bg-brand-600 text-white shadow-lg shadow-brand-500/20'
+                                        : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                                        }`}
+                                    >
+                                      {p.label}
+                                      {p.value === 'custom' && <ChevronRightIcon className="w-3 h-3 opacity-50" />}
+                                    </button>
+                                  ))}
+                                </>
+                              ) : (
+                                <div className="p-2 space-y-3">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-black uppercase text-neutral-400">Custom</span>
+                                    <button onClick={() => setIsCustomDateMode(false)} className="text-[10px] font-bold text-brand-600 hover:underline">Back</button>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <div>
+                                      <label className="text-[8px] font-black text-neutral-400 uppercase ml-1">Start</label>
+                                      <input
+                                        type="date"
+                                        value={tempDateRange.start}
+                                        onChange={(e) => setTempDateRange({ ...tempDateRange, start: e.target.value })}
+                                        className="w-full bg-neutral-100 dark:bg-neutral-800 border-none rounded-lg px-2 py-1.5 text-[10px] font-bold outline-none"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="text-[8px] font-black text-neutral-400 uppercase ml-1">End</label>
+                                      <input
+                                        type="date"
+                                        value={tempDateRange.end}
+                                        onChange={(e) => setTempDateRange({ ...tempDateRange, end: e.target.value })}
+                                        className="w-full bg-neutral-100 dark:bg-neutral-800 border-none rounded-lg px-2 py-1.5 text-[10px] font-bold outline-none"
+                                      />
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={handleApplyCustomDate}
+                                    className="w-full py-2 bg-brand-600 text-white text-[10px] font-black rounded-lg shadow-lg shadow-brand-500/20 active:scale-95 transition-all"
+                                  >
+                                    APPLY RANGE
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-800 mx-1 hidden sm:block"></div>
+
+                        <div className="relative">
+                          <button
+                            onClick={() => { setIsDeviceMenuOpen(!isDeviceMenuOpen); setIsDateMenuOpen(false); }}
+                            className={`flex items-center gap-2 px-2.5 py-1 transition-all active:scale-95 group/device rounded-full border shadow-sm ${isDeviceMenuOpen
+                              ? 'bg-amber-500 border-amber-400 text-white'
+                              : 'bg-white/50 dark:bg-dark-surface/50 border-neutral-200/50 dark:border-neutral-800'
+                              }`}
+                          >
+                            <ComputerDesktopIcon className={`w-3.5 h-3.5 ${isDeviceMenuOpen ? 'text-white' : 'text-amber-500'}`} />
+                            <span className={`text-[9px] font-black uppercase tracking-widest ${isDeviceMenuOpen ? 'text-white' : 'text-neutral-600 dark:text-neutral-300'}`}>
+                              {device || 'All'}
+                            </span>
+                            <ChevronDownIcon className={`w-3 h-3 transition-transform ${isDeviceMenuOpen ? 'rotate-180 opacity-100' : 'opacity-40'}`} />
+                          </button>
+
+                          {isDeviceMenuOpen && (
+                            <div className="absolute top-full left-0 mt-2 z-[100] bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl p-1.5 min-w-[120px] animate-in fade-in zoom-in-95 duration-200">
+                              {[
+                                { label: 'All Devices', value: '', icon: FunnelIcon },
+                                { label: 'Mobile', value: 'mobile', icon: DevicePhoneMobileIcon },
+                                { label: 'Desktop', value: 'desktop', icon: ComputerDesktopIcon },
+                                { label: 'Tablet', value: 'tablet', icon: DeviceTabletIcon },
+                              ].map((d) => (
+                                <button
+                                  key={d.value}
+                                  onClick={() => handleDeviceSelect(d.value)}
+                                  className={`w-full text-left px-3 py-2 rounded-xl text-[10px] font-bold transition-all flex items-center gap-2 ${(device || '') === d.value
+                                    ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20'
+                                    : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                                    }`}
+                                >
+                                  <d.icon className="w-3 h-3" />
+                                  {d.label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
-                    ) : (
-                      <>
-                        {!card.active && <div className="absolute top-6 right-6"><div className="w-8 h-8 rounded-full bg-neutral-50 dark:bg-neutral-800/50 flex items-center justify-center border border-neutral-100 dark:border-neutral-700/50 transition-all duration-500"><PlusIcon className="w-4 h-4" /></div></div>}
-                        <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${card.color} text-[10px] font-black mb-6 w-fit`}>{card.icon}{card.label}</div>
-                        <h3 className="text-lg font-black text-neutral-900 dark:text-white mb-2">{card.title}</h3>
-                        {card.metric ? <div className="text-4xl font-black text-neutral-900 dark:text-white tabular-nums mb-4">{card.metric}</div> : <div className="mb-4 py-1"><div className="text-[10px] font-black text-brand-600 dark:text-brand-400 uppercase tracking-widest opacity-60">Connect to Unlock</div></div>}
-                        <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 leading-relaxed mb-6 flex-grow">{card.desc}</p>
-                        <div className="mt-auto pt-4 border-t border-neutral-50 dark:border-neutral-800/50 flex items-center justify-between text-brand-600 dark:text-brand-400 text-[10px] font-black uppercase tracking-widest">
-                          <span>{card.active ? 'View Analytics' : 'Activate Insights'}</span>
-                          <ArrowRightIcon className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                    </div>
+
+                    <div className="flex flex-col md:flex-row gap-6 lg:items-center">
+                      <div className="grid grid-cols-2 gap-3 shrink-0">
+                        {[
+                          { id: 'ga4', active: !!activeGa4PropertyId, label: 'GA4 Analytics', logo: <Ga4Logo className="w-5 h-5" />, color: 'bg-orange-50' },
+                          { id: 'google-ads', active: !!activeGoogleAdsCustomerId, label: 'Google Ads', logo: <GoogleAdsLogo className="w-5 h-5" />, color: 'bg-amber-50' },
+                          { id: 'gsc', active: !!activeGscSite, label: 'Search Console', logo: <GscLogo className="w-5 h-5" />, color: 'bg-blue-50' },
+                          { id: 'facebook', active: !!activeFacebookAdAccountId, label: 'Facebook Ads', logo: <FacebookAdsLogo className="w-5 h-5" />, color: 'bg-blue-50' }
+                        ].map((card) => (
+                          <div key={card.id} className="flex flex-col gap-1.5 p-3 bg-white dark:bg-dark-surface border border-neutral-100 dark:border-neutral-800 rounded-2xl w-40 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md">
+                            <div className="flex items-center justify-between">
+                              <div className={`w-8 h-8 rounded-xl ${card.color} dark:bg-opacity-10 flex items-center justify-center shrink-0`}>{card.logo}</div>
+                              <div className={`w-2 h-2 rounded-full ${card.active ? 'bg-emerald-500 animate-pulse' : 'bg-neutral-300'}`}></div>
+                            </div>
+                            <div>
+                              <p className="text-[9px] font-black uppercase tracking-widest text-neutral-400 leading-none mb-1">{card.label}</p>
+                              <p className={`font-black uppercase tracking-tight ${card.active ? 'text-emerald-600 dark:text-emerald-400 text-[10px]' : 'text-neutral-400 text-[10px]'}`}>
+                                {card.active ? 'Connected' : 'Not Connected'}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex flex-col gap-2 min-w-[200px]">
+                        <button
+                          onClick={() => openWithQuestion(`Analyze complete brand dashboard for ${startDate} to ${endDate}. 
+                            - Total Web Traffic (GA4 Sessions): ${formatNumber(overviewData.ga4?.sessions || 0)}
+                            - Total Organic Clicks (GSC): ${formatNumber(overviewData.gsc?.clicks || 0)}
+                            - Total Ad Spend (Meta + Google): ${formatCurrency((overviewData.facebookAds?.spend || 0) + (overviewData.googleAds?.spend || 0))}
+                            - Total Ad Conversions: ${formatNumber((overviewData.googleAds?.conversions || 0) + (overviewData.facebookAds?.conversions || 0))}
+                            - Overall Health Score: ${overviewData.intelligence?.healthScore || 72}/100.
+                            Strategic review: Brand Performance, Efficiency, Strategy.`)}
+                          className="relative flex items-center justify-center px-3.5 py-2 gap-1.5 w-full sm:w-auto rounded-xl bg-brand-600/10 dark:bg-brand-500/10 border border-brand-500/20 dark:border-brand-500/25 text-brand-600 dark:text-brand-400 hover:bg-brand-600/15 dark:hover:bg-brand-500/15 hover:border-brand-500/35 hover:-translate-y-0.5 active:scale-95 transition-all duration-200 shadow-sm hover:shadow-brand-500/15 hover:shadow-md group"
+                        >
+                          <SparklesIcon className="w-3.5 h-3.5 flex-shrink-0 group-hover:rotate-12 transition-transform duration-300" />
+                          <span className="text-[11px] font-black uppercase tracking-wide whitespace-nowrap">AI Summary</span>
+                        </button>
+                        <button
+                          onClick={() => exportToPdf('dashboard-report', `RankPilot-Dashboard-${activeSite?.siteName || 'Report'}`)}
+                          className="px-4 py-2 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 rounded-2xl text-[10px] font-black flex items-center justify-center gap-2 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all shadow-sm active:scale-95 w-full uppercase tracking-wider"
+                        >
+                          <ArrowDownTrayIcon className="w-4 h-4" />
+                          Download PDF
+                        </button>
+                        <div className="flex flex-col gap-2.5 p-3.5 bg-brand-50/30 dark:bg-brand-500/5 border border-brand-100/50 dark:border-brand-500/20 rounded-2xl shadow-sm relative overflow-hidden group">
+                          {loading ? (
+                            <div className="animate-pulse flex items-center justify-between relative z-10">
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-9 h-9 rounded-xl bg-neutral-200 dark:bg-neutral-800" />
+                                <div className="space-y-1.5">
+                                  <div className="h-2 w-16 bg-neutral-200 dark:bg-neutral-800 rounded-full" />
+                                  <div className="h-2 w-10 bg-neutral-100 dark:bg-neutral-900 rounded-full" />
+                                </div>
+                              </div>
+                              <div className="w-12 h-6 bg-neutral-200 dark:bg-neutral-800 rounded-lg" />
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-between relative z-10">
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-9 h-9 rounded-xl bg-brand-500 flex items-center justify-center text-white shadow-lg shadow-brand-500/20 font-black text-xs">H</div>
+                                <div className="space-y-0.5">
+                                  <p className="text-[9px] font-black uppercase text-brand-600 dark:text-brand-400 tracking-widest leading-none">Audit Score</p>
+                                  <div className={`px-1.5 py-0.5 rounded text-[6px] font-black uppercase tracking-tighter ${(overviewData.intelligence?.healthScore || 72) >= 80 ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'} w-fit`}>
+                                    {(overviewData.intelligence?.healthScore || 72) >= 80 ? 'Optimal' : 'Needs Review'}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-2xl font-black text-brand-600 dark:text-brand-400 tracking-tighter leading-none">
+                                  {overviewData.intelligence?.healthScore || 72}<span className="text-[8px] text-neutral-400 ml-0.5 font-bold">/100</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </>
-                    )}
+                      </div>
+                    </div>
                   </div>
-                ))}
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <KpiCard title="Audience Traffic" value={formatNumber(totalTraffic)} change={overviewData.ga4?.growth || 0} isPositive={(overviewData.ga4?.growth || 0) >= 0} loading={loading} Icon={Ga4Logo} changeText="vs. last period" chartData={timeseriesData.map(d => d.Sessions)} disconnected={!activeGa4PropertyId} onClick={() => navigate(!activeGa4PropertyId ? '/connect-accounts' : '/dashboard/ga4')} insight={overviewData.intelligence?.metricTraffic} />
-                <KpiCard title="Google Search Clicks" value={formatNumber(searchClicks)} change={overviewData.gsc?.growth || 0} isPositive={(overviewData.gsc?.growth || 0) >= 0} loading={loading} Icon={GscLogo} changeText="organic search" chartData={timeseriesData.map(d => d.Clicks)} disconnected={!activeGscSite} onClick={() => navigate(!activeGscSite ? '/connect-accounts' : '/dashboard/gsc')} insight={overviewData.intelligence?.metricClicks} />
-                <KpiCard title="Total Ad Investment" value={formatCurrency(totalAdSpend)} change={Math.abs(overviewData.googleAds?.growth || 0)} isPositive={true} loading={loading} Icon={GoogleAdsLogo} changeText="combined spend" chartData={timeseriesData.map(d => d.Spend || 0)} disconnected={!activeGoogleAdsCustomerId && !activeFacebookAdAccountId} onClick={() => navigate((!activeGoogleAdsCustomerId && !activeFacebookAdAccountId) ? '/connect-accounts' : '/dashboard/google-ads')} insight={overviewData.intelligence?.metricSpend} />
-                <KpiCard title="Conversion Goals" value={formatNumber(totalConversions)} change={overviewData.googleAds?.growth || 0} isPositive={(overviewData.googleAds?.growth || 0) >= 0} loading={loading} Icon={SuccessLogo} changeText="all platforms" chartData={timeseriesData.map(d => d.Conversions || 0)} disconnected={!activeGoogleAdsCustomerId && !activeFacebookAdAccountId} onClick={() => navigate((!activeGoogleAdsCustomerId && !activeFacebookAdAccountId) ? '/connect-accounts' : '/dashboard/google-ads')} insight={overviewData.intelligence?.metricConversions} />
-                <KpiCard title="Marketing Impressions" value={formatNumber(totalAdImpressions)} change={overviewData.facebookAds?.growth || 0} isPositive={(overviewData.facebookAds?.growth || 0) >= 0} loading={loading} Icon={FacebookAdsLogo} changeText="paid reach" chartData={timeseriesData.map(d => d.Impressions || 0)} disconnected={!activeGoogleAdsCustomerId && !activeFacebookAdAccountId} onClick={() => navigate((!activeGoogleAdsCustomerId && !activeFacebookAdAccountId) ? '/connect-accounts' : '/dashboard/facebook-ads')} insight={overviewData.intelligence?.metricImpressions} />
-                <KpiCard title="Efficiency Score" value={totalAdSpend > 0 ? `${(totalConversions / (totalAdSpend / 100)).toFixed(1)}x` : '0.0x'} change={4.2} isPositive={true} loading={loading} Icon={PerformanceLogo} changeText="conversions per $100" chartData={timeseriesData.map(d => d.Spend > 0 ? (d.Conversions || 0) / ((d.Spend || 1) / 100) : 0)} disconnected={!activeGoogleAdsCustomerId && !activeFacebookAdAccountId} onClick={() => navigate((!activeGoogleAdsCustomerId && !activeFacebookAdAccountId) ? '/connect-accounts' : '/dashboard/google-ads')} insight={overviewData.intelligence?.metricEfficiency} />
+
+            
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <KpiCard title="Audience Traffic" value={formatNumber(overviewData.ga4?.sessions || 0)} change={overviewData.ga4?.growthSessions || 0} isPositive={(overviewData.ga4?.growthSessions || 0) >= 0} loading={loading} Icon={Ga4Logo} changeText="vs. last period" chartData={timeseriesData.map(d => d.Sessions)} disconnected={!activeGa4PropertyId} onClick={() => navigate(!activeGa4PropertyId ? '/connect-accounts' : '/dashboard/ga4')} insight={overviewData.intelligence?.metricTraffic} />
+                <KpiCard title="Google Search Clicks" value={formatNumber(overviewData.gsc?.clicks || 0)} change={overviewData.gsc?.growthClicks || 0} isPositive={(overviewData.gsc?.growthClicks || 0) >= 0} loading={loading} Icon={GscLogo} changeText="organic search" chartData={timeseriesData.map(d => d.Clicks)} disconnected={!activeGscSite} onClick={() => navigate(!activeGscSite ? '/connect-accounts' : '/dashboard/gsc')} insight={overviewData.intelligence?.metricClicks} />
+                <KpiCard title="Total Ad Investment" value={formatCurrency((overviewData.facebookAds?.spend || 0) + (overviewData.googleAds?.spend || 0))} change={Math.abs(overviewData.googleAds?.growthSpend || 0)} isPositive={(overviewData.googleAds?.growthSpend || 0) <= 0} loading={loading} Icon={GoogleAdsLogo} changeText="combined spend" chartData={timeseriesData.map(d => d.Spend || 0)} disconnected={!activeGoogleAdsCustomerId && !activeFacebookAdAccountId} onClick={() => navigate((!activeGoogleAdsCustomerId && !activeFacebookAdAccountId) ? '/connect-accounts' : '/dashboard/google-ads')} insight={overviewData.intelligence?.metricSpend} />
+                <KpiCard title="Conversion Goals" value={formatNumber((overviewData.googleAds?.conversions || 0) + (overviewData.facebookAds?.conversions || 0))} change={overviewData.googleAds?.growthConversions || 0} isPositive={(overviewData.googleAds?.growthConversions || 0) >= 0} loading={loading} Icon={SuccessLogo} changeText="all platforms" chartData={timeseriesData.map(d => d.Conversions || 0)} disconnected={!activeGoogleAdsCustomerId && !activeFacebookAdAccountId} onClick={() => navigate((!activeGoogleAdsCustomerId && !activeFacebookAdAccountId) ? '/connect-accounts' : '/dashboard/google-ads')} insight={overviewData.intelligence?.metricConversions} />
+                <KpiCard title="Marketing Impressions" value={formatNumber((overviewData.facebookAds?.impressions || 0) + (overviewData.googleAds?.impressions || 0))} change={overviewData.facebookAds?.growthReach || 0} isPositive={(overviewData.facebookAds?.growthReach || 0) >= 0} loading={loading} Icon={FacebookAdsLogo} changeText="paid reach" chartData={timeseriesData.map(d => d.Impressions || 0)} disconnected={!activeGoogleAdsCustomerId && !activeFacebookAdAccountId} onClick={() => navigate((!activeGoogleAdsCustomerId && !activeFacebookAdAccountId) ? '/connect-accounts' : '/dashboard/facebook-ads')} insight={overviewData.intelligence?.metricImpressions} />
+                <KpiCard title="Efficiency Score" value={((overviewData.facebookAds?.spend || 0) + (overviewData.googleAds?.spend || 0)) > 0 ? `+${((overviewData.googleAds?.conversions || 0) + (overviewData.facebookAds?.conversions || 0) / (((overviewData.facebookAds?.spend || 0) + (overviewData.googleAds?.spend || 0)) / 100)).toFixed(1)}x` : '0.0x'} change={4.2} isPositive={true} loading={loading} Icon={PerformanceLogo} changeText="conversions per $100" chartData={timeseriesData.map(d => d.Spend > 0 ? (d.Conversions || 0) / ((d.Spend || 1) / 100) : 0)} disconnected={!activeGoogleAdsCustomerId && !activeFacebookAdAccountId} onClick={() => navigate((!activeGoogleAdsCustomerId && !activeFacebookAdAccountId) ? '/connect-accounts' : '/dashboard/google-ads')} insight={overviewData.intelligence?.metricEfficiency} />
               </div>
+
+              {/* Enhanced Health & AI Intelligence Block */}
+              {!overviewData.intelligence ? (
+                <div className="bg-white dark:bg-dark-card border border-neutral-200/80 dark:border-neutral-700/60 rounded-[2rem] p-6 mb-8 animate-pulse shadow-sm shadow-brand-500/5">
+                  <div className="flex flex-col md:flex-row items-center gap-8">
+                    <div className="flex flex-col items-center shrink-0 space-y-2">
+                      <div className="h-2 w-24 bg-neutral-100 dark:bg-neutral-800 rounded-full" />
+                      <div className="h-12 w-20 bg-neutral-100 dark:bg-neutral-800 rounded-xl" />
+                      <div className="h-4 w-28 bg-neutral-100 dark:bg-neutral-800 rounded-full" />
+                    </div>
+                    <div className="h-px md:h-20 w-full md:w-px bg-neutral-100 dark:bg-neutral-800" />
+                    <div className="flex-1 space-y-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 rounded-full bg-neutral-100 dark:bg-neutral-800" />
+                        <div className="h-3 w-32 bg-neutral-100 dark:bg-neutral-800 rounded-full" />
+                      </div>
+                      <div className="space-y-2">
+                        <div className="h-3 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full" />
+                        <div className="h-3 w-2/3 bg-neutral-100 dark:bg-neutral-800 rounded-full" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className="bg-white dark:bg-dark-card border border-neutral-200/80 dark:border-neutral-700/60 rounded-[2rem] p-6 mb-8 hover:shadow-lg transition-all group relative overflow-hidden"
+                >
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 rounded-full blur-[80px] -mr-32 -mt-32"></div>
+                  <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
+                    <div className="flex flex-col items-center md:items-start shrink-0">
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 mb-2">Overall Site Health</span>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-6xl font-black text-neutral-900 dark:text-white tabular-nums">
+                          {overviewData.intelligence?.healthScore || 72}
+                        </span>
+                        <span className="text-xl font-bold text-neutral-400">/100</span>
+                      </div>
+                      <div className={`mt-3 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${(overviewData.intelligence?.healthScore || 72) >= 80 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                        }`}>
+                        {(overviewData.intelligence?.healthScore || 72) >= 80 ? 'Optimal Performance' : 'Optimization Required'}
+                      </div>
+                    </div>
+
+                    <div className="h-px md:h-20 w-full md:w-px bg-neutral-100 dark:bg-neutral-800 shrink-0"></div>
+
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <RankPilotLogo className="w-5 h-5 text-brand-600" />
+                        <span className="text-xs font-black uppercase tracking-widest text-brand-600">Site AI Intelligence</span>
+                      </div>
+                      <p className="text-sm font-bold text-neutral-600 dark:text-neutral-300 leading-relaxed italic">
+                        "{overviewData.intelligence?.overviewHealth || "Your site audit analysis is complete. Connect more sources to deepen the cross-platform intelligence mapping."}"
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 shadow-sm transition-all shadow-orange-500/5">
@@ -728,7 +740,7 @@ const DashboardPage = () => {
                         { label: 'Bounce', value: formatPct(overviewData.ga4?.bounceRate || 0) },
                         { label: 'Avg Time', value: formatTime(overviewData.ga4?.avgSessionDuration) },
                         { label: 'Views', value: formatNumber(overviewData.ga4?.pageViews) },
-                        { label: 'Growth', value: `${(overviewData.ga4?.growth || 0) >= 0 ? '+' : ''}${(overviewData.ga4?.growth || 0).toFixed(1)}%` },
+                        { label: 'Growth', value: `${(overviewData.ga4?.growthSessions || 0) >= 0 ? '+' : ''}${(overviewData.ga4?.growthSessions || 0).toFixed(1)}%` },
                       ].map((m, i) => (
                         <div key={i} className="p-3 bg-orange-50 dark:bg-orange-900/10 rounded-xl transition-all">
                           <div className="text-base font-black text-neutral-900 dark:text-white tabular-nums">{m.value}</div>
@@ -747,18 +759,19 @@ const DashboardPage = () => {
                           <div className="h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full w-[80%]" />
                         </div>
                       ) : (
-                    <div className="flex flex-col items-start gap-2.5">
-                        <p className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 leading-relaxed">
-                          {overviewData.intelligence?.overviewGA4 || "Analyzing high-volume traffic across user engagement."}
-                        </p>
-                        <button 
-                            onClick={() => openWithQuestion(`Provide a detailed analysis of this GA4 traffic summary: ${overviewData.intelligence?.overviewGA4 || 'Traffic engagement overview'}`)}
+                        <div className="flex flex-col items-start gap-2.5">
+                          <p className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                            {overviewData.intelligence?.overviewGA4 || "Analyzing high-volume traffic across user engagement."}
+                          </p>
+                          <button
+                            onClick={() => openWithQuestion(`Provide a detailed analysis for this GA4 traffic summary: ${overviewData.intelligence?.overviewGA4 || 'Traffic engagement overview'}.
+                              Values: Users: ${formatNumber(overviewData.ga4?.users)}, Sessions: ${formatNumber(overviewData.ga4?.sessions)}, Bounce Rate: ${formatPct(overviewData.ga4?.bounceRate || 0)}, Avg Time: ${formatTime(overviewData.ga4?.avgSessionDuration)}, Page Views: ${formatNumber(overviewData.ga4?.pageViews)}`)}
                             className="flex items-center gap-1.5 px-3 py-1 bg-brand-600/10 hover:bg-brand-600/20 text-brand-600 dark:text-brand-400 text-[10px] font-black rounded-lg transition-all active:scale-95 uppercase tracking-wider"
-                        >
+                          >
                             <SparklesIcon className="w-3 h-3" />
                             Ask AI
-                        </button>
-                    </div>
+                          </button>
+                        </div>
                       )}
                     </div>
                   )}
@@ -789,7 +802,7 @@ const DashboardPage = () => {
                         { label: 'Impressions', value: formatNumber(overviewData.gsc?.impressions) },
                         { label: 'CTR', value: formatPct((overviewData.gsc?.ctr || 0) * 100) },
                         { label: 'Avg Pos', value: `#${(overviewData.gsc?.avgPosition || 0).toFixed(1)}` },
-                        { label: 'Growth', value: `${(overviewData.gsc?.growth || 0) >= 0 ? '+' : ''}${(overviewData.gsc?.growth || 0).toFixed(1)}%` },
+                        { label: 'Growth', value: `${(overviewData.gsc?.growthClicks || 0) >= 0 ? '+' : ''}${(overviewData.gsc?.growthClicks || 0).toFixed(1)}%` },
                         { label: 'Status', value: 'Live' },
                       ].map((m, i) => (
                         <div key={i} className="p-3 bg-green-50 dark:bg-green-900/10 rounded-xl transition-all">
@@ -809,18 +822,19 @@ const DashboardPage = () => {
                           <div className="h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full w-[80%]" />
                         </div>
                       ) : (
-                    <div className="flex flex-col items-start gap-2.5">
-                        <p className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 leading-relaxed">
-                          {overviewData.intelligence?.overviewGSC || "SEO visibility is showing stable organic growth."}
-                        </p>
-                        <button 
-                            onClick={() => openWithQuestion(`How can I improve my SEO based on this GSC summary? ${overviewData.intelligence?.overviewGSC || 'Organic visibility overview'}`)}
+                        <div className="flex flex-col items-start gap-2.5">
+                          <p className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                            {overviewData.intelligence?.overviewGSC || "SEO visibility is showing stable organic growth."}
+                          </p>
+                          <button
+                            onClick={() => openWithQuestion(`How can I improve my SEO based on this GSC summary? ${overviewData.intelligence?.overviewGSC || 'Organic visibility overview'}.
+                              Values: Clicks: ${formatNumber(overviewData.gsc?.clicks)}, Impressions: ${formatNumber(overviewData.gsc?.impressions)}, CTR: ${formatPct((overviewData.gsc?.ctr || 0) * 100)}, Avg Position: #${(overviewData.gsc?.avgPosition || 0).toFixed(1)}`)}
                             className="flex items-center gap-1.5 px-3 py-1 bg-brand-600/10 hover:bg-brand-600/20 text-brand-600 dark:text-brand-400 text-[10px] font-black rounded-lg transition-all active:scale-95 uppercase tracking-wider"
-                        >
+                          >
                             <SparklesIcon className="w-3 h-3" />
                             Ask AI
-                        </button>
-                    </div>
+                          </button>
+                        </div>
                       )}
                     </div>
                   )}
@@ -867,18 +881,19 @@ const DashboardPage = () => {
                           <div className="h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full w-[80%]" />
                         </div>
                       ) : (
-                    <div className="flex flex-col items-start gap-2.5">
-                        <p className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 leading-relaxed">
-                          {overviewData.intelligence?.overviewGAds || "Google Ads campaigns are actively spending."}
-                        </p>
-                        <button 
-                            onClick={() => openWithQuestion(`Analyze Google Ads efficiency based on this: ${overviewData.intelligence?.overviewGAds || 'Ad campaign overview'}`)}
+                        <div className="flex flex-col items-start gap-2.5">
+                          <p className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                            {overviewData.intelligence?.overviewGAds || "Google Ads campaigns are actively spending."}
+                          </p>
+                          <button
+                            onClick={() => openWithQuestion(`Analyze Google Ads efficiency based on this: ${overviewData.intelligence?.overviewGAds || 'Ad campaign overview'}.
+                              Values: Spend: ${formatCurrency(overviewData.googleAds?.spend)}, Clicks: ${formatNumber(overviewData.googleAds?.clicks)}, Impressions: ${formatNumber(overviewData.googleAds?.impressions)}, Conversions: ${formatNumber(overviewData.googleAds?.conversions)}, CPC: ${formatCurrency(overviewData.googleAds?.cpc)}, CTR: ${formatPct((overviewData.googleAds?.ctr || 0) * 100)}`)}
                             className="flex items-center gap-1.5 px-3 py-1 bg-brand-600/10 hover:bg-brand-600/20 text-brand-600 dark:text-brand-400 text-[10px] font-black rounded-lg transition-all active:scale-95 uppercase tracking-wider"
-                        >
+                          >
                             <SparklesIcon className="w-3 h-3" />
                             Ask AI
-                        </button>
-                    </div>
+                          </button>
+                        </div>
                       )}
                     </div>
                   )}
@@ -925,18 +940,19 @@ const DashboardPage = () => {
                           <div className="h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full w-[80%]" />
                         </div>
                       ) : (
-                    <div className="flex flex-col items-start gap-2.5">
-                        <p className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 leading-relaxed">
-                          {overviewData.intelligence?.overviewFAds || "Facebook ad reach is expanding profitably."}
-                        </p>
-                        <button 
-                            onClick={() => openWithQuestion(`Give me strategies to scale Facebook ads based on this summary: ${overviewData.intelligence?.overviewFAds || 'Meta ads overview'}`)}
+                        <div className="flex flex-col items-start gap-2.5">
+                          <p className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                            {overviewData.intelligence?.overviewFAds || "Facebook ad reach is expanding profitably."}
+                          </p>
+                          <button
+                            onClick={() => openWithQuestion(`Give me strategies to scale Facebook ads based on this summary: ${overviewData.intelligence?.overviewFAds || 'Meta ads overview'}.
+                              Values: Spend: ${formatCurrency(overviewData.facebookAds?.spend)}, Reach: ${formatNumber(overviewData.facebookAds?.reach)}, Impressions: ${formatNumber(overviewData.facebookAds?.impressions)}, Clicks: ${formatNumber(overviewData.facebookAds?.clicks)}, ROAS: ${(overviewData.facebookAds?.roas || 0).toFixed(2)}x, CTR: ${formatPct((overviewData.facebookAds?.ctr || 0) * 100)}`)}
                             className="flex items-center gap-1.5 px-3 py-1 bg-brand-600/10 hover:bg-brand-600/20 text-brand-600 dark:text-brand-400 text-[10px] font-black rounded-lg transition-all active:scale-95 uppercase tracking-wider"
-                        >
+                          >
                             <SparklesIcon className="w-3 h-3" />
                             Ask AI
-                        </button>
-                    </div>
+                          </button>
+                        </div>
                       )}
                     </div>
                   )}
@@ -1019,18 +1035,20 @@ const DashboardPage = () => {
                         <div className="h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full w-[80%]" />
                       </div>
                     ) : (
-                    <div className="flex flex-col items-start gap-2.5">
+                      <div className="flex flex-col items-start gap-2.5">
                         <p className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 leading-relaxed">
                           {overviewData.intelligence?.adWinnerInsight || "Platform performance comparison shows clear efficiency leaders."}
                         </p>
-                        <button 
-                            onClick={() => openWithQuestion(`Which platform should I prioritize according to this? ${overviewData.intelligence?.adWinnerInsight || 'Ad platform comparison'}`)}
-                            className="flex items-center gap-1.5 px-3 py-1 bg-brand-600/10 hover:bg-brand-600/20 text-brand-600 dark:text-brand-400 text-[10px] font-black rounded-lg transition-all active:scale-95 uppercase tracking-wider"
+                        <button
+                          onClick={() => openWithQuestion(`Which platform should I prioritize according to this comparison? ${overviewData.intelligence?.adWinnerInsight || 'Ad platform comparison'}.
+                            Google Ads Spend: ${formatCurrency(overviewData.googleAds?.spend)}, Google Ads Conv: ${formatNumber(overviewData.googleAds?.conversions)}. 
+                            Meta Ads Spend: ${formatCurrency(overviewData.facebookAds?.spend)}, Meta Ads Conv: ${formatNumber(overviewData.facebookAds?.conversions)}.`)}
+                          className="flex items-center gap-1.5 px-3 py-1 bg-brand-600/10 hover:bg-brand-600/20 text-brand-600 dark:text-brand-400 text-[10px] font-black rounded-lg transition-all active:scale-95 uppercase tracking-wider"
                         >
-                            <SparklesIcon className="w-3 h-3" />
-                            Ask AI
+                          <SparklesIcon className="w-3 h-3" />
+                          Ask AI
                         </button>
-                    </div>
+                      </div>
                     )}
                   </div>
                 )}
@@ -1076,16 +1094,17 @@ const DashboardPage = () => {
                     </div>
                   ) : (
                     <div className="flex flex-col items-start gap-2.5">
-                        <p className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 leading-relaxed">
-                          {overviewData.intelligence?.growthMatrixInsight || "Organic and paid growth trends are being correlated to identify scaling triggers."}
-                        </p>
-                        <button 
-                            onClick={() => openWithQuestion(`Tell me more about this growth matrix insight: ${overviewData.intelligence?.growthMatrixInsight || 'Growth trends'}`)}
-                            className="flex items-center gap-1.5 px-3 py-1 bg-brand-600/10 hover:bg-brand-600/20 text-brand-600 dark:text-brand-400 text-[10px] font-black rounded-lg transition-all active:scale-95 uppercase tracking-wider"
-                        >
-                            <SparklesIcon className="w-3 h-3" />
-                            Ask AI
-                        </button>
+                      <p className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                        {overviewData.intelligence?.growthMatrixInsight || "Organic and paid growth trends are being correlated to identify scaling triggers."}
+                      </p>
+                      <button
+                        onClick={() => openWithQuestion(`Tell me more about this growth matrix insight: ${overviewData.intelligence?.growthMatrixInsight || 'Growth trends'}.
+                          Context: Analyzing ${selectedMetric} trends. Total ${selectedMetric}: ${selectedMetric === 'Spend' ? formatCurrency((overviewData.googleAds?.spend || 0) + (overviewData.facebookAds?.spend || 0)) : formatNumber(overviewData.ga4?.sessions || 0)}.`)}
+                        className="flex items-center gap-1.5 px-3 py-1 bg-brand-600/10 hover:bg-brand-600/20 text-brand-600 dark:text-brand-400 text-[10px] font-black rounded-lg transition-all active:scale-95 uppercase tracking-wider"
+                      >
+                        <SparklesIcon className="w-3 h-3" />
+                        Ask AI
+                      </button>
                     </div>
                   )}
                 </div>
@@ -1093,7 +1112,7 @@ const DashboardPage = () => {
 
 
 
-               <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden mb-6">
+              <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden mb-6">
                 <div className="px-6 py-4 border-b border-neutral-100 dark:border-neutral-800 flex justify-between items-center">
                   <div className="space-y-0.5">
                     <h3 className="text-base font-black text-neutral-900 dark:text-white uppercase tracking-tight">Engagement & Audit</h3>
@@ -1114,16 +1133,17 @@ const DashboardPage = () => {
                     </div>
                   ) : (
                     <div className="flex flex-col items-start gap-2.5">
-                        <p className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 leading-relaxed">
-                          {overviewData.intelligence?.topPagesInsight || "Landing page performance and growth bottlenecks."}
-                        </p>
-                        <button 
-                            onClick={() => openWithQuestion(`Analyze these top pages further: ${overviewData.intelligence?.topPagesInsight || 'Page performance'}`)}
-                            className="flex items-center gap-1.5 px-3 py-1 bg-brand-600/10 hover:bg-brand-600/20 text-brand-600 dark:text-brand-400 text-[10px] font-black rounded-lg transition-all active:scale-95 uppercase tracking-wider"
-                        >
-                            <SparklesIcon className="w-3 h-3" />
-                            Ask AI
-                        </button>
+                      <p className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                        {overviewData.intelligence?.topPagesInsight || "Landing page performance and growth bottlenecks."}
+                      </p>
+                      <button
+                        onClick={() => openWithQuestion(`Analyze these top pages further: ${overviewData.intelligence?.topPagesInsight || 'Page performance'}.
+                          Top Pages Data: ${topPages.slice(0, 3).map(p => `${p.url} (${formatNumber(p.visitors)} visitors)`).join(', ')}.`)}
+                        className="flex items-center gap-1.5 px-3 py-1 bg-brand-600/10 hover:bg-brand-600/20 text-brand-600 dark:text-brand-400 text-[10px] font-black rounded-lg transition-all active:scale-95 uppercase tracking-wider"
+                      >
+                        <SparklesIcon className="w-3 h-3" />
+                        Ask AI
+                      </button>
                     </div>
                   )}
                 </div>
@@ -1199,16 +1219,18 @@ const DashboardPage = () => {
                     </div>
                   ) : (
                     <div className="flex flex-col items-start gap-2.5">
-                        <p className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 leading-tight">
-                          {overviewData.intelligence?.comparisonInsight || "Historical performance growth benchmarks."}
-                        </p>
-                        <button 
-                            onClick={() => openWithQuestion(`What should I do about these period comparisons? ${overviewData.intelligence?.comparisonInsight || 'Comparison trends'}`)}
-                            className="flex items-center gap-1.5 px-3 py-1 bg-brand-600/10 hover:bg-brand-600/20 text-brand-600 dark:text-brand-400 text-[10px] font-black rounded-lg transition-all active:scale-95 uppercase tracking-wider"
-                        >
-                            <SparklesIcon className="w-3 h-3" />
-                            Ask AI
-                        </button>
+                      <p className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 leading-tight">
+                        {overviewData.intelligence?.comparisonInsight || "Historical performance growth benchmarks."}
+                      </p>
+                      <button
+                        onClick={() => openWithQuestion(`What should I do about these period comparisons? ${overviewData.intelligence?.comparisonInsight || 'Comparison trends'}. 
+                          Current Period: Sessions ${formatNumber(overviewData.ga4?.sessions)}, GSC Clicks ${formatNumber(overviewData.gsc?.clicks)}, GAds Spend ${formatCurrency(overviewData.googleAds?.spend)}, Meta Spend ${formatCurrency(overviewData.facebookAds?.spend)}.
+                          Prior Period: Sessions ${formatNumber(overviewData.ga4?.priorSessions)}, GSC Clicks ${formatNumber(overviewData.gsc?.priorClicks)}, GAds Spend ${formatCurrency(overviewData.googleAds?.priorSpend)}, Meta Spend ${formatCurrency(overviewData.facebookAds?.priorSpend)}.`)}
+                        className="flex items-center gap-1.5 px-3 py-1 bg-brand-600/10 hover:bg-brand-600/20 text-brand-600 dark:text-brand-400 text-[10px] font-black rounded-lg transition-all active:scale-95 uppercase tracking-wider"
+                      >
+                        <SparklesIcon className="w-3 h-3" />
+                        Ask AI
+                      </button>
                     </div>
                   )}
                 </div>

@@ -55,9 +55,9 @@ const KpiCard = ({ title, value, change, changeText, valueSuffix, isPositive, Ic
           </span>
           <div className="flex items-baseline gap-2 mt-2">
             {disconnected ? (
-               <h3 className="text-xl font-black text-neutral-300 dark:text-neutral-700 uppercase tracking-widest leading-none">
-                 Link Site
-               </h3>
+               <p className="text-[11px] font-bold text-neutral-400 dark:text-neutral-500 leading-relaxed mt-1 pr-10 italic">
+                 {insight}
+               </p>
             ) : (
               <>
                 <h3 className="text-3xl font-black text-neutral-900 dark:text-white tabular-nums tracking-tight leading-none">
