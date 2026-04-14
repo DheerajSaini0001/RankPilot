@@ -28,7 +28,7 @@ import { listSites, getActiveAccounts } from '../../api/accountApi';
 import Logo from './Logo';
 
 
-const DashboardLayout = ({ children, noScroll = false }) => {
+const DashboardLayout = ({ children, noScroll = false, title }) => {
     const { user, clearAuth } = useAuthStore();
     const {
         userSites = [],
@@ -376,7 +376,7 @@ const DashboardLayout = ({ children, noScroll = false }) => {
                                 <span className="text-neutral-300">/</span>
                                 <span className="text-brand-500">Overview</span>
                             </div>
-                            <h2 className="text-sm sm:text-base font-black text-neutral-900 dark:text-white leading-tight">Insight Dashboard</h2>
+                            <h2 className="text-sm sm:text-base font-black text-neutral-900 dark:text-white leading-tight">{title || 'Insight Dashboard'}</h2>
                         </div>
 
                         <div className="hidden lg:flex flex-col flex-1 max-w-md relative group">

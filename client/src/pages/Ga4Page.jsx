@@ -12,13 +12,9 @@ import { getActiveAccounts } from '../api/accountApi';
 import {
     ArrowDownTrayIcon,
     GlobeAltIcon,
-    UserCircleIcon,
     EnvelopeIcon,
-    BoltIcon,
     ArrowPathIcon,
     UsersIcon,
-    CursorArrowRaysIcon,
-    ClockIcon,
     ExclamationTriangleIcon,
     ChartBarIcon,
     ChevronRightIcon,
@@ -40,7 +36,6 @@ import {
     XAxis, YAxis,
     Tooltip, CartesianGrid
 } from 'recharts';
-import FilterBar from '../components/dashboard/FilterBar';
 import { useFilterStore } from '../store/filterStore';
 
 const formatNumber = (num) =>
@@ -57,9 +52,9 @@ const Ga4Logo = ({ className = "w-6 h-6" }) => (
     <img src="https://www.vectorlogo.zone/logos/google_analytics/google_analytics-icon.svg" alt="GA4" className={`${className} object-contain`} />
 );
 
-const SectionAiSummary = ({ insight, loading, title = "AI SUMMARY" }) => (
+const SectionAiSummary = ({ insight, loading, sectionTitle, title = "AI SUMMARY" }) => (
     <div className="mt-4 p-4 bg-brand-50/10 dark:bg-brand-500/5 border border-brand-100/50 dark:border-brand-500/20 rounded-[1.5rem] animate-in fade-in duration-700">
-        <h4 className="text-[10px] font-black text-neutral-900 dark:text-white uppercase tracking-[0.15em] mb-3">{title}</h4>
+        <h4 className="text-[10px] font-black text-neutral-900 dark:text-white uppercase tracking-[0.15em] mb-3">{sectionTitle || title}</h4>
         {loading ? (
             <div className="space-y-2 animate-pulse mb-4">
                 <div className="h-2 bg-neutral-200 dark:bg-neutral-800 rounded-full w-full" />
@@ -139,8 +134,6 @@ const Ga4Page = () => {
             });
 
             setPriorOverview(data.priorOverview);
-
-            console.log('GA4 timeseries:', data.timeseries);
             setTimeseries(data.timeseries || []);
             setTraffic(data.traffic || []);
             setPages(data.pages || []);
@@ -257,31 +250,77 @@ const Ga4Page = () => {
     }, [syncMetadata?.syncStatus, activeSiteId, loadData]);
 
 
-    if (!isConnected) {
+    if (!isConnected || !hasProperty) {
+        const isMissingConn = !isConnected;
         return (
             <DashboardLayout>
-                <div className="flex flex-col h-full items-center justify-center">
-                    <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700/60 p-8 rounded-2xl flex flex-col items-center text-center max-w-sm">
-                        <ExclamationTriangleIcon className="w-12 h-12 text-neutral-400 mb-4" />
-                        <h2 className="text-xl font-bold text-neutral-900 dark:text-white">Google Analytics 4 Not Connected</h2>
-                        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-2 mb-5">Please go to Integrations to connect your Google account for GA4 data.</p>
-                        <button onClick={() => navigate('/connect-accounts')} className="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold rounded-xl transition-colors">Go to Integrations</button>
-                    </div>
-                </div>
-            </DashboardLayout>
-        );
-    }
+                <div className="h-full flex flex-col items-center justify-center p-4 min-h-[60vh] animate-in fade-in zoom-in-95 duration-700">
+                    <div className="relative w-full max-w-xl bg-white dark:bg-[#0d0d0d] rounded-[2.5rem] border border-neutral-200/60 dark:border-neutral-800 shadow-2xl shadow-brand-500/5 overflow-hidden group">
+                        
+                        {/* Animated Gradient Background Glow */}
+                        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-brand-500/5 dark:bg-brand-500/10 rounded-full blur-[120px] -mr-32 -mt-32 transition-colors group-hover:bg-brand-500/15 duration-1000"></div>
+                        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-amber-500/5 dark:bg-amber-500/10 rounded-full blur-[120px] -ml-32 -mb-32 transition-colors group-hover:bg-amber-500/15 duration-1000"></div>
 
-    if (!hasProperty) {
-        return (
-            <DashboardLayout>
-                <div className="flex flex-col h-full items-center justify-center">
-                    <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700/60 p-8 rounded-2xl flex flex-col items-center text-center max-w-sm">
-                        <ExclamationTriangleIcon className="w-12 h-12 text-amber-400 mb-4" />
-                        <h2 className="text-xl font-bold text-neutral-900 dark:text-white">No GA4 Property Selected</h2>
-                        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-2 mb-5">Google is connected, but no GA4 property has been selected yet. Go to Integrations to choose one.</p>
-                        <button onClick={() => navigate('/connect-accounts')} className="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold rounded-xl transition-colors">Select GA4 Property</button>
+                        <div className="relative z-10 px-6 py-12 flex flex-col items-center text-center">
+                            
+                            {/* Icon Logic */}
+                            <div className="relative mb-8">
+                                <div className="w-24 h-24 bg-white dark:bg-neutral-800/80 rounded-[2rem] flex items-center justify-center shadow-xl border border-neutral-100 dark:border-neutral-700 relative overflow-hidden group-hover:scale-105 transition-transform duration-500">
+                                    <Ga4Logo className="w-14 h-14 grayscale opacity-40 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700" />
+                                    
+                                    {/* Disconnected Pulse */}
+                                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full border-4 border-white dark:border-[#0d0d0d] flex items-center justify-center">
+                                        <div className="w-2 h-2 bg-white rounded-full animate-pulse shadow-[0_0_8px_white]"></div>
+                                    </div>
+                                </div>
+                                <div className="absolute inset-0 bg-brand-500/10 blur-3xl rounded-full scale-150 rotate-45 -z-10 animate-pulse"></div>
+                            </div>
+
+                            <div className="space-y-3 max-w-md">
+                                <h1 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tighter leading-tight">
+                                    {isMissingConn ? 'Channel Connection Offline' : 'Property Alignment Required'}
+                                </h1>
+                                <p className="text-sm font-bold text-neutral-500 dark:text-neutral-400 leading-relaxed italic">
+                                    {isMissingConn 
+                                        ? "Your Google Analytics 4 stream is currently disconnected. RankPilot's AI requires a live data pipeline to map traffic patterns and user behavior."
+                                        : "Google account connected, but no GA4 property has been mapped to this site yet. Select your analytics stream to activate real-time intelligence."
+                                    }
+                                </p>
+                            </div>
+
+                            <div className="mt-10 flex flex-col sm:flex-row gap-4 items-center">
+                                <button 
+                                    onClick={() => navigate('/connect-accounts')} 
+                                    className="px-8 py-4 bg-brand-600 hover:bg-brand-500 text-white rounded-2xl text-[11px] font-black uppercase tracking-[.2em] shadow-xl shadow-brand-500/30 active:scale-95 transition-all flex items-center gap-3"
+                                >
+                                    {isMissingConn ? 'Connect Data Stream' : 'Select Stream'}
+                                    <ArrowPathIcon className="w-4 h-4" />
+                                </button>
+                                
+                                <button 
+                                    onClick={() => window.open('https://rankpilot.ai/docs', '_blank')}
+                                    className="px-8 py-4 text-neutral-400 hover:text-neutral-900 dark:hover:text-white text-[10px] font-black uppercase tracking-[.2em] border border-neutral-200 dark:border-neutral-800 rounded-2xl hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all"
+                                >
+                                    View Guide
+                                </button>
+                            </div>
+
+                            {/* Decorative Feature List */}
+                            <div className="mt-16 grid grid-cols-3 gap-6 w-full opacity-30 group-hover:opacity-60 transition-opacity duration-1000 border-t border-neutral-100 dark:border-neutral-800/50 pt-10">
+                                {[
+                                    { label: 'Real-time Flow', icon: GlobeAltIcon },
+                                    { label: 'Growth Triggers', icon: ChartBarIcon },
+                                    { label: 'AI Mapping', icon: SparklesIcon }
+                                ].map((f, i) => (
+                                    <div key={i} className="flex flex-col items-center gap-2">
+                                        <f.icon className="w-5 h-5 text-neutral-400" />
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-neutral-500">{f.label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
+                                
                 </div>
             </DashboardLayout>
         );
@@ -727,7 +766,7 @@ const Ga4Page = () => {
                             <SectionAiSummary 
                                 insight={intelligence?.matrix} 
                                 loading={loading} 
-                                sectionTitle="Engagement Resonance Matrix"
+                                sectionTitle="AI SUMMARY"
                                 contextPrompt={`Analyze my engagement matrix: ${timeseries.slice(-7).map(d => `${d.date}: ${d.sessions} sessions`).join(', ')}. What trends do you see?`}
                             />
                         </div>
@@ -794,7 +833,7 @@ const Ga4Page = () => {
                             <SectionAiSummary 
                                 insight={intelligence?.userType} 
                                 loading={loading} 
-                                sectionTitle="User Distribution"
+                                sectionTitle="AI SUMMARY"
                                 contextPrompt={`My user breakdown: New Users (${formatNumber(newUsers)}), Returning Users (${formatNumber(overview?.sessions - newUsers)}). How can I improve retention?`}
                             />
                         </div>
@@ -847,7 +886,7 @@ const Ga4Page = () => {
                     <SectionAiSummary 
                         insight={intelligence?.retention} 
                         loading={loading} 
-                        sectionTitle="Engagement Resonance"
+                        sectionTitle="AI SUMMARY"
                         contextPrompt={`Current engagement rate: ${(100 - (overview?.bounceRate || 0)).toFixed(1)}%. How does this compare to industry standards for ${siteName}?`}
                     />
                 </div>
@@ -897,7 +936,7 @@ const Ga4Page = () => {
                         <SectionAiSummary 
                             insight={intelligence?.trendBounce} 
                             loading={loading} 
-                            sectionTitle="Bounce Rate Trend"
+                            sectionTitle="AI SUMMARY"
                             contextPrompt={`Analyze the bounce rate trend in this period. Current average: ${overview?.bounceRate}%. Any specific days showing high bounce?`}
                         />
                     </div>
@@ -939,7 +978,7 @@ const Ga4Page = () => {
                          <SectionAiSummary 
                             insight={intelligence?.trendVolume} 
                             loading={loading} 
-                            sectionTitle="Session Volume Distribution"
+                            sectionTitle="AI SUMMARY"
                             contextPrompt={`My session volume distribution for this period. Total views: ${formatNumber(overview?.pageViews)}. How can I optimize traffic spread?`}
                         />
                     </div>
@@ -966,7 +1005,7 @@ const Ga4Page = () => {
                             <SectionAiSummary 
                                 insight={intelligence?.sources} 
                                 loading={loading} 
-                                sectionTitle="Traffic Sources"
+                                sectionTitle="AI SUMMARY"
                                 contextPrompt={`My top traffic sources: ${traffic.slice(0, 5).map(t => `${t.source}: ${t.sessions} sessions`).join(', ')}. Where should I focus my marketing budget?`}
                             />
                         </div>
@@ -990,7 +1029,7 @@ const Ga4Page = () => {
                             <SectionAiSummary 
                                 insight={intelligence?.pages} 
                                 loading={loading} 
-                                sectionTitle="Top Landing Pages"
+                                sectionTitle="AI SUMMARY"
                                 contextPrompt={`My top pages: ${pages.slice(0, 5).map(p => `${p.path}: ${p.views} views`).join(', ')}. Which pages need better conversion optimization?`}
                             />
                         </div>
@@ -1060,7 +1099,7 @@ const Ga4Page = () => {
                         <SectionAiSummary 
                             insight={intelligence?.devices} 
                             loading={loading} 
-                            sectionTitle="Apparatus Analysis"
+                            sectionTitle="AI SUMMARY"
                             contextPrompt={`Device breakdown: ${breakdowns.devices.map(d => `${d.name}: ${d.value} sessions`).join(', ')}. Contrast mobile vs desktop behavior.`}
                         />
                     </div>
@@ -1110,7 +1149,7 @@ const Ga4Page = () => {
                         <SectionAiSummary 
                             insight={intelligence?.geo} 
                             loading={loading} 
-                            sectionTitle="Geographical Reach"
+                            sectionTitle="AI SUMMARY"
                             contextPrompt={`Top locations: ${breakdowns.locations.slice(0, 5).map(l => `${l.name}: ${l.value} sessions`).join(', ')}. Any geographical expansion opportunities?`}
                         />
                     </div>
@@ -1173,7 +1212,7 @@ const Ga4Page = () => {
                     <SectionAiSummary 
                         insight={intelligence?.growth} 
                         loading={loading} 
-                        sectionTitle="Period Comparison"
+                        sectionTitle="AI SUMMARY"
                         contextPrompt={`Analyze the period comparison data. Users: ${overview?.users} (${overview?.users >= priorOverview?.users ? '+' : ''}${((overview?.users / priorOverview?.users - 1) * 100).toFixed(1)}%). Is this growth sustainable?`}
                     />
                 </div>
