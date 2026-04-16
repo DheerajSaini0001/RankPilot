@@ -148,7 +148,7 @@ const DashboardPage = () => {
         gsc: data.gsc || { clicks: 0, impressions: 0, position: 0, ctr: 0, growth: 0 },
         googleAds: data.googleAds || { spend: 0, conversions: 0, clicks: 0, impressions: 0, cpc: 0, ctr: 0, growth: 0 },
         facebookAds: data.facebookAds || { spend: 0, conversions: 0, clicks: 0, impressions: 0, reach: 0, purchaseValue: 0, roas: 0, growth: 0 },
-        intelligence: data.intelligence || { briefing: [], adStrategy: '', contentAudit: '', growthMomentum: '', healthScore: 0 },
+        intelligence: data.intelligence || { briefing: [], adStrategy: '', contentAudit: '', growthMomentum: '' },
         adWinner: data.adWinner,
         syncMetadata: data.syncMetadata
       });
@@ -445,13 +445,13 @@ const DashboardPage = () => {
             </div>
           ) : (
             <>
-              <div className={`bg-white/60 dark:bg-dark-card/60 backdrop-blur-xl border border-neutral-200/60 dark:border-neutral-800/60 rounded-[2.5rem] shadow-sm relative group flex flex-col animate-in fade-in slide-in-from-bottom-5 duration-1000 ${(isDateMenuOpen || isDeviceMenuOpen) ? 'z-40' : 'z-10'}`}>
+              <div className={`bg-white/60 dark:bg-dark-card/60 backdrop-blur-xl border border-neutral-200/60 dark:border-neutral-800/60 rounded-[2rem] shadow-sm relative group flex flex-col animate-in fade-in slide-in-from-bottom-5 duration-1000 ${(isDateMenuOpen || isDeviceMenuOpen) ? 'z-40' : 'z-10'}`}>
                 <div className="absolute inset-x-0 top-0 h-32 rounded-t-[2.5rem] overflow-hidden pointer-events-none">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 rounded-full blur-[100px] -mr-32 -mt-32 group-hover:bg-brand-500/10 transition-colors"></div>
                 </div>
 
-                <div className="p-4 md:py-5 md:px-8 relative z-10">
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+                <div className="p-4 md:py-4 md:px-6 relative z-10">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                     <div className="flex-1 space-y-4">
                       <div className="space-y-0.5">
                         <h1 className="text-xl lg:text-4xl font-black tracking-tight text-neutral-900 dark:text-white leading-none">
@@ -462,13 +462,18 @@ const DashboardPage = () => {
                         </h1>
                       </div>
 
-                      <div className="space-y-1.5 border-l-2 border-brand-500/20 pl-4">
-                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-600 dark:text-brand-400 shrink-0">Website Summary</p>
-                        <h2 className="text-2xl lg:text-3xl font-black text-neutral-900 dark:text-white tracking-tight leading-none">{overviewData.siteName || activeSite?.siteName || 'RankPilot'}</h2>
-                        <p className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-sm mt-2">
-                          {overviewData.intelligence?.websiteSummary || `Monitoring ${overviewData.siteName || activeSite?.siteName} performance across your marketing channels.`}
-                        </p>
-                      </div>
+                        <div className="space-y-1 border-l-2 border-brand-500/20 pl-4">
+                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-600 dark:text-brand-400 shrink-0">Website Summary</p>
+                          <div className="flex items-center gap-3">
+                            <h2 className="text-xl lg:text-2xl font-black text-neutral-900 dark:text-white tracking-tight leading-none">{overviewData.siteName || activeSite?.siteName || 'RankPilot'}</h2>
+                            <div className="px-1.5 py-0.5 rounded-full text-[6px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                              Active
+                            </div>
+                          </div>
+                          <p className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-sm mt-1">
+                            {overviewData.intelligence?.websiteSummary || `Monitoring ${overviewData.siteName || activeSite?.siteName} performance across your marketing channels.`}
+                          </p>
+                        </div>
 
                       <div className="flex flex-wrap items-center gap-3 pt-2">
                         <div className="flex items-center gap-3">
@@ -618,88 +623,54 @@ const DashboardPage = () => {
                     </div>
 
                     <div className="flex flex-col md:flex-row gap-6 lg:items-center">
-                      <div className="grid grid-cols-2 gap-3 shrink-0">
+                      <div className="grid grid-cols-2 gap-2.5 shrink-0">
                         {[
                           { id: 'ga4', active: !!activeGa4PropertyId, label: 'GA4 Analytics', logo: <Ga4Logo className="w-5 h-5" />, color: 'bg-orange-50' },
                           { id: 'google-ads', active: !!activeGoogleAdsCustomerId, label: 'Google Ads', logo: <GoogleAdsLogo className="w-5 h-5" />, color: 'bg-amber-50' },
                           { id: 'gsc', active: !!activeGscSite, label: 'Search Console', logo: <GscLogo className="w-5 h-5" />, color: 'bg-blue-50' },
                           { id: 'facebook', active: !!activeFacebookAdAccountId, label: 'Facebook Ads', logo: <FacebookAdsLogo className="w-5 h-5" />, color: 'bg-blue-50' }
                         ].map((card) => (
-                          <div key={card.id} className="flex flex-col gap-1.5 p-3 bg-white dark:bg-dark-surface border border-neutral-100 dark:border-neutral-800 rounded-2xl w-40 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md">
+                          <div key={card.id} className="flex flex-col gap-1.5 p-2.5 bg-white dark:bg-dark-surface border border-neutral-100 dark:border-neutral-800 rounded-2xl w-36 shadow-sm transition-all hover:shadow-md group/item">
                             <div className="flex items-center justify-between">
-                              <div className={`w-8 h-8 rounded-xl ${card.color} dark:bg-opacity-10 flex items-center justify-center shrink-0`}>{card.logo}</div>
-                              <div className={`w-2 h-2 rounded-full ${card.active ? 'bg-emerald-500 animate-pulse' : 'bg-neutral-300'}`}></div>
+                              <div className={`w-7 h-7 rounded-xl ${card.color} dark:bg-opacity-10 flex items-center justify-center shrink-0 border border-neutral-100/50 dark:border-white/5`}>{card.logo}</div>
+                              <div className={`w-1.5 h-1.5 rounded-full ${card.active ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-neutral-300'}`}></div>
                             </div>
                             <div>
-                              <p className="text-[9px] font-black uppercase tracking-widest text-neutral-400 leading-none mb-1">{card.label}</p>
-                              <p className={`font-black uppercase tracking-tight ${card.active ? 'text-emerald-600 dark:text-emerald-400 text-[10px]' : 'text-neutral-400 text-[10px]'}`}>
-                                {card.active ? 'Connected' : 'Not Connected'}
+                              <p className="text-[9px] font-bold uppercase tracking-tight text-neutral-400 dark:text-neutral-500 leading-none mb-1 group-hover/item:text-neutral-500 transition-colors">{card.label}</p>
+                              <p className={`font-black uppercase tracking-tighter ${card.active ? 'text-emerald-600 dark:text-emerald-400 text-[10px]' : 'text-neutral-300 dark:text-neutral-600 text-[10px]'}`}>
+                                {card.active ? 'Connected' : 'Disconnected'}
                               </p>
                             </div>
                           </div>
                         ))}
                       </div>
 
-                      <div className="flex flex-col gap-2 min-w-[200px]">
+                      <div className="flex flex-col gap-2 min-w-[180px] self-stretch justify-center pl-4 border-l border-neutral-100 dark:border-neutral-800 ml-2">
                         <button
                           onClick={() => openWithQuestion(`Analyze complete brand dashboard for ${startDate} to ${endDate}. 
                             - Total Web Traffic (GA4 Sessions): ${formatNumber(overviewData.ga4?.sessions || 0)}
                             - Total Organic Clicks (GSC): ${formatNumber(overviewData.gsc?.clicks || 0)}
                             - Total Ad Spend (Meta + Google): ${formatCurrency((overviewData.facebookAds?.spend || 0) + (overviewData.googleAds?.spend || 0))}
                             - Total Ad Conversions: ${formatNumber((overviewData.googleAds?.conversions || 0) + (overviewData.facebookAds?.conversions || 0))}
-                            - Overall Health Score: ${overviewData.intelligence?.healthScore || 72}/100.
                             Strategic review: Brand Performance, Efficiency, Strategy.`)}
-                          className="h-8 px-4 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
+                          className="h-10 px-4 bg-brand-50 hover:bg-brand-100 dark:bg-brand-500/10 dark:hover:bg-brand-500/20 text-brand-600 dark:text-brand-400 rounded-2xl text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95"
                         >
                           <SparklesIcon className="w-3.5 h-3.5" />
                           AI SUMMARY
                         </button>
                         <button
                           onClick={() => exportToPdf('dashboard-report', `RankPilot-Dashboard-${activeSite?.siteName || 'Report'}`)}
-                          className="h-8 px-3 bg-white dark:bg-neutral-800/20 border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-lg text-[9px] font-black tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-50 transition-all shadow-sm active:scale-95"
+                          className="h-10 px-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-2xl text-[10px] font-black tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all shadow-sm active:scale-95"
                         >
                           <ArrowDownTrayIcon className="w-3.5 h-3.5" />
                           PDF REPORT
                         </button>
-                        <div className="flex flex-col gap-2.5 p-3.5 bg-brand-50/30 dark:bg-brand-500/5 border border-brand-100/50 dark:border-brand-500/20 rounded-2xl shadow-sm relative overflow-hidden group">
-                          {loading ? (
-                            <div className="animate-pulse flex items-center justify-between relative z-10">
-                              <div className="flex items-center gap-2.5">
-                                <div className="w-9 h-9 rounded-xl bg-neutral-200 dark:bg-neutral-800" />
-                                <div className="space-y-1.5">
-                                  <div className="h-2 w-16 bg-neutral-200 dark:bg-neutral-800 rounded-full" />
-                                  <div className="h-2 w-10 bg-neutral-100 dark:bg-neutral-900 rounded-full" />
-                                </div>
-                              </div>
-                              <div className="w-12 h-6 bg-neutral-200 dark:bg-neutral-800 rounded-lg" />
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-between relative z-10">
-                              <div className="flex items-center gap-2.5">
-                                <div className="w-9 h-9 rounded-xl bg-brand-500 flex items-center justify-center text-white shadow-lg shadow-brand-500/20 font-black text-xs">H</div>
-                                <div className="space-y-0.5">
-                                  <p className="text-[9px] font-black uppercase text-brand-600 dark:text-brand-400 tracking-widest leading-none">Audit Score</p>
-                                  <div className={`px-1.5 py-0.5 rounded text-[6px] font-black uppercase tracking-tighter ${(overviewData.intelligence?.healthScore || 72) >= 80 ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'} w-fit`}>
-                                    {(overviewData.intelligence?.healthScore || 72) >= 80 ? 'Optimal' : 'Needs Review'}
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-2xl font-black text-brand-600 dark:text-brand-400 tracking-tighter leading-none">
-                                  {overviewData.intelligence?.healthScore || 72}<span className="text-[8px] text-neutral-400 ml-0.5 font-bold">/100</span>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-
-            
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                 <KpiCard title="Audience Traffic" value={formatNumber(overviewData.ga4?.sessions || 0)} change={overviewData.ga4?.growthSessions || 0} isPositive={(overviewData.ga4?.growthSessions || 0) >= 0} loading={loading} Icon={Ga4Logo} changeText="vs. last period" chartData={timeseriesData.map(d => d.Sessions)} disconnected={!activeGa4PropertyId} onClick={() => navigate(!activeGa4PropertyId ? '/connect-accounts' : '/dashboard/ga4')} insight={overviewData.intelligence?.metricTraffic} contextPrompt={`Analyze Audience Traffic: ${formatNumber(overviewData.ga4?.sessions || 0)} sessions with ${overviewData.ga4?.growthSessions || 0}% growth. What does this mean for our reach?`} />
                 <KpiCard title="Google Search Clicks" value={formatNumber(overviewData.gsc?.clicks || 0)} change={overviewData.gsc?.growthClicks || 0} isPositive={(overviewData.gsc?.growthClicks || 0) >= 0} loading={loading} Icon={GscLogo} changeText="organic search" chartData={timeseriesData.map(d => d.Clicks)} disconnected={!activeGscSite} onClick={() => navigate(!activeGscSite ? '/connect-accounts' : '/dashboard/gsc')} insight={overviewData.intelligence?.metricClicks} contextPrompt={`Examine Organic Search performance: ${formatNumber(overviewData.gsc?.clicks || 0)} clicks. How can we improve our SEO trajectory?`} />
@@ -708,63 +679,6 @@ const DashboardPage = () => {
                 <KpiCard title="Marketing Impressions" value={formatNumber((overviewData.facebookAds?.impressions || 0) + (overviewData.googleAds?.impressions || 0))} change={overviewData.facebookAds?.growthReach || 0} isPositive={(overviewData.facebookAds?.growthReach || 0) >= 0} loading={loading} Icon={FacebookAdsLogo} changeText="paid reach" chartData={timeseriesData.map(d => d.Impressions || 0)} disconnected={!activeGoogleAdsCustomerId && !activeFacebookAdAccountId} onClick={() => navigate((!activeGoogleAdsCustomerId && !activeFacebookAdAccountId) ? '/connect-accounts' : '/dashboard/facebook-ads')} insight={overviewData.intelligence?.metricImpressions} contextPrompt={`Marketing visibility: ${formatNumber((overviewData.facebookAds?.impressions || 0) + (overviewData.googleAds?.impressions || 0))} impressions. Are we building enough brand awareness?`} />
                 <KpiCard title="Efficiency Score" value={((overviewData.facebookAds?.spend || 0) + (overviewData.googleAds?.spend || 0)) > 0 ? `+${(((overviewData.googleAds?.conversions || 0) + (overviewData.facebookAds?.conversions || 0)) / (((overviewData.facebookAds?.spend || 0) + (overviewData.googleAds?.spend || 0)) / 100)).toFixed(1)}x` : '0.0x'} change={4.2} isPositive={true} loading={loading} Icon={PerformanceLogo} changeText="conversions per $100" chartData={timeseriesData.map(d => d.Spend > 0 ? (d.Conversions || 0) / ((d.Spend || 1) / 100) : 0)} disconnected={!activeGoogleAdsCustomerId && !activeFacebookAdAccountId} onClick={() => navigate((!activeGoogleAdsCustomerId && !activeFacebookAdAccountId) ? '/connect-accounts' : '/dashboard/google-ads')} insight={overviewData.intelligence?.metricEfficiency} contextPrompt={`Audit our Efficiency Score. How can we lower the cost per conversion while scaling?`} />
               </div>
-
-              {/* Enhanced Health & AI Intelligence Block */}
-              {!overviewData.intelligence ? (
-                <div className="bg-white dark:bg-dark-card border border-neutral-200/80 dark:border-neutral-700/60 rounded-[2rem] p-6 mb-8 animate-pulse shadow-sm shadow-brand-500/5">
-                  <div className="flex flex-col md:flex-row items-center gap-8">
-                    <div className="flex flex-col items-center shrink-0 space-y-2">
-                      <div className="h-2 w-24 bg-neutral-100 dark:bg-neutral-800 rounded-full" />
-                      <div className="h-12 w-20 bg-neutral-100 dark:bg-neutral-800 rounded-xl" />
-                      <div className="h-4 w-28 bg-neutral-100 dark:bg-neutral-800 rounded-full" />
-                    </div>
-                    <div className="h-px md:h-20 w-full md:w-px bg-neutral-100 dark:bg-neutral-800" />
-                    <div className="flex-1 space-y-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 rounded-full bg-neutral-100 dark:bg-neutral-800" />
-                        <div className="h-3 w-32 bg-neutral-100 dark:bg-neutral-800 rounded-full" />
-                      </div>
-                      <div className="space-y-2">
-                        <div className="h-3 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full" />
-                        <div className="h-3 w-2/3 bg-neutral-100 dark:bg-neutral-800 rounded-full" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  className="bg-white dark:bg-dark-card border border-neutral-200/80 dark:border-neutral-700/60 rounded-[2rem] p-6 mb-8 hover:shadow-lg transition-all group relative overflow-hidden"
-                >
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 rounded-full blur-[80px] -mr-32 -mt-32"></div>
-                  <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
-                    <div className="flex flex-col items-center md:items-start shrink-0">
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 mb-2">Overall Site Health</span>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-6xl font-black text-neutral-900 dark:text-white tabular-nums">
-                          {overviewData.intelligence?.healthScore || 72}
-                        </span>
-                        <span className="text-xl font-bold text-neutral-400">/100</span>
-                      </div>
-                      <div className={`mt-3 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${(overviewData.intelligence?.healthScore || 72) >= 80 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                        }`}>
-                        {(overviewData.intelligence?.healthScore || 72) >= 80 ? 'Optimal Performance' : 'Optimization Required'}
-                      </div>
-                    </div>
-
-                    <div className="h-px md:h-20 w-full md:w-px bg-neutral-100 dark:bg-neutral-800 shrink-0"></div>
-
-                    <div className="flex-1 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <RankPilotLogo className="w-5 h-5 text-brand-600" />
-                        <span className="text-xs font-black uppercase tracking-widest text-brand-600">Site AI Intelligence</span>
-                      </div>
-                      <p className="text-sm font-bold text-neutral-600 dark:text-neutral-300 leading-relaxed italic">
-                        "{overviewData.intelligence?.overviewHealth || "Your site audit analysis is complete. Connect more sources to deepen the cross-platform intelligence mapping."}"
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 shadow-sm transition-all shadow-orange-500/5">

@@ -108,6 +108,16 @@ const Ga4Page = () => {
     const [breakdowns, setBreakdowns] = useState({ devices: [], locations: [] });
     const [intelligence, setIntelligence] = useState(null);
 
+    const presetLabels = {
+        'today': 'Today',
+        'yesterday': 'Yesterday',
+        '7d': 'Last 7 Days',
+        '28d': 'Last 28 Days',
+        '90d': 'Last 90 Days',
+        '1y': 'Last Year',
+        'custom': 'Custom Range'
+    };
+
     const loadData = useCallback(async () => {
         if (!isConnected || !hasProperty) return;
         setLoading(true);
@@ -348,8 +358,8 @@ const Ga4Page = () => {
 
     const pageColumns = [
         { header: 'Page Title', cell: (row) => <div className="max-w-[200px] truncate" title={row.title}>{row.title}</div> },
-        { header: 'Path', cell: (row) => <div className="max-w-[200px] truncate text-brand-600 dark:text-brand-400" title={row.path}>{row.path}</div> },
-        { header: 'Views', cell: (row) => formatNumber(row.views) },
+        { header: 'URL Path', cell: (row) => <div className="max-w-[200px] truncate text-brand-600 dark:text-brand-400" title={row.path}>{row.path}</div> },
+        { header: 'Page Views', cell: (row) => formatNumber(row.views) },
         { header: 'Users', cell: (row) => formatNumber(row.users) },
     ];
 
@@ -618,13 +628,13 @@ const Ga4Page = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <KpiCard
-                        title="Active Navigators"
+                        title="Active Users"
                         value={overview ? formatNumber(overview.activeUsers || 0) : '0'}
                         loading={loading}
                         Icon={Ga4Logo}
                         change={12.4}
                         isPositive={true}
-                        changeText="real-time reach"
+                        changeText="vs last period"
                         chartData={timeseries.map(d => d.sessions).slice(-10)}
                         insight={intelligence?.kpiUsers}
                         contextPrompt={`Current GA4 Active Users: ${formatNumber(overview?.users)}. Analyze this acquisition trend.`}
@@ -636,30 +646,30 @@ const Ga4Page = () => {
                         Icon={Ga4Logo}
                         change={7.2}
                         isPositive={true}
-                        changeText="engagement volume"
+                        changeText="vs last period"
                         chartData={timeseries.map(d => d.sessions).slice(-10)}
                         insight={intelligence?.kpiSessions}
                         contextPrompt={`Total sessions: ${formatNumber(overview?.sessions)}. How is the engagement volume compared to last period?`}
                     />
                     <KpiCard
-                        title="Resonance Rate"
+                        title="Engagement Rate"
                         value={overview ? `${(100 - overview.bounceRate).toFixed(1)}%` : '0%'}
                         loading={loading}
                         Icon={Ga4Logo}
                         change={2.1}
                         isPositive={true}
-                        changeText="retention surge"
+                        changeText="vs last period"
                         insight={intelligence?.kpiResonance}
-                        contextPrompt={`My Resonance/Engagement Rate is ${(100 - (overview?.bounceRate || 0)).toFixed(1)}%. What does this say about user interest?`}
+                        contextPrompt={`My Engagement Rate is ${(100 - (overview?.bounceRate || 0)).toFixed(1)}%. What does this say about user interest?`}
                     />
                     <KpiCard
-                        title="Avg. Session Time"
+                        title="Avg. Session Duration"
                         value={overview ? formatTime(overview.avgSessionDuration) : '0m 0s'}
                         loading={loading}
                         Icon={Ga4Logo}
                         change={-0.5}
                         isPositive={false}
-                        changeText="attention span"
+                        changeText="vs last period"
                         insight={intelligence?.kpiDuration}
                         contextPrompt={`Average session duration: ${formatTime(overview?.avgSessionDuration)}. Suggest ways to increase attention span.`}
                     />
@@ -668,9 +678,9 @@ const Ga4Page = () => {
                 {/* ADD 2 — Summary Strip */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                     {[
-                        { label: 'Total Page Views', value: overview ? formatNumber(overview.pageViews) : '0', icon: <ChartBarIcon className="w-5 h-5 text-blue-500" />, insight: intelligence?.kpiPageViews },
+                        { label: 'Page Views', value: overview ? formatNumber(overview.pageViews) : '0', icon: <ChartBarIcon className="w-5 h-5 text-blue-500" />, insight: intelligence?.kpiPageViews },
                         { label: 'New Users', value: formatNumber(newUsers), icon: <UsersIcon className="w-5 h-5 text-emerald-500" />, insight: intelligence?.kpiNewUsers },
-                        { label: 'Pages / Session', value: pagesPerSession, icon: <GlobeAltIcon className="w-5 h-5 text-purple-500" />, insight: intelligence?.kpiPagesPerSession }
+                        { label: 'Pages Per Session', value: pagesPerSession, icon: <GlobeAltIcon className="w-5 h-5 text-purple-500" />, insight: intelligence?.kpiPagesPerSession }
                     ].map((card, idx) => (
                         <div key={idx} className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-4 shadow-sm group hover:border-brand-500/30 transition-all flex flex-col">
                             <div className="flex items-center gap-4 mb-3">
@@ -699,8 +709,8 @@ const Ga4Page = () => {
                     <div className="lg:col-span-2 bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-[2.5rem] shadow-sm overflow-hidden flex flex-col min-h-[450px] group relative">
                         <div className="p-8 border-b border-neutral-100 dark:border-neutral-800 flex justify-between items-center bg-emerald-500/5">
                             <div>
-                                <h3 className="text-lg font-black text-neutral-900 dark:text-white">Engagement Resonance Matrix</h3>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mt-1">Cross-period session liquidity analysis</p>
+                                <h3 className="text-lg font-black text-neutral-900 dark:text-white">Sessions Over Time</h3>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mt-1">{presetLabels[preset] || 'Custom Range'}</p>
                             </div>
                             <div className="p-2 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 flex items-center gap-2">
                                 <button
@@ -739,14 +749,28 @@ const Ga4Page = () => {
                                             tickLine={false}
                                             tick={{ fontSize: 10, fill: '#9CA3AF', fontWeight: 'bold' }}
                                             dy={15}
+                                            interval={2}
+                                            tickFormatter={(val) => {
+                                                const d = new Date(val);
+                                                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                                            }}
                                         />
                                         <YAxis
                                             axisLine={false}
                                             tickLine={false}
                                             tick={{ fontSize: 10, fill: '#9CA3AF', fontWeight: 'bold' }}
                                             tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val}
+                                            domain={['auto', 'auto']}
                                         />
                                         <Tooltip
+                                            labelFormatter={(label) => {
+                                                const d = new Date(label);
+                                                return d.toLocaleDateString('en-US', { 
+                                                    month: 'short', 
+                                                    day: 'numeric', 
+                                                    year: 'numeric' 
+                                                });
+                                            }}
                                             contentStyle={{
                                                 borderRadius: '20px',
                                                 border: 'none',
@@ -775,7 +799,7 @@ const Ga4Page = () => {
                     {/* lg:col-span-1: ADD 3 — New vs Returning Users */}
                     <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-[2rem] p-6 shadow-sm flex flex-col">
                         <div className="flex items-center justify-between mb-1">
-                            <h3 className="text-base font-black text-neutral-900 dark:text-white">New vs Returning</h3>
+                            <h3 className="text-base font-black text-neutral-900 dark:text-white">New vs Returning Users</h3>
                             <button
                                 onClick={() => openWithQuestion(`My GA4 user split: ${newPct}% new users (${formatNumber(newUsers)}) and ${retPct}% returning (${formatNumber(retUsers)}) out of ${formatNumber(overview?.users)} total. Is this a healthy ratio? What strategies can improve user retention?`)}
                                 className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
@@ -784,9 +808,9 @@ const Ga4Page = () => {
                                 ASK AI
                             </button>
                         </div>
-                        <p className="text-xs text-neutral-400 font-semibold mb-4">User type distribution</p>
+                        <p className="text-xs text-neutral-400 font-semibold mb-4">Based on selected date range</p>
 
-                        <div className="flex items-center justify-center relative" style={{ height: 160 }}>
+                        <div className="flex-1 flex items-center justify-center relative" style={{ minHeight: 220 }}>
                             {loading ? (
                                 <div className="w-32 h-32 rounded-full border-8 border-neutral-100 dark:border-neutral-800 border-t-brand-500 animate-spin"></div>
                             ) : (
@@ -794,20 +818,29 @@ const Ga4Page = () => {
                                     <PieChart>
                                         <Pie
                                             data={[{ name: 'New Users', value: newUsers }, { name: 'Returning', value: retUsers }]}
-                                            innerRadius={52} outerRadius={72} paddingAngle={4} dataKey="value"
+                                            innerRadius={65} outerRadius={85} paddingAngle={4} dataKey="value"
                                         >
                                             <Cell fill="#3B82F6" />
                                             <Cell fill="#10B981" />
                                         </Pie>
-                                        <Tooltip
+                                        <text x="50%" y="45%" textAnchor="middle" dominantBaseline="middle"
+                                            className="fill-neutral-900 dark:fill-white"
+                                            style={{ fontSize: '18px', fontWeight: '900' }}>
+                                            {formatNumber(overview?.users)}
+                                        </text>
+                                        <text x="50%" y="58%" textAnchor="middle" dominantBaseline="middle"
+                                            className="fill-neutral-400 dark:fill-neutral-500"
+                                            style={{ fontSize: '9px', fontWeight: '700' }}>
+                                            TOTAL USERS
+                                        </text>
+                                        <Tooltip 
                                             contentStyle={{
-                                                borderRadius: '12px',
+                                                borderRadius: '15px',
                                                 border: 'none',
-                                                fontSize: '12px',
                                                 background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
                                                 color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
                                             }}
-                                        />
+                                        /> 
                                     </PieChart>
                                 </ResponsiveContainer>
                             )}
@@ -845,7 +878,7 @@ const Ga4Page = () => {
                     <div className="flex items-center justify-between mb-5">
                         <div>
                             <h3 className="text-base font-black text-neutral-900 dark:text-white">Engagement Rate</h3>
-                            <p className="text-xs text-neutral-400 font-semibold mt-0.5">GA4 engagement metrics — inverse of bounce rate</p>
+                            <p className="text-xs text-neutral-400 font-semibold mt-0.5">GA4 engagement metrics for selected period</p>
                         </div>
                         <div className="flex items-center gap-2">
                             <button
@@ -881,7 +914,7 @@ const Ga4Page = () => {
                     </div>
 
                     <div className="mt-4 p-3 bg-brand-50 dark:bg-brand-900/20 rounded-xl text-xs text-brand-700 dark:text-brand-300">
-                        💡 <strong>Engagement Rate</strong> = Sessions lasting 10+ seconds, with a conversion event, or 2+ pageviews. GA4 uses this as the replacement for Bounce Rate.
+                        💡 Engagement Rate counts sessions where user stayed 10+ sec, converted, or viewed 2+ pages.
                     </div>
                     <SectionAiSummary 
                         insight={intelligence?.retention} 
@@ -896,7 +929,7 @@ const Ga4Page = () => {
                     {/* Left: Bounce Rate Trend */}
                     <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 shadow-sm">
                         <div className="flex items-center justify-between mb-1">
-                            <h3 className="text-sm font-black text-neutral-900 dark:text-white">Bounce Rate Trend</h3>
+                            <h3 className="text-sm font-black text-neutral-900 dark:text-white">Bounce Rate Over Time</h3>
                             <button
                                 onClick={() => openWithQuestion(`My GA4 bounce rate is ${((overview?.bounceRate || 0) * 100).toFixed(1)}% (engagement rate: ${engagementRate}%). Is this a problem? What pages might be causing high bounce and how can I fix it?`)}
                                 className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
@@ -905,7 +938,7 @@ const Ga4Page = () => {
                                 ASK AI
                             </button>
                         </div>
-                        <p className="text-xs text-neutral-400 mb-4">Daily resonance fluctuations</p>
+                        <p className="text-[11px] font-black uppercase tracking-widest text-neutral-400 mt-1">Daily bounce rate changes</p>
                         {loading ? (
                             <div className="h-48 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse" />
                         ) : (
@@ -918,9 +951,22 @@ const Ga4Page = () => {
                                         </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" className="dark:stroke-neutral-800" opacity={0.5} />
-                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9CA3AF', fontWeight: 'bold' }} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9CA3AF', fontWeight: 'bold' }} tickFormatter={v => `${v}%`} />
+                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9CA3AF', fontWeight: 'bold' }} interval={6}
+                                        tickFormatter={(val) => {
+                                            const d = new Date(val);
+                                            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                                        }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9CA3AF', fontWeight: 'bold' }} tickFormatter={v => `${v}%`} domain={[10, 'auto']} />
                                     <Tooltip
+                                        labelFormatter={(label) => {
+                                            const d = new Date(label);
+                                            return d.toLocaleDateString('en-US', {
+                                                month: 'short',
+                                                day: 'numeric',
+                                                year: 'numeric'
+                                            });
+                                        }}
+                                        formatter={(value) => [`${value}%`, 'Bounce Rate']}
                                         contentStyle={{
                                             borderRadius: '15px',
                                             border: 'none',
@@ -929,7 +975,7 @@ const Ga4Page = () => {
                                             color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
                                         }}
                                     />
-                                    <Area type="monotone" dataKey="bounceRate" stroke="#F97316" strokeWidth={2.5} fill="url(#bounceGrad)" name="Bounce Rate %" dot={false} />
+                                    <Area type="monotone" dataKey="bounceRate" stroke="#F97316" strokeWidth={2.5} fill="url(#bounceGrad)" name="Bounce Rate" dot={false} />
                                 </AreaChart>
                             </ResponsiveContainer>
                         )}
@@ -944,7 +990,7 @@ const Ga4Page = () => {
                     {/* Right: Page Views Bar Chart */}
                     <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 shadow-sm">
                         <div className="flex items-center justify-between mb-1">
-                            <h3 className="text-sm font-black text-neutral-900 dark:text-white">Session Volume Distribution</h3>
+                            <h3 className="text-sm font-black text-neutral-900 dark:text-white">Page Views Over Time</h3>
                             <button
                                 onClick={() => openWithQuestion(`My GA4 total sessions: ${formatNumber(overview?.sessions)}, page views: ${formatNumber(overview?.pageViews)}, pages per session: ${pagesPerSession}. Are there any concerning spikes or dips? What does session distribution tell us?`)}
                                 className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
@@ -953,16 +999,30 @@ const Ga4Page = () => {
                                 ASK AI
                             </button>
                         </div>
-                        <p className="text-xs text-neutral-400 mb-4">Traffic density per interval</p>
+                        <p className="text-[11px] font-black uppercase tracking-widest text-neutral-400 mt-1">Daily page view count</p>
                         {loading ? (
                             <div className="h-48 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse" />
                         ) : (
                             <ResponsiveContainer width="100%" height={190}>
                                 <BarChart data={timeseries} margin={{ top: 5, right: 10, left: -25, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" className="dark:stroke-neutral-800" opacity={0.5} />
-                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9CA3AF', fontWeight: 'bold' }} />
+                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9CA3AF', fontWeight: 'bold' }} interval={6}
+                                        tickFormatter={(val) => {
+                                            const d = new Date(val);
+                                            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                                        }} 
+                                        />
                                     <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9CA3AF', fontWeight: 'bold' }} tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v} />
                                     <Tooltip
+                                    labelFormatter={(label) => {
+                                    const d = new Date(label);
+                                        return d.toLocaleDateString('en-US', { 
+                                            month: 'short', 
+                                            day: 'numeric', 
+                                            year: 'numeric' 
+                                        });
+                                    }}
+                                    formatter={(value) => [value.toLocaleString(), 'Page Views']}
                                         contentStyle={{
                                             borderRadius: '15px',
                                             border: 'none',
@@ -971,7 +1031,7 @@ const Ga4Page = () => {
                                             color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
                                         }}
                                     />
-                                    <Bar dataKey="pageViews" fill="#3B82F6" radius={[4, 4, 0, 0]} name="Page Views" fillOpacity={0.85} />
+                                    <Bar dataKey="pageViews" fill="#3B82F6" radius={[3, 3, 0, 0]} maxBarSize={8} name="Page Views" fillOpacity={0.85} />
                                 </BarChart>
                             </ResponsiveContainer>
                         )}
@@ -989,7 +1049,7 @@ const Ga4Page = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-2xl shadow-sm overflow-hidden flex flex-col">
                         <div className="p-5 border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-dark-surface/50 flex items-center justify-between">
-                            <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Traffic Sources</h3>
+                            <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Top Traffic Sources </h3>
                             <button
                                 onClick={() => openWithQuestion(`My GA4 top traffic sources: ${traffic.slice(0, 5).map(t => `${t.channel} (${t.sessions} sessions)`).join(', ')}. Which channels are performing best? How can I optimize my traffic mix?`)}
                                 className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
@@ -1038,11 +1098,11 @@ const Ga4Page = () => {
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Device Mix Breakdown */}
-                    <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-[2.5rem] p-8 shadow-sm group">
+                    <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-[2.5rem] p-8 shadow-sm group flex flex-col">
                         <div className="mb-6 flex justify-between items-center">
                             <div>
-                                <h3 className="text-lg font-black text-neutral-900 dark:text-white">Apparatus Analysis</h3>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Device category distribution</p>
+                                <h3 className="text-lg font-black text-neutral-900 dark:text-white">Device Breakdown</h3>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Sessions by device type</p>
                             </div>
                             <button
                                 onClick={() => openWithQuestion(`My GA4 device breakdown: ${breakdowns.devices.map(d => `${d.name}: ${formatNumber(d.value)} sessions`).join(', ')}. Should I prioritize mobile optimization? Any device-specific UX improvements?`)}
@@ -1052,8 +1112,9 @@ const Ga4Page = () => {
                                 ASK AI
                             </button>
                         </div>
-                        <div className="flex flex-col md:flex-row items-center gap-8 mb-6">
-                            <div className="w-[200px] h-[200px]">
+                        <div className="flex-1">
+                            <div className="flex flex-col md:flex-row items-center gap-10 mb-8">
+                                <div className="w-[240px] h-[240px]">
                                 {loading ? (
                                     <div className="w-full h-full rounded-full bg-neutral-100 dark:bg-neutral-800 animate-pulse"></div>
                                 ) : (
@@ -1066,11 +1127,26 @@ const Ga4Page = () => {
                                                 paddingAngle={8}
                                                 dataKey="value"
                                             >
+                                                <text x="50%" y="45%" textAnchor="middle" dominantBaseline="middle"
+                                                    className="fill-neutral-900 dark:fill-white"
+                                                    style={{ fontSize: '18px', fontWeight: '900' }}>
+                                                    {formatNumber(overview?.sessions)}
+                                                </text>
+
+                                                <text x="50%" y="58%" textAnchor="middle" dominantBaseline="middle"
+                                                    className="fill-neutral-400 dark:fill-neutral-500"
+                                                    style={{ fontSize: '9px', fontWeight: '700' }}>
+                                                    TOTAL SESSIONS
+                                                </text>
                                                 {breakdowns.devices.map((entry, index) => (
                                                     <Cell key={index} fill={['#10B981', '#3B82F6', '#F59E0B', '#EF4444'][index % 4]} />
                                                 ))}
                                             </Pie>
                                             <Tooltip
+                                                formatter={(value, name) => [
+                                                    value.toLocaleString(),
+                                                    name.charAt(0).toUpperCase() + name.slice(1)
+                                                ]}
                                                 contentStyle={{
                                                     borderRadius: '15px',
                                                     border: 'none',
@@ -1091,7 +1167,7 @@ const Ga4Page = () => {
                                             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ['#10B981', '#3B82F6', '#F59E0B', '#EF4444'][i % 4] }}></div>
                                             <span className="text-xs font-black capitalize text-neutral-600 dark:text-neutral-400">{d.name}</span>
                                         </div>
-                                        <span className="text-xs font-black text-neutral-900 dark:text-white">{formatNumber(d.value)}</span>
+                                        <span className="text-xs font-black text-neutral-900 dark:text-white">{formatNumber(d.value)} ({((d.value / overview.sessions) * 100).toFixed(0)}%)</span>
                                     </div>
                                 ))}
                             </div>
@@ -1104,12 +1180,14 @@ const Ga4Page = () => {
                         />
                     </div>
 
+                    </div>
+
                     {/* Geography Breakdown */}
-                    <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-[2.5rem] p-8 shadow-sm group">
+                    <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-[2.5rem] p-8 shadow-sm group flex flex-col">
                         <div className="mb-6 flex justify-between items-center">
                             <div>
-                                <h3 className="text-lg font-black text-neutral-900 dark:text-white">Geographical Reach</h3>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Top 5 conversion landscapes</p>
+                                <h3 className="text-lg font-black text-neutral-900 dark:text-white">Top Locations</h3>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Top 5 countries by sessions</p>
                             </div>
                             <button
                                 onClick={() => openWithQuestion(`My top GA4 locations by sessions: ${breakdowns.locations.slice(0, 5).map(l => `${l.name}: ${formatNumber(l.value)}`).join(', ')}. Any geo-based opportunities or localization strategies I should pursue?`)}
@@ -1119,22 +1197,21 @@ const Ga4Page = () => {
                                 ASK AI
                             </button>
                         </div>
-                        <div className="space-y-4">
+                        <div className="flex-1 space-y-7">
                             {loading ? (
                                 Array(5).fill(0).map((_, i) => (
                                     <div key={i} className="h-10 w-full bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"></div>
                                 ))
                             ) : breakdowns.locations.map((loc, i) => {
-                                const maxVal = Math.max(...breakdowns.locations.map(l => l.value));
-                                const width = (loc.value / maxVal) * 100;
+                                const width = (loc.value / overview.sessions) * 100;
                                 return (
-                                    <div key={i} className="space-y-2">
+                                    <div key={i} className="space-y-3">
                                         <div className="flex justify-between items-end">
                                             <span className="text-xs font-black text-neutral-700 dark:text-neutral-300 flex items-center gap-2">
                                                 <span className="w-5 h-5 flex items-center justify-center bg-neutral-100 dark:bg-dark-surface rounded-md text-[10px]">{i + 1}</span>
                                                 {loc.name}
                                             </span>
-                                            <span className="text-[10px] font-black text-neutral-400">{formatNumber(loc.value)} SESSIONS</span>
+                                            <span className="text-[10px] font-black text-neutral-400">{formatNumber(loc.value)} ({((loc.value / overview.sessions) * 100).toFixed(0)}%) </span>
                                         </div>
                                         <div className="h-2 w-full bg-neutral-100 dark:bg-dark-surface rounded-full overflow-hidden">
                                             <div
@@ -1159,8 +1236,8 @@ const Ga4Page = () => {
                 <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 shadow-sm">
                     <div className="flex items-center justify-between mb-5">
                         <div>
-                            <h3 className="text-sm font-black text-neutral-900 dark:text-white">Period Comparison</h3>
-                            <p className="text-xs text-neutral-400 mt-0.5">This period vs last period — all key metrics</p>
+                            <h3 className="text-sm font-black text-neutral-900 dark:text-white">This Period vs Last Period</h3>
+                            <p className="text-xs text-neutral-400 mt-0.5">Compare performance with previous period</p>
                         </div>
                         <div className="flex items-center gap-2">
                             <button
@@ -1170,7 +1247,8 @@ const Ga4Page = () => {
                                 <SparklesIcon className="w-3.5 h-3.5" />
                                 ASK AI
                             </button>
-                            <span className="text-xs font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full border border-purple-100 dark:border-purple-800">vs Last Period</span>
+                            <span className="text-xs font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full border border-purple-100 dark:border-purple-800">Previous Period
+                            </span>
                         </div>
                     </div>
                     <div className="overflow-x-auto">
@@ -1201,6 +1279,11 @@ const Ga4Page = () => {
                                                     : 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
                                                     }`}>
                                                     {row.up ? '▲' : '▼'} {Math.abs(row.change)}%
+                                                    {row.metric.includes('Bounce') && (
+                                                        <span className="ml-1 text-[9px] font-bold">
+                                                            {row.up ? '(worse)' : '(better)'}
+                                                        </span>
+                                                    )}
                                                 </span>
                                             </td>
                                         </tr>

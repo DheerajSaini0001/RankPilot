@@ -56,7 +56,7 @@ const DataTable = ({ columns, data, loading = false, className = '', initialLimi
                         {expanded ? (
                             <>Show Less</>
                         ) : (
-                            <>View More ({data.length - initialLimit} remaining)</>
+                            <>View all ({data.length - initialLimit} remaining)</>
                         )}
                     </button>
                 </div>
