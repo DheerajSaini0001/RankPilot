@@ -1,4 +1,7 @@
-import DailyMetric from '../models/DailyMetric.js';
+import Ga4Metric from '../models/Ga4Metric.js';
+import GscMetric from '../models/GscMetric.js';
+import GoogleAdsMetric from '../models/GoogleAdsMetric.js';
+import FacebookAdsMetric from '../models/FacebookAdsMetric.js';
 import UserAccounts from '../models/UserAccounts.js';
 import { runReport as runGa4Report } from './ga4Service.js';
 import { runQuery as runGscQuery } from './gscService.js';
@@ -257,7 +260,6 @@ export const syncGa4 = async (acc, startDate, endDate) => {
                     filter: {
                         'metadata.userId': userId,
                         'metadata.siteId': acc._id,
-                        'metadata.source': 'ga4',
                         'metadata.platformAccountId': acc.ga4PropertyId,
                         date: formattedDate,
                         'metadata.dimensions.channel': row.dimensionValues[1].value,
@@ -293,7 +295,7 @@ export const syncGa4 = async (acc, startDate, endDate) => {
 
         for (let i = 0; i < operations.length; i += 1000) {
             const chunk = operations.slice(i, i + 1000);
-            await DailyMetric.bulkWrite(chunk);
+            await Ga4Metric.bulkWrite(chunk);
         }
     }
 };
@@ -312,7 +314,6 @@ export const syncGsc = async (acc, startDate, endDate) => {
                     filter: {
                         'metadata.userId': userId,
                         'metadata.siteId': acc._id,
-                        'metadata.source': 'gsc',
                         'metadata.platformAccountId': acc.gscSiteUrl,
                         date: rowDate,
                         'metadata.dimensions.page': row.keys[1],
@@ -339,7 +340,7 @@ export const syncGsc = async (acc, startDate, endDate) => {
 
         for (let i = 0; i < operations.length; i += 1000) {
             const chunk = operations.slice(i, i + 1000);
-            await DailyMetric.bulkWrite(chunk);
+            await GscMetric.bulkWrite(chunk);
         }
     }
 };
@@ -362,7 +363,6 @@ export const syncGoogleAds = async (acc, startDate, endDate) => {
                     filter: {
                         'metadata.userId': userId,
                         'metadata.siteId': acc._id,
-                        'metadata.source': 'google-ads',
                         'metadata.platformAccountId': acc.googleAdsCustomerId,
                         date: rowDate,
                         'metadata.dimensions.campaign': row.campaign.name,
@@ -397,7 +397,7 @@ export const syncGoogleAds = async (acc, startDate, endDate) => {
 
         for (let i = 0; i < operations.length; i += 1000) {
             const chunk = operations.slice(i, i + 1000);
-            await DailyMetric.bulkWrite(chunk);
+            await GoogleAdsMetric.bulkWrite(chunk);
         }
     }
 };
@@ -419,7 +419,6 @@ export const syncFacebookAds = async (acc, startDate, endDate) => {
                     filter: {
                         'metadata.userId': userId,
                         'metadata.siteId': acc._id,
-                        'metadata.source': 'facebook-ads',
                         'metadata.platformAccountId': acc.facebookAdAccountId,
                         date: rowDate,
                         'metadata.dimensions.campaign': row.campaign_name,
@@ -470,7 +469,7 @@ export const syncFacebookAds = async (acc, startDate, endDate) => {
 
         for (let i = 0; i < operations.length; i += 1000) {
             const chunk = operations.slice(i, i + 1000);
-            await DailyMetric.bulkWrite(chunk);
+            await FacebookAdsMetric.bulkWrite(chunk);
         }
     }
 };

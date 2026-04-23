@@ -2,7 +2,10 @@ import UserAccounts from '../models/UserAccounts.js';
 import mongoose from 'mongoose';
 import GoogleToken from '../models/GoogleToken.js';
 import FacebookToken from '../models/FacebookToken.js';
-import DailyMetric from '../models/DailyMetric.js';
+import Ga4Metric from '../models/Ga4Metric.js';
+import GscMetric from '../models/GscMetric.js';
+import GoogleAdsMetric from '../models/GoogleAdsMetric.js';
+import FacebookAdsMetric from '../models/FacebookAdsMetric.js';
 import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
 import WeeklyInsight from '../models/WeeklyInsight.js';
@@ -38,7 +41,13 @@ async function cleanupMetrics(userId, platformAccountId, ignoreSiteId = null) {
     const otherSiteUsingThis = await UserAccounts.findOne(query);
 
     if (!otherSiteUsingThis) {
-        await DailyMetric.deleteMany({ 'metadata.userId': userId, 'metadata.platformAccountId': platformAccountId });
+        const filter = { 'metadata.userId': userId, 'metadata.platformAccountId': platformAccountId };
+        await Promise.all([
+            Ga4Metric.deleteMany(filter),
+            GscMetric.deleteMany(filter),
+            GoogleAdsMetric.deleteMany(filter),
+            FacebookAdsMetric.deleteMany(filter)
+        ]);
     }
 }
 
@@ -71,7 +80,13 @@ async function performSiteDelete(userId, siteId, account = null) {
     await Notification.deleteMany({ siteId, userId });
 
     // 4. Delete all metrics associated with this specific site strictly by siteId
-    await DailyMetric.deleteMany({ 'metadata.siteId': siteId, 'metadata.userId': userId });
+    const siteFilter = { 'metadata.siteId': siteId, 'metadata.userId': userId };
+    await Promise.all([
+        Ga4Metric.deleteMany(siteFilter),
+        GscMetric.deleteMany(siteFilter),
+        GoogleAdsMetric.deleteMany(siteFilter),
+        FacebookAdsMetric.deleteMany(siteFilter)
+    ]);
 
     // 5. Finally delete the site record
     await UserAccounts.deleteOne({ _id: siteId, userId });

@@ -1,6 +1,9 @@
 import GoogleToken from '../models/GoogleToken.js';
 import FacebookToken from '../models/FacebookToken.js';
-import DailyMetric from '../models/DailyMetric.js';
+import Ga4Metric from '../models/Ga4Metric.js';
+import GscMetric from '../models/GscMetric.js';
+import GoogleAdsMetric from '../models/GoogleAdsMetric.js';
+import FacebookAdsMetric from '../models/FacebookAdsMetric.js';
 import UserAccounts from '../models/UserAccounts.js';
 import { createNotification } from '../utils/notification.js';
 import { generateWeeklyInsightInternal, generateSuggestedQuestionsInternal } from '../controllers/aiController.js';
@@ -58,32 +61,35 @@ export const checkPerformanceDrops = async () => {
     try {
         const accounts = await UserAccounts.find();
         for (const acc of accounts) {
-            const platformId = acc.ga4PropertyId || acc.gscSiteUrl; 
-            if (!platformId) continue;
+            const platformChecks = [
+                { id: acc.ga4PropertyId, model: Ga4Metric, metric: 'sessions', type: 'GA4' },
+                { id: acc.gscSiteUrl, model: GscMetric, metric: 'clicks', type: 'GSC' }
+            ].filter(p => p.id);
 
-            const metrics = await DailyMetric.aggregate([
-                { $match: { 'metadata.platformAccountId': platformId, date: { $gte: startDate, $lte: now } } },
-                { $group: { _id: { period: { $cond: [{ $gte: ['$date', splitDate] }, 'current', 'previous'] } }, totalSessions: { $sum: '$metrics.sessions' }, totalClicks: { $sum: '$metrics.clicks' } } }
-            ]);
+            for (const check of platformChecks) {
+                const metrics = await check.model.aggregate([
+                    { $match: { 'metadata.platformAccountId': check.id, date: { $gte: startDate, $lte: now } } },
+                    { $group: { _id: { period: { $cond: [{ $gte: ['$date', splitDate] }, 'current', 'previous'] } }, total: { $sum: `$metrics.${check.metric}` } } }
+                ]);
 
-            const current = metrics.find(m => m._id.period === 'current');
-            const previous = metrics.find(m => m._id.period === 'previous');
+                const current = metrics.find(m => m._id.period === 'current');
+                const previous = metrics.find(m => m._id.period === 'previous');
 
-            if (current && previous) {
-                const isGsc = platformId === acc.gscSiteUrl;
-                const prevVal = isGsc ? (previous.totalClicks || 0) : (previous.totalSessions || 0);
-                const curVal = isGsc ? (current.totalClicks || 0) : (current.totalSessions || 0);
+                if (current && previous) {
+                    const prevVal = previous.total || 0;
+                    const curVal = current.total || 0;
 
-                if (prevVal > 100 && curVal < prevVal * 0.7) {
-                    const dropPercent = Math.round(((prevVal - curVal) / prevVal) * 100);
-                    await createNotification(acc.userId, {
-                        type: 'warning',
-                        title: `Traffic Alert: ${dropPercent}% Drop`,
-                        message: `Your traffic for "${acc.siteName}" has dropped by ${dropPercent}% compared to last week. Explore AI insights to see why.`,
-                        source: 'ai',
-                        actionLabel: 'Analyze Now',
-                        actionPath: '/dashboard/ai-chat'
-                    });
+                    if (prevVal > 100 && curVal < prevVal * 0.7) {
+                        const dropPercent = Math.round(((prevVal - curVal) / prevVal) * 100);
+                        await createNotification(acc.userId, {
+                            type: 'warning',
+                            title: `${check.type} Traffic Alert: ${dropPercent}% Drop`,
+                            message: `Your traffic for "${acc.siteName}" has dropped by ${dropPercent}% compared to last week. Explore AI insights to see why.`,
+                            source: 'ai',
+                            actionLabel: 'Analyze Now',
+                            actionPath: '/dashboard/ai-chat'
+                        });
+                    }
                 }
             }
         }
@@ -102,14 +108,14 @@ export const checkInactiveSources = async () => {
         const accounts = await UserAccounts.find();
         for (const acc of accounts) {
             const sources = [
-                { id: acc.ga4PropertyId, name: 'GA4', key: 'sessions' },
-                { id: acc.gscSiteUrl, name: 'Search Console', key: 'clicks' },
-                { id: acc.googleAdsCustomerId, name: 'Google Ads', key: 'spend' },
-                { id: acc.facebookAdAccountId, name: 'Facebook Ads', key: 'spend' }
+                { id: acc.ga4PropertyId, name: 'GA4', key: 'sessions', model: Ga4Metric },
+                { id: acc.gscSiteUrl, name: 'Search Console', key: 'clicks', model: GscMetric },
+                { id: acc.googleAdsCustomerId, name: 'Google Ads', key: 'spend', model: GoogleAdsMetric },
+                { id: acc.facebookAdAccountId, name: 'Facebook Ads', key: 'spend', model: FacebookAdsMetric }
             ].filter(s => s.id);
 
             for (const source of sources) {
-                const recentData = await DailyMetric.findOne({
+                const recentData = await source.model.findOne({
                     'metadata.platformAccountId': source.id,
                     date: { $gte: threeDaysAgo },
                     [`metrics.${source.key}`]: { $gt: 0 }
@@ -143,33 +149,36 @@ export const checkMonthlyGrowth = async () => {
     try {
         const accounts = await UserAccounts.find();
         for (const acc of accounts) {
-            const platformId = acc.ga4PropertyId || acc.gscSiteUrl; 
-            if (!platformId) continue;
+            const platformChecks = [
+                { id: acc.ga4PropertyId, model: Ga4Metric, metric: 'sessions', type: 'GA4' },
+                { id: acc.gscSiteUrl, model: GscMetric, metric: 'clicks', type: 'GSC' }
+            ].filter(p => p.id);
 
-            const metrics = await DailyMetric.aggregate([
-                { $match: { 'metadata.platformAccountId': platformId, date: { $gte: firstDayPrevMonth, $lt: firstDayThisMonth } } },
-                { $group: { _id: { period: { $cond: [{ $gte: ['$date', firstDayLastMonth] }, 'lastMonth', 'prevMonth'] } }, totalSessions: { $sum: '$metrics.sessions' }, totalClicks: { $sum: '$metrics.clicks' } } }
-            ]);
+            for (const check of platformChecks) {
+                const metrics = await check.model.aggregate([
+                    { $match: { 'metadata.platformAccountId': check.id, date: { $gte: firstDayPrevMonth, $lt: firstDayThisMonth } } },
+                    { $group: { _id: { period: { $cond: [{ $gte: ['$date', firstDayLastMonth] }, 'lastMonth', 'prevMonth'] } }, total: { $sum: `$metrics.${check.metric}` } } }
+                ]);
 
-            const lastMonth = metrics.find(m => m._id.period === 'lastMonth');
-            const prevMonth = metrics.find(m => m._id.period === 'prevMonth');
+                const lastMonth = metrics.find(m => m._id.period === 'lastMonth');
+                const prevMonth = metrics.find(m => m._id.period === 'prevMonth');
 
-            if (lastMonth && prevMonth) {
-                const isGsc = platformId === acc.gscSiteUrl;
-                const lastVal = isGsc ? (lastMonth.totalClicks || 0) : (lastMonth.totalSessions || 0);
-                const prevVal = isGsc ? (prevMonth.totalClicks || 0) : (prevMonth.totalSessions || 0);
+                if (lastMonth && prevMonth) {
+                    const lastVal = lastMonth.total || 0;
+                    const prevVal = prevMonth.total || 0;
 
-                if (prevVal > 100) {
-                    const growthPercent = Math.round(((lastVal - prevVal) / prevVal) * 100);
-                    if (growthPercent > 5) {
-                        await createNotification(acc.userId, {
-                            type: 'success',
-                            title: 'Monthly Growth Report',
-                            message: `Your ${acc.siteName} grew by ${growthPercent}% last month! Keep it up! 🚀`,
-                            source: 'ai',
-                            actionLabel: 'View Monthly Full Report',
-                            actionPath: '/dashboard'
-                        });
+                    if (prevVal > 100) {
+                        const growthPercent = Math.round(((lastVal - prevVal) / prevVal) * 100);
+                        if (growthPercent > 5) {
+                            await createNotification(acc.userId, {
+                                type: 'success',
+                                title: `${check.type} Monthly Growth Report`,
+                                message: `Your ${acc.siteName} grew by ${growthPercent}% last month! Keep it up! 🚀`,
+                                source: 'ai',
+                                actionLabel: 'View Monthly Full Report',
+                                actionPath: '/dashboard'
+                            });
+                        }
                     }
                 }
             }
@@ -192,14 +201,17 @@ export const checkAdSpendSpikes = async () => {
     try {
         const accounts = await UserAccounts.find({ $or: [{ googleAdsCustomerId: { $ne: null } }, { facebookAdAccountId: { $ne: null } }] });
         for (const acc of accounts) {
-            const platformIds = [acc.googleAdsCustomerId, acc.facebookAdAccountId].filter(Boolean);
+            const platforms = [
+                { id: acc.googleAdsCustomerId, model: GoogleAdsMetric, type: 'google-ads' },
+                { id: acc.facebookAdAccountId, model: FacebookAdsMetric, type: 'facebook-ads' }
+            ].filter(p => p.id);
             
-            for (const pId of platformIds) {
-                const yesterdayData = await DailyMetric.findOne({ 'metadata.platformAccountId': pId, date: yesterday });
+            for (const platform of platforms) {
+                const yesterdayData = await platform.model.findOne({ 'metadata.platformAccountId': platform.id, date: yesterday });
                 if (!yesterdayData || !yesterdayData.metrics.spend) continue;
 
-                const avgData = await DailyMetric.aggregate([
-                    { $match: { 'metadata.platformAccountId': pId, date: { $gte: sevenDaysAgo, $lt: yesterday } } },
+                const avgData = await platform.model.aggregate([
+                    { $match: { 'metadata.platformAccountId': platform.id, date: { $gte: sevenDaysAgo, $lt: yesterday } } },
                     { $group: { _id: null, avgSpend: { $avg: '$metrics.spend' } } }
                 ]);
 

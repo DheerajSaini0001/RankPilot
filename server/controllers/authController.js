@@ -8,7 +8,10 @@ import GoogleToken from '../models/GoogleToken.js';
 import FacebookToken from '../models/FacebookToken.js';
 import UserAccounts from '../models/UserAccounts.js';
 import Conversation from '../models/Conversation.js';
-import DailyMetric from '../models/DailyMetric.js';
+import Ga4Metric from '../models/Ga4Metric.js';
+import GscMetric from '../models/GscMetric.js';
+import GoogleAdsMetric from '../models/GoogleAdsMetric.js';
+import FacebookAdsMetric from '../models/FacebookAdsMetric.js';
 import Message from '../models/Message.js';
 import Notification from '../models/Notification.js';
 import WeeklyInsight from '../models/WeeklyInsight.js';
@@ -242,7 +245,10 @@ export const deleteMe = async (req, res) => {
         GoogleToken.deleteMany({ userId }),
         FacebookToken.deleteMany({ userId }),
         UserAccounts.deleteMany({ userId }),
-        DailyMetric.deleteMany({ 'metadata.userId': userId }),
+        Ga4Metric.deleteMany({ 'metadata.userId': userId }),
+        GscMetric.deleteMany({ 'metadata.userId': userId }),
+        GoogleAdsMetric.deleteMany({ 'metadata.userId': userId }),
+        FacebookAdsMetric.deleteMany({ 'metadata.userId': userId }),
         Notification.deleteMany({ userId }),
         WeeklyInsight.deleteMany({ userId }),
         Message.deleteMany({ conversationId: { $in: convIds } }),
