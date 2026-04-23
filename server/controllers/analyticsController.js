@@ -602,7 +602,7 @@ export const getGscSummary = async (req, res) => {
         const prevStart = new Date(prevEnd.getTime() - diff);
         const prevFilter = await buildMatchFilter(userId, { ...req.query, startDate: prevStart.toISOString().split('T')[0], endDate: prevEnd.toISOString().split('T')[0] });
 
-        const [overview, priorOverview, timeseries, queries, pages, deviceBreakdown, countryBreakdown] = await Promise.all([
+        const [overview, priorOverview, timeseries, queries, pages] = await Promise.all([
             GscMetric.aggregate([
                 { $match: filter },
                 {
@@ -662,16 +662,6 @@ export const getGscSummary = async (req, res) => {
                 },
                 { $sort: { clicks: -1 } },
                 { $limit: 10 }
-            ]),
-            GscMetric.aggregate([
-                { $match: filter },
-                { $group: { _id: "$metadata.dimensions.device", value: { $sum: "$metrics.clicks" } } }
-            ]),
-            GscMetric.aggregate([
-                { $match: filter },
-                { $group: { _id: "$metadata.dimensions.country", value: { $sum: "$metrics.clicks" } } },
-                { $sort: { value: -1 } },
-                { $limit: 10 }
             ])
         ]);
 
@@ -691,8 +681,6 @@ export const getGscSummary = async (req, res) => {
             })),
             queries: queries.map(d => ({ query: d._id, clicks: d.clicks, impressions: d.impressions, ctr: d.impressions > 0 ? d.clicks / d.impressions : 0, position: d.position })),
             pages: pages.map(d => ({ page: d._id, clicks: d.clicks, impressions: d.impressions, ctr: d.impressions > 0 ? d.clicks / d.impressions : 0, position: d.position })),
-            devices: deviceBreakdown.map(d => ({ name: d._id || 'unknown', value: d.value })),
-            countries: countryBreakdown.map(d => ({ name: d._id || 'unknown', value: d.value })),
             syncMetadata
         };
 

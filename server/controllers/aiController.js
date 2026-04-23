@@ -167,11 +167,13 @@ export const fetchPlatformData = async (userId, startDate, endDate, siteId, acti
             results.topCampaigns.push(...camp.map(i => ({ name: i._id, value: i.value, conversions: i.conversions, source: config.key })));
         }
 
-        const dev = await config.model.aggregate([
-            { $match: { 'metadata.platformAccountId': config.id, date: { $gte: currentStart, $lte: currentEnd } } },
-            { $group: { _id: "$metadata.dimensions.device", value: { $sum: config.key === 'ga4' ? "$metrics.sessions" : (config.key === 'gsc' ? "$metrics.clicks" : "$metrics.spend") } } }
-        ]);
-        results.topDevices.push(...dev.map(i => ({ name: i._id, value: i.value, source: config.key })));
+        if (config.key !== 'gsc') {
+            const dev = await config.model.aggregate([
+                { $match: { 'metadata.platformAccountId': config.id, date: { $gte: currentStart, $lte: currentEnd } } },
+                { $group: { _id: "$metadata.dimensions.device", value: { $sum: config.key === 'ga4' ? "$metrics.sessions" : "$metrics.spend" } } }
+            ]);
+            results.topDevices.push(...dev.map(i => ({ name: i._id, value: i.value, source: config.key })));
+        }
     });
 
     await Promise.all(aggTasks);

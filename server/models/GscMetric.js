@@ -7,9 +7,7 @@ const gscMetricSchema = new mongoose.Schema({
         platformAccountId: { type: String, required: true },
         dimensions: {
             page: { type: String },
-            query: { type: String },
-            device: { type: String },
-            country: { type: String }
+            query: { type: String }
         }
     },
     date: { type: Date, required: true },

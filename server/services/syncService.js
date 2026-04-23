@@ -304,12 +304,14 @@ export const syncGsc = async (acc, startDate, endDate) => {
     if (!acc || !acc.gscSiteUrl) return;
     const userId = acc.userId;
 
-    const res = await runGscQuery(userId, acc.gscSiteUrl, 'ultra_detail_sync', startDate, endDate, ['date', 'page', 'query', 'device', 'country'], acc.gscTokenId);
+    const res = await runGscQuery(userId, acc.gscSiteUrl, 'ultra_detail_sync', startDate, endDate, ['date', 'page', 'query'], acc.gscTokenId);
 
     if (res.rows) {
-        const operations = res.rows.map(row => {
-            const rowDate = new Date(row.keys[0]);
-            return {
+        const operations = res.rows
+            .filter(row => row.clicks > 0 || row.impressions >= 5)
+            .map(row => {
+                const rowDate = new Date(row.keys[0]);
+                return {
                 updateOne: {
                     filter: {
                         'metadata.userId': userId,
@@ -317,9 +319,7 @@ export const syncGsc = async (acc, startDate, endDate) => {
                         'metadata.platformAccountId': acc.gscSiteUrl,
                         date: rowDate,
                         'metadata.dimensions.page': row.keys[1],
-                        'metadata.dimensions.query': row.keys[2],
-                        'metadata.dimensions.device': row.keys[3],
-                        'metadata.dimensions.country': row.keys[4]
+                        'metadata.dimensions.query': row.keys[2]
                     },
                     update: {
                         $set: {
