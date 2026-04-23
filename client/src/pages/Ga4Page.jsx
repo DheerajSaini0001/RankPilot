@@ -136,6 +136,7 @@ const Ga4Page = () => {
 
             setOverview({
                 activeUsers: data.overview.users,
+                newUsers: data.overview.newUsers,
                 sessions: data.overview.sessions,
                 bounceRate: data.overview.bounceRate,
                 avgSessionDuration: data.overview.avgSessionDuration,
@@ -367,7 +368,7 @@ const Ga4Page = () => {
     const pagesPerSession = (overview?.sessions > 0)
         ? (overview.pageViews / overview.sessions).toFixed(2)
         : '0.00';
-    const newUsers = overview ? Math.round((overview.users || 0) * 0.59) : 0;
+    const newUsers = overview?.newUsers || 0;
     const retUsers = overview ? (overview.users || 0) - newUsers : 0;
     const newPct = overview?.users > 0 ? ((newUsers / overview.users) * 100).toFixed(1) : '0';
     const retPct = overview?.users > 0 ? ((retUsers / overview.users) * 100).toFixed(1) : '0';
@@ -391,7 +392,7 @@ const Ga4Page = () => {
         { metric: '📄 Page Views', current: formatNumber(overview.pageViews), prior: formatNumber(priorOverview.pageViews), change: calculateChange(overview.pageViews, priorOverview.pageViews), up: overview.pageViews >= priorOverview.pageViews },
         { metric: '📉 Bounce Rate', current: `${(overview.bounceRate || 0).toFixed(1)}%`, prior: `${(priorOverview.bounceRate || 0).toFixed(1)}%`, change: calculateChange(overview.bounceRate || 0, priorOverview.bounceRate || 0), up: (overview.bounceRate || 0) <= (priorOverview.bounceRate || 0) }, // Down is good for bounce
         { metric: '⏱ Avg Duration', current: formatTime(overview.avgSessionDuration), prior: formatTime(priorOverview.avgSessionDuration), change: calculateChange(overview.avgSessionDuration, priorOverview.avgSessionDuration), up: overview.avgSessionDuration >= priorOverview.avgSessionDuration },
-        { metric: '✨ New Users', current: formatNumber(Math.round(overview.users * 0.59)), prior: formatNumber(Math.round(priorOverview.users * 0.59)), change: calculateChange(overview.users, priorOverview.users), up: overview.users >= priorOverview.users },
+        { metric: '✨ New Users', current: formatNumber(overview.newUsers || 0), prior: formatNumber(priorOverview.newUsers || 0), change: calculateChange(overview.newUsers, priorOverview.newUsers), up: overview.newUsers >= priorOverview.newUsers },
     ] : [];
 
     return (
@@ -637,7 +638,7 @@ const Ga4Page = () => {
                         changeText="vs last period"
                         chartData={timeseries.map(d => d.sessions).slice(-10)}
                         insight={intelligence?.kpiUsers}
-                        contextPrompt={`Current GA4 Active Users: ${formatNumber(overview?.users)}. Analyze this acquisition trend.`}
+                        contextPrompt={`My website currently has ${formatNumber(overview?.users)} active users with ${formatNumber(overview?.newUsers)} being new visitors. How does this impact my growth strategy?`}
                     />
                     <KpiCard
                         title="Total Sessions"
@@ -653,14 +654,14 @@ const Ga4Page = () => {
                     />
                     <KpiCard
                         title="Engagement Rate"
-                        value={overview ? `${(100 - overview.bounceRate).toFixed(1)}%` : '0%'}
+                        value={overview ? `${(100 - (overview.bounceRate || 0)).toFixed(1)}%` : '0%'}
                         loading={loading}
                         Icon={Ga4Logo}
                         change={2.1}
                         isPositive={true}
                         changeText="vs last period"
                         insight={intelligence?.kpiResonance}
-                        contextPrompt={`My Engagement Rate is ${(100 - (overview?.bounceRate || 0)).toFixed(1)}%. What does this say about user interest?`}
+                        contextPrompt={`My Engagement Rate is ${(100 - (overview?.bounceRate || 0)).toFixed(1)}%. What does this tell me about how interesting my content is to visitors?`}
                     />
                     <KpiCard
                         title="Avg. Session Duration"
@@ -671,7 +672,7 @@ const Ga4Page = () => {
                         isPositive={false}
                         changeText="vs last period"
                         insight={intelligence?.kpiDuration}
-                        contextPrompt={`Average session duration: ${formatTime(overview?.avgSessionDuration)}. Suggest ways to increase attention span.`}
+                        contextPrompt={`The average user spends ${formatTime(overview?.avgSessionDuration)} on my site. Is this enough time to convert them?`}
                     />
                 </div>
 
@@ -714,7 +715,7 @@ const Ga4Page = () => {
                             </div>
                             <div className="p-2 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 flex items-center gap-2">
                                 <button
-                                    onClick={() => openWithQuestion(`My GA4 sessions trend: ${timeseries.slice(-7).map(d => `${d.date}: ${d.sessions}`).join(', ')}. Total sessions: ${formatNumber(overview?.sessions)}, Bounce Rate: ${((overview?.bounceRate || 0) * 100).toFixed(1)}%. What does my engagement look like and how can I improve it?`)}
+                                    onClick={() => openWithQuestion(`My GA4 sessions trend: ${timeseries.slice(-7).map(d => `${d.date}: ${d.sessions}`).join(', ')}. Total sessions: ${formatNumber(overview?.sessions)}, Engagement Rate: ${(100 - (overview?.bounceRate || 0)).toFixed(1)}%. What does my engagement look like and how can I improve it?`)}
                                     className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
                                 >
                                     <SparklesIcon className="w-3.5 h-3.5" />
@@ -867,7 +868,7 @@ const Ga4Page = () => {
                                 insight={intelligence?.userType} 
                                 loading={loading} 
                                 sectionTitle="AI SUMMARY"
-                                contextPrompt={`My user breakdown: New Users (${formatNumber(newUsers)}), Returning Users (${formatNumber(overview?.sessions - newUsers)}). How can I improve retention?`}
+                                contextPrompt={`My audience split: New Users (${formatNumber(newUsers)}), Returning Users (${formatNumber((overview?.users || 0) - newUsers)}). What strategies can I use to improve long-term user retention?`}
                             />
                         </div>
                     </div>
@@ -931,7 +932,7 @@ const Ga4Page = () => {
                         <div className="flex items-center justify-between mb-1">
                             <h3 className="text-sm font-black text-neutral-900 dark:text-white">Bounce Rate Over Time</h3>
                             <button
-                                onClick={() => openWithQuestion(`My GA4 bounce rate is ${((overview?.bounceRate || 0) * 100).toFixed(1)}% (engagement rate: ${engagementRate}%). Is this a problem? What pages might be causing high bounce and how can I fix it?`)}
+                                onClick={() => openWithQuestion(`My average Engagement Rate is ${engagementRate}% (Bounce: ${(overview?.bounceRate || 0).toFixed(1)}%). Is this healthy for ${siteName}? What pages might be causing high bounce and how can I fix it?`)}
                                 className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
                             >
                                 <SparklesIcon className="w-3.5 h-3.5" />
@@ -983,7 +984,7 @@ const Ga4Page = () => {
                             insight={intelligence?.trendBounce} 
                             loading={loading} 
                             sectionTitle="AI SUMMARY"
-                            contextPrompt={`Analyze the bounce rate trend in this period. Current average: ${overview?.bounceRate}%. Any specific days showing high bounce?`}
+                            contextPrompt={`Analyze my engagement/bounce trend. Current average bounce: ${(overview?.bounceRate || 0).toFixed(1)}%. Which specific days show concerning spikes?`}
                         />
                     </div>
 
@@ -1241,7 +1242,7 @@ const Ga4Page = () => {
                         </div>
                         <div className="flex items-center gap-2">
                             <button
-                                onClick={() => openWithQuestion(`My GA4 comparison — Users: ${formatNumber(overview?.users)} vs ${formatNumber(priorOverview?.users)}, Sessions: ${formatNumber(overview?.sessions)} vs ${formatNumber(priorOverview?.sessions)}, Bounce: ${((overview?.bounceRate || 0) * 100).toFixed(1)}% vs ${((priorOverview?.bounceRate || 0) * 100).toFixed(1)}%. What are the most significant changes and what might be causing them?`)}
+                                onClick={() => openWithQuestion(`My GA4 comparison — Users: ${formatNumber(overview?.users)} vs ${formatNumber(priorOverview?.users)}, Sessions: ${formatNumber(overview?.sessions)} vs ${formatNumber(priorOverview?.sessions)}, Bounce: ${(overview?.bounceRate || 0).toFixed(1)}% vs ${(priorOverview?.bounceRate || 0).toFixed(1)}%. What are the most significant changes and what might be causing them?`)}
                                 className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
                             >
                                 <SparklesIcon className="w-3.5 h-3.5" />

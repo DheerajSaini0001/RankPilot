@@ -331,9 +331,10 @@ export const getGa4Summary = async (req, res) => {
     try {
         let syncMetadata = null;
         if (siteId) {
-            const acc = await UserAccounts.findOne({ _id: siteId, userId }).select('lastDailySyncAt syncStatus isHistoricalSyncComplete');
+            const acc = await UserAccounts.findOne({ _id: siteId, userId }).select('siteName lastDailySyncAt syncStatus isHistoricalSyncComplete');
             if (acc) {
                 syncMetadata = {
+                    siteName: acc.siteName,
                     lastDailySyncAt: acc.lastDailySyncAt,
                     syncStatus: acc.syncStatus,
                     isHistoricalSyncComplete: acc.isHistoricalSyncComplete
@@ -360,6 +361,7 @@ export const getGa4Summary = async (req, res) => {
                     $group: {
                         _id: null,
                         users: { $sum: "$metrics.users" },
+                        newUsers: { $sum: "$metrics.newUsers" },
                         sessions: { $sum: "$metrics.sessions" },
                         bounceRate: { $avg: "$metrics.bounceRate" },
                         avgSessionDuration: { $avg: "$metrics.avgSessionDuration" },
@@ -373,6 +375,7 @@ export const getGa4Summary = async (req, res) => {
                     $group: {
                         _id: null,
                         users: { $sum: "$metrics.users" },
+                        newUsers: { $sum: "$metrics.newUsers" },
                         sessions: { $sum: "$metrics.sessions" },
                         bounceRate: { $avg: "$metrics.bounceRate" },
                         avgSessionDuration: { $avg: "$metrics.avgSessionDuration" },
@@ -443,8 +446,8 @@ export const getGa4Summary = async (req, res) => {
 
 
         const result = {
-            overview: overview[0] || { users: 0, sessions: 0, bounceRate: 0, avgSessionDuration: 0, pageViews: 0 },
-            priorOverview: priorOverview[0] || { users: 0, sessions: 0, bounceRate: 0, avgSessionDuration: 0, pageViews: 0 },
+            overview: overview[0] || { users: 0, newUsers: 0, sessions: 0, bounceRate: 0, avgSessionDuration: 0, pageViews: 0 },
+            priorOverview: priorOverview[0] || { users: 0, newUsers: 0, sessions: 0, bounceRate: 0, avgSessionDuration: 0, pageViews: 0 },
             timeseries: timeseries.map(d => ({
                 date: d._id,
                 sessions: d.sessions,
@@ -462,40 +465,34 @@ export const getGa4Summary = async (req, res) => {
         };
 
         // STEP: Strategic AI Intelligence for GA4
+        const siteName = syncMetadata?.siteName || "your website";
+        
         const generateGa4Intelligence = async (data) => {
             try {
                 const prompt = `
-                  Act as an expert Marketing Intelligence Assistant. Analyze this GA4 data and provide EXACTLY 17 friendly, data-driven summaries for the business owner.
-                  Your tone should be professional yet encouraging, using "you" and "your" to make it personal and actionable.
+                  Act as an expert Marketing Intelligence Assistant for the website "${siteName}". 
+                  Analyze this GA4 data and provide EXACTLY 17 friendly, data-driven summaries for the business owner.
+                  Your tone should be professional yet encouraging, using "you" and "your" to make it personal and actionable for ${siteName}.
                   
-                  DATA:
-                  - Metrics (Current): ${data.overview.users} users, ${data.overview.sessions} sessions, ${data.overview.pageViews} views, ${data.overview.bounceRate}% bounce rate.
-                  - Metrics (Prior): ${data.priorOverview.users} users, ${data.priorOverview.sessions} sessions.
-                  - Recent Trend: ${JSON.stringify(data.timeseries.slice(-7))}
-                  - Traffic Mix: ${JSON.stringify(data.traffic.slice(0, 5))}
-                  - Top Performance Pages: ${JSON.stringify(data.pages.slice(0, 5))}
-                  - Device Distribution: ${JSON.stringify(data.breakdowns.devices)}
-                  - Top Geo Locations: ${JSON.stringify(data.breakdowns.locations.slice(0, 5))}
-
                   EXPECTED JSON FORMAT:
                   {
-                    "kpiUsers": "Active Users specifically (10-12 words).",
-                    "kpiSessions": "Total Sessions specifically (10-12 words).",
-                    "kpiResonance": "Engagement/Bounce Rate specifically (10-12 words).",
-                    "kpiDuration": "Average Session Duration specifically (10-12 words).",
-                    "kpiPageViews": "Total Page Views specifically (15-20 words).",
-                    "kpiNewUsers": "New User acquisition specifically (15-20 words).",
-                    "kpiPagesPerSession": "Pages per session depth specifically (15-20 words).",
-                    "matrix": "Overall engagement health and what it means for your brand (25-30 words).",
-                    "userType": "How well you are keeping users versus finding new ones (25-30 words).",
-                    "retention": "Detailed look at your user engagement habits and duration (40-45 words).",
-                    "trendBounce": "A simple take on your recent bounce rate trends (25-30 words).",
-                    "trendVolume": "How your session volume is growing over time (25-30 words).",
-                    "sources": "Where your fans are coming from and channel advice (25-30 words).",
-                    "pages": "Your top content performance and tips to improve (25-30 words).",
-                    "devices": "How your site performs across phones and computers (25-30 words).",
-                    "geo": "Where in the world your users are and local opportunities (25-30 words).",
-                    "growth": "A big-picture look at your progress compared to last period (40-45 words)."
+                    "kpiUsers": "Active Users Card (10-12 words). Analyze ${data.overview.users} current vs ${data.priorOverview.users} prior users. Summarize the growth or dip.",
+                    "kpiSessions": "Total Sessions Card (10-12 words). Analyze ${data.overview.sessions} current vs ${data.priorOverview.sessions} prior sessions. Comment on traffic volume.",
+                    "kpiResonance": "Engagement Rate Card (10-12 words). Current Engagement Rate is ${(100 - data.overview.bounceRate).toFixed(1)}%. Explain what this means for interaction quality.",
+                    "kpiDuration": "Avg. Duration Card (10-12 words). Analyze ${data.overview.avgSessionDuration} seconds average stay. Comment on attention capture.",
+                    "kpiPageViews": "Page Views Strip (15-20 words). Total views are ${data.overview.pageViews}. Discuss the scale of content discovery.",
+                    "kpiNewUsers": "New Users Strip (15-20 words). Based on ${data.overview.newUsers} new users out of ${data.overview.users} total, comment on reach.",
+                    "kpiPagesPerSession": "Content Depth Strip (15-20 words). Average ${(data.overview.pageViews / (data.overview.sessions || 1)).toFixed(2)} pages per session. Comment on how deep users explore your site.",
+                    "matrix": "Sessions Trend Summary (25-30 words). Analyze this 7-day trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({date: d.date, sessions: d.sessions})))}.",
+                    "userType": "Loyalty Summary (25-30 words). Analyze the audience split: ${data.overview.newUsers} New vs ${data.overview.users - data.overview.newUsers} Returning users. Evaluate brand loyalty.",
+                    "retention": "Engagement Deep Dive (40-45 words). Analyze: ${(100 - data.overview.bounceRate).toFixed(1)}% engagement rate, ${data.overview.avgSessionDuration}s duration, and trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({date: d.date, bounce: d.bounceRate})))}.",
+                    "trendBounce": "Bounce Trend (25-30 words). Interpret daily bounce changes from this trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({date: d.date, bounce: d.bounceRate})))}.",
+                    "trendVolume": "Traffic Patterns (25-30 words). Analyze daily fluctuations from this trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({date: d.date, views: d.pageViews})))}.",
+                    "sources": "Traffic Channels (25-30 words). Analyze these top sources: ${JSON.stringify(data.traffic.slice(0, 3))}. Identify winners.",
+                    "pages": "Content Performance (25-30 words). Analyze these top pages: ${JSON.stringify(data.pages.slice(0, 3))}. Suggest optimizations.",
+                    "devices": "Device Experience (25-30 words). Analyze this split: ${data.breakdowns.devices.map(d => `${d.name}: ${d.value} sessions`).join(', ')}. Compare mobile vs desktop behavior.",
+                    "geo": "Geo Opportunities (25-30 words). Top locations: ${data.breakdowns.locations.slice(0, 3).map(l => `${l.name}: ${l.value} sessions`).join(', ')}. Suggest local growth tips.",
+                    "growth": "Master Growth Report (40-45 words). Comprehensive comparison of current vs prior: Users (${data.overview.users} vs ${data.priorOverview.users}), New Users (${data.overview.newUsers} vs ${data.priorOverview.newUsers}), Sessions (${data.overview.sessions} vs ${data.priorOverview.sessions}), Views (${data.overview.pageViews} vs ${data.priorOverview.pageViews}), Bounce (${data.overview.bounceRate}% vs ${data.priorOverview.bounceRate}%), Duration (${data.overview.avgSessionDuration}s vs ${data.priorOverview.avgSessionDuration}s). Summarize overall growth trajectory."
                   }
 
                   STRICT RULES:
@@ -508,24 +505,34 @@ export const getGa4Summary = async (req, res) => {
                 return JSON.parse(aiRes.content.replace(/```json|```/g, '').trim());
             } catch (error) {
                 console.error("GA4 AI Intelligence failed:", error);
+                const userDiff = data.overview.users - data.priorOverview.users;
+                const sessDiff = data.overview.sessions - data.priorOverview.sessions;
+                const bounceDiff = data.overview.bounceRate - data.priorOverview.bounceRate;
+
                 return {
-                    kpiUsers: "Your active user count is growing; keep focusing on your best sources.",
-                    kpiSessions: "Your total sessions are peaking; everything is set for your growing traffic.",
-                    kpiResonance: "Your engagement is healthy; your content is clearly resonating with your audience.",
-                    kpiDuration: "Your users are staying engaged; your site is successfully capturing their attention.",
-                    kpiPageViews: "Your visibility is high; keep using internal links to help users discover more of your great content today.",
-                    kpiNewUsers: "You are attracting many new users; focus on making their first visit truly memorable for your brand.",
-                    kpiPagesPerSession: "Your visitors are exploring deep; your site navigation is working perfectly for them to find your content.",
-                    matrix: "Your overall engagement is strong and resilient; keep a close eye on your weekly trends to stay on this positive path and continue building your brand authority effectively.",
-                    userType: "Your user mix is healthy with great new growth; try adding small rewards to keep your returning fans coming back to your site for more great content.",
-                    retention: "Your visitors truly love your primary content paths; focusing on these high-interest areas will help you build an even more loyal fan base over time, ensuring that your audience remains consistently engaged with your brand and continues to return for your valuable updates and insights.",
-                    trendBounce: "Your trends are stabilizing nicely; a quick check of your most popular pages will ensure everything stays smooth and inviting for your visitors as they browse your site.",
-                    trendVolume: "Your traffic flow is very stable; ensure your navigation remains simple to keep your growing audience happy and engaged with your brand as they explore your latest offerings.",
-                    sources: "Your top channels are bringing in high-quality visitors; keep scaling what works while exploring one new source this month to expand your reach and grow your audience base.",
-                    pages: "Your best pages are really shining; adding a friendly call-to-action will help you get even better results from this traffic and turn your visitors into loyal brand advocates.",
-                    devices: "Your visitors mostly use phones and computers; ensure your mobile experience stays fast and friendly for your biggest audience segment to keep them happy while they browse your site.",
-                    geo: "Your brand is strong in your top regions; there is a great opportunity to share your message with similar new areas soon to expand your global reach and influence.",
-                    growth: "Your latest progress shows you are moving in the right direction; stay focused on your winning campaigns and your brand visibility will keep climbing steadily, helping you reach your long-term business goals while maintaining the high level of engagement that your audience has come to expect from you."
+                    kpiUsers: userDiff >= 0 
+                        ? `Great news! Active users grew to ${data.overview.users}. Your acquisition strategy is performing well.`
+                        : `Active users are at ${data.overview.users}. Consider a quick campaign to boost your reach.`,
+                    kpiSessions: sessDiff >= 0
+                        ? `Traffic is up with ${data.overview.sessions} sessions. Your site visibility is climbing steadily.`
+                        : `Sessions are at ${data.overview.sessions}. Focus on driving more consistent daily visitor traffic.`,
+                    kpiResonance: bounceDiff <= 0
+                        ? `Engagement improved! Your rate climbed to ${(100 - data.overview.bounceRate).toFixed(1)}%. Content is resonating well.`
+                        : `Engagement rate is ${(100 - data.overview.bounceRate).toFixed(1)}%. Optimize top landing pages for better interaction.`,
+                    kpiDuration: `Visitors stay for ${(data.overview.avgSessionDuration).toFixed(0)}s on average. Your site successfully captures their interest.`,
+                    kpiPageViews: `Total views reached ${data.overview.pageViews}. Use more internal links to help your users discover even more great content today.`,
+                    kpiNewUsers: `You've welcomed ${data.overview.newUsers} new users. Focus on turning these first-time visitors into loyal brand fans for long-term growth.`,
+                    kpiPagesPerSession: `Users explore ${(data.overview.pageViews / (data.overview.sessions || 1)).toFixed(2)} pages per visit. Your clear site navigation is successfully aiding deeper content discovery.`,
+                    matrix: `Your ${data.timeseries.length}-day session trends show ${sessDiff >= 0 ? 'growth' : 'stability'}. Continue monitoring your daily traffic peaks closely to optimize your posting schedule and capture the maximum amount of visitor interest effectively.`,
+                    userType: `Your audience is a healthy mix of ${data.overview.newUsers} New vs ${data.overview.users - data.overview.newUsers} Returning users. This solid blend of fresh discovery and brand loyalty is excellent for your long-term growth.`,
+                    retention: `Engagement metrics including your ${(100 - data.overview.bounceRate).toFixed(1)}% engagement rate remain ${bounceDiff <= 0 ? 'strong' : 'consistent'}. To maintain this interest, focus on refining your user experience and ensuring your most popular landing pages are perfectly optimized to guide visitors toward your goals consistently.`,
+                    trendBounce: `Daily bounce trends are ${bounceDiff <= 0 ? 'improving steadily' : 'stabilizing'}. Keep a close watch for any unexpected spikes on your high-traffic pages and ensure that your technical performance remains fast and inviting for all users.`,
+                    trendVolume: `Traffic patterns for your ${data.overview.pageViews} views are ${sessDiff >= 0 ? 'climbing consistently' : 'steady'}. Keep your top-performing content fresh and updated to ensure that your growing audience finds significant value every time they return to your site.`,
+                    sources: `${data.traffic[0]?.source || data.traffic[0]?.channel || 'Direct'} is currently your #1 traffic source. Doubling down on your top-performing channels while testing one new acquisition strategy this month will yield the best long-term growth results for you.`,
+                    pages: `Your top page "${data.pages[0]?.path || '/'}" is performing ${userDiff >= 0 ? 'exceptionally well' : 'consistently'} right now. Consider adding a clear, friendly call-to-action here to convert this high volume of traffic into loyal brand subscribers.`,
+                    devices: `${data.breakdowns.devices[0]?.name || 'Mobile'} users are currently your biggest audience segment. Ensure your site experience is perfectly optimized for smaller screens with fast loading times and intuitive navigation to keep these visitors highly engaged.`,
+                    geo: `Your brand is currently strongest in ${data.breakdowns.locations[0]?.name || 'your top region'}. Expanding your marketing reach to similar geographical areas could unlock significant new growth opportunities and help you build a truly global audience.`,
+                    growth: `The overall trajectory for your ${data.overview.users} users is ${userDiff >= 0 ? 'positive' : 'stable'} and shows great potential. Keep scaling your winning campaigns and top content paths to ensure future success, as your current foundation is strong enough to support higher levels of global brand visibility.`
                 };
             }
         };
