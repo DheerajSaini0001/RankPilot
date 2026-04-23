@@ -86,6 +86,9 @@ export const listGa4 = async (req, res) => {
         if (error.message.includes('GOOGLE_AUTH_MISSING')) {
             return res.status(401).json({ success: false, message: 'GOOGLE_AUTH_MISSING' });
         }
+        if (error.message.includes('GOOGLE_AUTH_EXPIRED')) {
+            return res.status(400).json({ success: false, message: 'GOOGLE_AUTH_EXPIRED' });
+        }
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -96,6 +99,9 @@ export const listGsc = async (req, res) => {
         const sites = await fetchGscSites(req.user._id, tokenId);
         res.status(200).json(sites);
     } catch (error) {
+        if (error.message.includes('GOOGLE_AUTH_EXPIRED')) {
+            return res.status(400).json({ success: false, message: 'GOOGLE_AUTH_EXPIRED' });
+        }
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -106,6 +112,9 @@ export const listGoogleAds = async (req, res) => {
         const accounts = await listAccounts(req.user._id, tokenId);
         res.status(200).json(accounts);
     } catch (error) {
+        if (error.message.includes('GOOGLE_AUTH_EXPIRED')) {
+            return res.status(400).json({ success: false, message: 'GOOGLE_AUTH_EXPIRED' });
+        }
         res.status(500).json({ success: false, message: error.message });
     }
 };

@@ -360,7 +360,7 @@ const DashboardPage = () => {
             <div className="flex-1 text-center md:text-left">
               <h3 className="text-sm font-black text-brand-900 dark:text-brand-100">Optimizing Historical Data Sync</h3>
               <p className="text-xs font-bold text-brand-700/70 dark:text-brand-400 mt-1">
-                We're fetching {activeSite.siteName}'s 24-month marketing history into RankPilot's high-speed memory.
+                We're fetching {activeSite.siteName}'s 3-month marketing history into RankPilot's high-speed memory.
               </p>
             </div>
             <div className="flex flex-col items-center md:items-end gap-2 shrink-0">

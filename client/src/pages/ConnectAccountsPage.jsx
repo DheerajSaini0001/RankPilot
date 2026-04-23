@@ -144,7 +144,12 @@ const ConnectAccountsPage = () => {
     // Side Effects: Fetch properties when Token is selected
     useEffect(() => {
         if (ga4TokenId) {
-            listGa4(ga4TokenId).then(res => setGa4Props(res.data || [])).catch(() => setGa4Props([]));
+            listGa4(ga4TokenId).then(res => setGa4Props(res.data || [])).catch((err) => {
+                if (err.response?.data?.message === 'GOOGLE_AUTH_EXPIRED') {
+                    toast.error('Google session expired. Please reconnect your account.');
+                }
+                setGa4Props([]);
+            });
         } else {
             setGa4Props([]);
         }
@@ -152,7 +157,12 @@ const ConnectAccountsPage = () => {
 
     useEffect(() => {
         if (gscTokenId) {
-            listGsc(gscTokenId).then(res => setGscSites(res.data || [])).catch(() => setGscSites([]));
+            listGsc(gscTokenId).then(res => setGscSites(res.data || [])).catch((err) => {
+                if (err.response?.data?.message === 'GOOGLE_AUTH_EXPIRED') {
+                    toast.error('Google session expired. Please reconnect your account.');
+                }
+                setGscSites([]);
+            });
         } else {
             setGscSites([]);
         }
@@ -160,7 +170,12 @@ const ConnectAccountsPage = () => {
 
     useEffect(() => {
         if (googleAdsTokenId) {
-            listGoogleAds(googleAdsTokenId).then(res => setGAdsAccounts(res.data || [])).catch(() => setGAdsAccounts([]));
+            listGoogleAds(googleAdsTokenId).then(res => setGAdsAccounts(res.data || [])).catch((err) => {
+                if (err.response?.data?.message === 'GOOGLE_AUTH_EXPIRED') {
+                    toast.error('Google session expired. Please reconnect your account.');
+                }
+                setGAdsAccounts([]);
+            });
         } else {
             setGAdsAccounts([]);
         }
