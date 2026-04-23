@@ -17,7 +17,13 @@ import {
     SparklesIcon,
     GlobeAltIcon,
     ArrowDownTrayIcon,
-    UserCircleIcon
+    UserCircleIcon,
+    ArrowPathIcon,
+    ChevronRightIcon,
+    ChevronDownIcon,
+    CalendarIcon,
+    FunnelIcon,
+    XMarkIcon
 } from '@heroicons/react/24/outline';
 import { exportToPdf } from '../utils/reportExport';
 import { 
@@ -31,8 +37,31 @@ import {
 } from 'recharts';
 import FilterBar from '../components/dashboard/FilterBar';
 import { useFilterStore } from '../store/filterStore';
+import { useAiChatStore } from '../store/aiChatStore';
 
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
+
+const GscLogo = ({ className = "w-6 h-6" }) => (
+    <div className={`${className} bg-brand-600 rounded-lg flex items-center justify-center p-1`}>
+        <MagnifyingGlassIcon className="w-full h-full text-white" />
+    </div>
+);
+
+const SectionAiSummary = ({ insight, loading, sectionTitle, title = "AI SUMMARY" }) => (
+    <div className="mt-4 p-4 bg-brand-50/10 dark:bg-brand-500/5 border border-brand-100/50 dark:border-brand-500/20 rounded-[1.5rem] animate-in fade-in duration-700">
+        <h4 className="text-[10px] font-black text-neutral-900 dark:text-white uppercase tracking-[0.15em] mb-3">{sectionTitle || title}</h4>
+        {loading ? (
+            <div className="space-y-2 animate-pulse mb-4">
+                <div className="h-2 bg-neutral-200 dark:bg-neutral-800 rounded-full w-full" />
+                <div className="h-2 bg-neutral-200 dark:bg-neutral-800 rounded-full w-[85%]" />
+            </div>
+        ) : (
+            <p className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 leading-relaxed mb-4">
+                {insight || "Analyzing section data for strategic intelligence..."}
+            </p>
+        )}
+    </div>
+);
 
 const EmptyState = ({ message='No data for this period', sub='Try selecting a wider date range' }) => (
   <div className="flex flex-col items-center justify-center py-12 text-neutral-400 dark:text-neutral-500">
@@ -43,9 +72,24 @@ const EmptyState = ({ message='No data for this period', sub='Try selecting a wi
 );
 
 const GscPage = () => {
-    const { startDate, endDate } = useDateRangeStore();
-    const { device } = useFilterStore();
-    const { activeGscSite, connectedSources, activeSiteId, syncMetadata, setAccounts } = useAccountsStore();
+    const startDate = useDateRangeStore(s => s.startDate);
+    const endDate = useDateRangeStore(s => s.endDate);
+    const preset = useDateRangeStore(s => s.preset);
+    const setPreset = useDateRangeStore(s => s.setPreset);
+    
+    const searchQuery = useFilterStore(s => s.searchQuery);
+    const setSearchQuery = useFilterStore(s => s.setSearchQuery);
+    const device = useFilterStore(s => s.device);
+    const setFilters = useFilterStore(s => s.setFilters);
+
+    const activeGscSite = useAccountsStore(s => s.activeGscSite);
+    const connectedSources = useAccountsStore(s => s.connectedSources);
+    const activeSiteId = useAccountsStore(s => s.activeSiteId);
+    const syncMetadata = useAccountsStore(s => s.syncMetadata);
+    const setAccounts = useAccountsStore(s => s.setAccounts);
+    const userSites = useAccountsStore(s => s.userSites);
+    
+    const openWithQuestion = useAiChatStore(s => s.openWithQuestion);
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     
@@ -54,8 +98,21 @@ const GscPage = () => {
     const [timeseries, setTimeseries] = useState([]);
     const [queries, setQueries] = useState([]);
     const [pages, setPages] = useState([]);
-    const [devices, setDevices] = useState([]);
-    const [countries, setCountries] = useState([]);
+    const [intelligence, setIntelligence] = useState(null);
+
+    const [isDateMenuOpen, setIsDateMenuOpen] = useState(false);
+    const [isCustomDateMode, setIsCustomDateMode] = useState(false);
+    const [tempDateRange, setTempDateRange] = useState({ start: startDate, end: endDate });
+
+    const presetLabels = {
+        'today': 'Today',
+        'yesterday': 'Yesterday',
+        '7d': 'Last 7 Days',
+        '28d': 'Last 28 Days',
+        '90d': 'Last 90 Days',
+        '1y': 'Last Year',
+        'custom': 'Custom Range'
+    };
 
     const loadData = useCallback(async () => {
         if (!activeGscSite) return;
@@ -76,8 +133,7 @@ const GscPage = () => {
             setTimeseries(data.timeseries || []);
             setQueries(data.queries || []);
             setPages(data.pages || []);
-            setDevices(data.devices || []);
-            setCountries(data.countries || []);
+            setIntelligence(data.intelligence || null);
 
             if (data.syncMetadata) {
                 setAccounts({
@@ -188,7 +244,7 @@ const GscPage = () => {
         );
     }
 
-    const { searchQuery } = useFilterStore();
+
 
     const filteredQueries = queries.filter(q => 
         (q.query?.toLowerCase() || '').includes(searchQuery.toLowerCase())
@@ -258,114 +314,183 @@ const GscPage = () => {
     return (
         <DashboardLayout>
             <div id="gsc-report" className="flex flex-col space-y-8">
-                {/* Header */}
-                <div className="bg-white dark:bg-[#111111] p-5 md:p-6 rounded-[2.5rem] border border-neutral-200 dark:border-neutral-800 shadow-xl shadow-neutral-200/20 dark:shadow-none relative overflow-hidden group transition-all duration-300">
-                    <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/[0.015] dark:bg-blue-500/5 rounded-full blur-[100px] -mr-40 -mt-40 pointer-events-none"></div>
-                    
-                    <div className="relative z-10 flex flex-col lg:flex-row lg:items-center gap-8">
-                        
-                        {/* 1. Logo & Main Identity Section */}
-                        <div className="flex items-center gap-6 shrink-0">
-                            <div className="w-16 h-16 md:w-20 md:h-20 bg-white dark:bg-neutral-900 rounded-[1.5rem] flex items-center justify-center shrink-0 shadow-sm border border-neutral-100 dark:border-neutral-800 relative overflow-hidden transition-transform group-hover:scale-105 duration-500">
-                                <div className="absolute inset-0 bg-gradient-to-tr from-neutral-50 to-white dark:from-neutral-900 dark:to-neutral-800 opacity-40"></div>
-                                <MagnifyingGlassIcon className="w-8 h-8 md:w-10 md:h-10 text-brand-600 dark:text-brand-400 group-hover:scale-110 transition-transform duration-500" />
+                {/* Compact Professional Header */}
+                <div className={`bg-white dark:bg-[#0d0d0d] px-6 py-4 rounded-[1.5rem] border border-neutral-100 dark:border-neutral-800 shadow-sm relative transition-all duration-300 ${isDateMenuOpen ? 'z-50' : 'z-10'}`}>
+                    <div className="relative z-10 flex flex-col xl:flex-row xl:items-center gap-6 xl:gap-10">
+                        {/* 1. Logo & Identity Section */}
+                        <div className="flex items-center gap-4 shrink-0">
+                            <div className="w-12 h-12 bg-white dark:bg-neutral-800/80 rounded-xl flex items-center justify-center shrink-0 border border-neutral-100 dark:border-neutral-700 shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)]">
+                                <GscLogo className="w-7 h-7" />
                             </div>
-                            <div className="flex flex-col">
-                                <div className="flex items-center gap-3">
-                                    <h1 className="text-2xl md:text-3xl font-black text-neutral-900 dark:text-white tracking-tight leading-none">Search Console</h1>
+                            <div className="flex flex-col justify-center">
+                                <div className="flex items-center gap-2.5">
+                                    <h1 className="text-lg md:text-xl font-black text-neutral-900 dark:text-white tracking-tight leading-none">Search Console</h1>
                                     {activeSiteId && (
-                                        <div className="px-3 py-1.5 bg-[#0a0a0b] text-white rounded-full text-[10px] font-black uppercase tracking-[0.15rem] flex items-center gap-2 shadow-lg border border-white/10">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
-                                            {userSites?.find(s => s._id === activeSiteId)?.siteName || 'ACTIVE WEBSITE'}
+                                        <div className="px-2 py-0.5 bg-neutral-900 dark:bg-neutral-800 text-white rounded text-[7px] font-black uppercase tracking-widest">
+                                            {userSites?.find(s => s._id === activeSiteId)?.siteName || 'ACTIVE SITE'}
                                         </div>
                                     )}
                                 </div>
-                                <div className="mt-3.5 flex items-center gap-4">
-                                    <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20 shadow-sm">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]"></div>
-                                        <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-500 uppercase tracking-widest">LIVE DATA ACTIVE</span>
+                                <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium leading-none mt-1.5 selection:bg-brand-500/20">
+                                    Monitor your search performance and optimize keywords with AI-powered SEO intelligence.
+                                </p>
+                                <div className="mt-2.5 flex items-center gap-3">
+                                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/5 rounded-full border border-emerald-500/10">
+                                        <div className="w-1 h-1 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]"></div>
+                                        <span className="text-[8px] font-black text-emerald-600 dark:text-emerald-500 uppercase tracking-widest">Connected</span>
                                     </div>
-                                    <div className="text-[11px] text-neutral-400 font-bold flex items-center gap-2">
-                                        <span className="uppercase text-[10px] tracking-tight opacity-60">Synced:</span>
-                                        <span className="text-neutral-700 dark:text-neutral-300 font-black tabular-nums">{syncMetadata?.lastDailySyncAt ? new Date(syncMetadata.lastDailySyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}</span>
-                                        <button onClick={handleManualRefresh} className="p-1 hover:text-brand-500 transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg active:rotate-180 duration-500">
-                                            <ArrowPathIcon className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-                                        </button>
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-1.5 text-[9px] text-neutral-400 font-bold uppercase tracking-widest">
+                                            Synced: <span className="text-neutral-700 dark:text-neutral-300 tabular-nums font-black">{syncMetadata?.lastDailySyncAt ? new Date(syncMetadata.lastDailySyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}</span>
+                                            <button onClick={handleManualRefresh} className="hover:text-brand-500 transition-all active:rotate-180 ml-1">
+                                                <ArrowPathIcon className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+                                            </button>
+                                        </div>
+                                        <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-800 hidden sm:block"></div>
+                                        <div className="relative">
+                                            <button
+                                                onClick={() => setIsDateMenuOpen(!isDateMenuOpen)}
+                                                className={`flex items-center gap-2 px-2.5 py-1 transition-all active:scale-95 group/date rounded-full border shadow-sm ${isDateMenuOpen
+                                                    ? 'bg-brand-600 border-brand-500 text-white'
+                                                    : 'bg-white/50 dark:bg-dark-surface/50 border-neutral-200/50 dark:border-neutral-800/60'
+                                                    }`}
+                                            >
+                                                <CalendarIcon className={`w-3.5 h-3.5 ${isDateMenuOpen ? 'text-white' : 'text-brand-600'}`} />
+                                                <span className={`text-[9px] font-black uppercase tracking-widest ${isDateMenuOpen ? 'text-white' : 'text-neutral-600 dark:text-neutral-300'}`}>
+                                                    {preset === 'custom' ? 'Range' : preset}
+                                                </span>
+                                                <ChevronDownIcon className={`w-3 h-3 transition-transform ${isDateMenuOpen ? 'rotate-180 opacity-100' : 'opacity-40'}`} />
+                                            </button>
+                                            {isDateMenuOpen && (
+                                                <div className="absolute top-full left-0 mt-2 z-[100] bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl p-1.5 min-w-[160px] animate-in fade-in zoom-in-95 duration-200 normal-case tracking-normal">
+                                                    {!isCustomDateMode ? (
+                                                        <>
+                                                            {[
+                                                                { label: 'Today', value: 'today', days: 0 },
+                                                                { label: 'Yesterday', value: 'yesterday', days: 1 },
+                                                                { label: 'Last 7 Days', value: '7d', days: 7 },
+                                                                { label: 'Last 28 Days', value: '28d', days: 28 },
+                                                                { label: 'Last 90 Days', value: '90d', days: 90 },
+                                                                { label: 'Last Year', value: '1y', days: 365 },
+                                                                { label: 'Custom Range', value: 'custom', icon: CalendarIcon },
+                                                            ].map((p) => (
+                                                                <button
+                                                                    key={p.value}
+                                                                    onClick={() => handleDatePresetSelect(p)}
+                                                                    className={`w-full text-left px-3 py-2 rounded-xl text-[10px] font-bold transition-all flex items-center justify-between ${preset === p.value
+                                                                        ? 'bg-brand-600 text-white shadow-lg shadow-brand-500/20'
+                                                                        : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                                                                        }`}
+                                                                >
+                                                                    {p.label}
+                                                                    {p.value === 'custom' && <ChevronRightIcon className="w-3 h-3 opacity-50" />}
+                                                                </button>
+                                                            ))}
+                                                        </>
+                                                    ) : (
+                                                        <div className="p-2 space-y-3">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-[10px] font-black uppercase text-neutral-400">Custom</span>
+                                                                <button onClick={() => setIsCustomDateMode(false)} className="text-[10px] font-bold text-brand-600 hover:underline">Back</button>
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <div>
+                                                                    <label className="text-[8px] font-black text-neutral-400 uppercase ml-1">Start</label>
+                                                                    <input
+                                                                        type="date"
+                                                                        value={tempDateRange.start}
+                                                                        onChange={(e) => setTempDateRange({ ...tempDateRange, start: e.target.value })}
+                                                                        className="w-full bg-neutral-100 dark:bg-neutral-800 border-none rounded-lg px-2 py-1.5 text-[10px] font-bold outline-none text-neutral-900 dark:text-white"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="text-[8px] font-black text-neutral-400 uppercase ml-1">End</label>
+                                                                    <input
+                                                                        type="date"
+                                                                        value={tempDateRange.end}
+                                                                        onChange={(e) => setTempDateRange({ ...tempDateRange, end: e.target.value })}
+                                                                        className="w-full bg-neutral-100 dark:bg-neutral-800 border-none rounded-lg px-2 py-1.5 text-[10px] font-bold outline-none text-neutral-900 dark:text-white"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                onClick={handleApplyCustomDate}
+                                                                className="w-full py-2 bg-brand-600 text-white text-[10px] font-black rounded-lg shadow-lg shadow-brand-500/20 active:scale-95 transition-all"
+                                                            >
+                                                                APPLY RANGE
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         {/* 2. Divider (Desktop) */}
-                        <div className="hidden lg:block w-[1px] h-14 bg-neutral-100 dark:bg-neutral-800 self-center"></div>
+                        <div className="hidden xl:block w-[1px] h-8 bg-neutral-100 dark:bg-neutral-800/60"></div>
 
-                        {/* 3. Info Grid Section */}
-                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8">
-                            <div className="flex items-center gap-4 group/item">
-                                <div className="w-11 h-11 rounded-full bg-neutral-50 dark:bg-neutral-800/80 flex items-center justify-center border border-neutral-100 dark:border-neutral-700/50 shrink-0 transition-all group-hover/item:border-brand-500/30 group-hover/item:shadow-sm">
-                                    <GlobeAltIcon className="w-5 h-5 text-neutral-400 group-hover/item:text-brand-500 transition-colors" />
+                        {/* 3. Information Row */}
+                        <div className="flex-1 flex flex-wrap items-center gap-x-10 gap-y-3">
+                            {[
+                                { label: 'PROPERTY URL', value: activeGscSite?.replace('https://', '').replace('http://', '') || 'website.com', icon: GlobeAltIcon },
+                                { label: 'SYNC ACCOUNT', value: userSites?.find(s => s._id === activeSiteId)?.gscTokenId?.email || 'seo@slt.work', icon: UserCircleIcon }
+                            ].map((item, idx) => (
+                                <div key={idx} className="flex items-center gap-2.5 min-w-max">
+                                    <div className="w-8 h-8 rounded-lg bg-neutral-50 dark:bg-neutral-800/40 flex items-center justify-center border border-neutral-100 dark:border-neutral-700/30">
+                                        <item.icon className="w-4 h-4 text-neutral-400" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[7px] font-black text-neutral-400 uppercase tracking-widest leading-none mb-0.5">{item.label}</span>
+                                        <span className="text-xs font-bold text-neutral-700 dark:text-neutral-200 tracking-tight">{item.value}</span>
+                                    </div>
                                 </div>
-                                <div className="flex flex-col min-w-0">
-                                    <span className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest leading-none">Property URL</span>
-                                    <span className="text-sm font-black text-neutral-800 dark:text-neutral-200 mt-1.5 truncate uppercase tracking-tight">{activeGscSite?.replace('https://', '').replace('http://', '') || 'website.com'}</span>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-4 group/item">
-                                <div className="w-11 h-11 rounded-full bg-neutral-50 dark:bg-neutral-800/80 flex items-center justify-center border border-neutral-100 dark:border-neutral-700/50 shrink-0 transition-all group-hover/item:border-brand-500/30 group-hover/item:shadow-sm">
-                                    <span className="font-black text-[11px] text-neutral-400 group-hover/item:text-brand-500 transition-colors">SC</span>
-                                </div>
-                                <div className="flex flex-col min-w-0">
-                                    <span className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest leading-none">Console Status</span>
-                                    <span className="text-sm font-black text-neutral-800 dark:text-neutral-200 mt-1.5 tabular-nums tracking-tight">Verified</span>
-                                </div>
-                            </div>
-                            <div className="hidden xl:flex items-center gap-4 group/item">
-                                <div className="w-11 h-11 rounded-full bg-neutral-50 dark:bg-neutral-800/80 flex items-center justify-center border border-neutral-100 dark:border-neutral-700/50 shrink-0 transition-all group-hover/item:border-brand-500/30 group-hover/item:shadow-sm">
-                                    <UserCircleIcon className="w-5 h-5 text-neutral-400 group-hover/item:text-brand-500 transition-colors" />
-                                </div>
-                                <div className="flex flex-col min-w-0">
-                                    <span className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest leading-none">Sync Account</span>
-                                    <span className="text-sm font-black text-neutral-800 dark:text-neutral-200 mt-1.5 truncate tracking-tight">{userSites?.find(s => s._id === activeSiteId)?.gscTokenId?.email || 'seo@slt.work'}</span>
-                                </div>
-                            </div>
+                            ))}
                         </div>
 
-                        {/* 4. Actions Section */}
-                        <div className="flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0 w-full lg:w-auto min-w-[240px]">
-                            <AiSectionChat 
-                                label="GET AI SUMMARY"
-                                sectionTitle="GSC Performance Summary"
-                                activeSources={['gsc']}
-                                contextPrompt={`Analyze my Search Console performance for ${startDate} to ${endDate}. 
-                                Clicks: ${formatNumber(overview?.clicks || 0)}, Impressions: ${formatNumber(overview?.impressions || 0)}`}
-                                customTrigger={(open) => (
-                                    <button 
-                                        onClick={open}
-                                        className="w-full h-12 px-6 bg-[#edf2ff] hover:bg-[#e0e7ff] text-[#4f46e5] rounded-xl text-[11px] font-black tracking-widest flex items-center justify-between transition-all active:scale-[0.98] group shadow-sm"
-                                    >
-                                        <span className="flex items-center gap-3">
-                                            <SparklesIcon className="w-4 h-4 text-[#4f46e5]" />
-                                            GET AI SUMMARY
-                                        </span>
-                                        <ChevronRightIcon className="w-4 h-4 text-[#4f46e5]/40 group-hover:translate-x-1 transition-transform" />
-                                    </button>
-                                )}
-                            />
+                        {/* 4. Action Buttons */}
+                        <div className="flex flex-col sm:flex-row gap-2 shrink-0">
                             <button
-                                onClick={() => exportToPdf('gsc-report', `RankPilot-GSC-${activeGscSite?.replace('https://', '')}`)}
-                                className="w-full h-12 px-6 border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#111111] text-neutral-800 dark:text-neutral-200 rounded-xl text-[11px] font-black tracking-widest flex items-center justify-between hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all active:scale-[0.98] group shadow-sm"
+                                onClick={() => openWithQuestion(`Analyze my GSC performance for ${startDate} to ${endDate}. Clicks: ${formatNumber(overview?.clicks || 0)}, Impressions: ${formatNumber(overview?.impressions || 0)}`)}
+                                className="h-8 px-4 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
                             >
-                                <span className="flex items-center gap-3">
-                                    <ArrowDownTrayIcon className="w-4 h-4 text-neutral-400 group-hover:text-neutral-700 dark:group-hover:text-white transition-colors" />
-                                    PDF REPORT
-                                </span>
-                                <ChevronRightIcon className="w-4 h-4 text-neutral-300 dark:text-neutral-700 group-hover:translate-x-1 transition-transform" />
+                                <SparklesIcon className="w-3.5 h-3.5" />
+                                AI SUMMARY
+                            </button>
+                            <button
+                                onClick={() => exportToPdf('gsc-report', `RankPilot-GSC-${activeSiteId}`)}
+                                className="h-8 px-3 bg-white dark:bg-neutral-800/20 border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-lg text-[9px] font-black tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-50 transition-all"
+                            >
+                                <ArrowDownTrayIcon className="w-3.5 h-3.5" />
+                                PDF REPORT
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <FilterBar onRefresh={handleManualRefresh} loading={loading} />
+                {/* Refined Search Bar */}
+                <div className="flex justify-start">
+                    <div className="group bg-white/70 dark:bg-dark-card/70 backdrop-blur-lg border border-neutral-200/60 dark:border-neutral-700/50 rounded-full px-4 py-2 shadow-sm flex items-center gap-3 w-full max-w-md transition-all hover:shadow-md hover:border-brand-500/30">
+                        <FunnelIcon className="w-4 h-4 text-neutral-400 group-focus-within:text-brand-500 transition-colors" />
+                        <input
+                            type="text"
+                            placeholder="Search queries or pages..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="bg-transparent border-none outline-none text-xs font-bold text-neutral-900 dark:text-white placeholder:text-neutral-400 flex-1"
+                        />
+                        {searchQuery && (
+                            <button 
+                                onClick={() => setSearchQuery('')}
+                                className="text-neutral-400 hover:text-red-500 transition-colors"
+                            >
+                                <XMarkIcon className="w-3.5 h-3.5" />
+                            </button>
+                        )}
+                    </div>
+                </div>
 
                 {/* KPI Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -410,39 +535,50 @@ const GscPage = () => {
                 </div>
 
                 {/* ADD 2 — Summary Strip */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  {[
-                    { label:'Average CTR',    value:`${avgCTR}%`,      icon:'🎯' },
-                    { label:'Total Queries',  value:totalQueries,       icon:'🔍' },
-                    { label:'Best Position',  value:`#${topPosition}`,  icon:'🏆' },
-                  ].map((item,i) => (
-                    <div key={i} className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-4 flex items-center gap-4 shadow-sm">
-                      <div className="w-12 h-12 flex items-center justify-center bg-neutral-50 dark:bg-neutral-800 rounded-xl text-2xl">{item.icon}</div>
-                      <div>
-                        <div className="text-xl font-black text-neutral-900 dark:text-white tabular-nums">
-                          {loading ? <div className="h-6 w-20 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse"/> : item.value}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                    {[
+                        { label: 'Total Queries', value: formatNumber(totalQueries), icon: <MagnifyingGlassIcon className="w-5 h-5 text-blue-500" />, insight: intelligence?.kpiQueries },
+                        { label: 'Avg CTR', value: `${avgCTR}%`, icon: <CursorArrowRaysIcon className="w-5 h-5 text-emerald-500" />, insight: intelligence?.kpiCtr },
+                        { label: 'Top Position', value: topPosition, icon: <ChartBarIcon className="w-5 h-5 text-purple-500" />, insight: intelligence?.kpiPosition }
+                    ].map((card, idx) => (
+                        <div key={idx} className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-4 shadow-sm group hover:border-brand-500/30 transition-all flex flex-col">
+                            <div className="flex items-center gap-4 mb-3">
+                                <div className="w-10 h-10 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 flex items-center justify-center border border-neutral-100 dark:border-neutral-700/50 group-hover:scale-110 transition-transform">
+                                    {card.icon}
+                                </div>
+                                <div>
+                                    <div className="text-xl font-black text-neutral-900 dark:text-white tabular-nums">
+                                        {loading ? <div className="h-6 w-20 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse" /> : card.value}
+                                    </div>
+                                    <div className="text-xs text-neutral-500 dark:text-neutral-400 font-medium mt-0.5">{card.label}</div>
+                                </div>
+                            </div>
+                            {card.insight && !loading && (
+                                <p className="text-[9px] font-bold text-neutral-400 dark:text-neutral-500 leading-relaxed italic border-t border-neutral-50 dark:border-neutral-800 pt-2 mt-auto">
+                                    "{card.insight}"
+                                </p>
+                            )}
                         </div>
-                        <div className="text-xs text-neutral-500 dark:text-neutral-400 font-medium mt-0.5">{item.label}</div>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
 
-                {/* FIX 1 — Neural Traffic Resonance Chart */}
-                <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-[2.5rem] shadow-sm overflow-hidden flex flex-col min-h-[450px] group">
-                    <div className="p-8 border-b border-neutral-100 dark:border-neutral-800 flex justify-between items-center bg-brand-500/5">
+                {/* Performance Resonance Section */}
+                <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-[2.5rem] shadow-sm overflow-hidden flex flex-col min-h-[450px] group relative">
+                    <div className="p-8 border-b border-neutral-100 dark:border-neutral-800 flex justify-between items-center bg-blue-500/5">
                         <div>
-                            <h3 className="text-lg font-black text-neutral-900 dark:text-white">Neural Traffic Resonance</h3>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mt-1">Cross-axial click and impression mapping</p>
+                            <h3 className="text-lg font-black text-neutral-900 dark:text-white">Search Performance resonance</h3>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mt-1">{presetLabels[preset] || 'Custom Range'}</p>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <AiSectionChat
-                                sectionTitle="GSC - Traffic Resonance (Clicks & Impressions)"
-                                contextPrompt={`Analyze my Google Search Console clicks and impressions trend. Clicks: ${overview?.clicks || 0}, Impressions: ${overview?.impressions || 0}, CTR: ${((overview?.ctr || 0) * 100).toFixed(2)}%. What patterns do you see and what should I optimize?`}
-                                activeSources={['gsc']}
-                            />
-                            <div className="w-10 h-10 flex items-center justify-center bg-brand-500/10 rounded-xl border border-brand-500/20">
-                                <ChartBarIcon className="w-5 h-5 text-brand-500" />
+                        <div className="p-2 bg-blue-500/10 rounded-2xl border border-blue-500/20 flex items-center gap-2">
+                             <button
+                                onClick={() => openWithQuestion(`Analyze my GSC clicks and impressions trend. Clicks: ${overview?.clicks || 0}, Impressions: ${overview?.impressions || 0}, CTR: ${((overview?.ctr || 0) * 100).toFixed(2)}%. What patterns do you see?`)}
+                                className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
+                            >
+                                <SparklesIcon className="w-3.5 h-3.5" />
+                                ASK AI
+                            </button>
+                            <div className="w-10 h-10 flex items-center justify-center bg-blue-500 rounded-xl">
+                                <ChartBarIcon className="w-5 h-5 text-white" />
                             </div>
                         </div>
                     </div>
@@ -514,6 +650,13 @@ const GscPage = () => {
                             </div>
                             </>
                         )}
+                    </div>
+                    <div className="px-8 pb-8">
+                        <SectionAiSummary 
+                            insight={intelligence?.traffic} 
+                            loading={loading} 
+                            sectionTitle="AI PERFORMANCE INSIGHT"
+                        />
                     </div>
                 </div>
 
@@ -751,109 +894,6 @@ const GscPage = () => {
                                 </BarChart>
                             </ResponsiveContainer>
                         )}
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Device Breakdown */}
-                    <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-[2.5rem] p-8 shadow-sm group">
-                        <div className="flex items-center justify-between mb-6">
-                            <div>
-                                <h3 className="text-lg font-black text-neutral-900 dark:text-white">Apparatus Analysis</h3>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Search volume by device category</p>
-                            </div>
-                            <AiSectionChat
-                                sectionTitle="GSC - Device Breakdown"
-                                contextPrompt={`My GSC device breakdown: ${devices.map(d => `${d.name}: ${formatNumber(d.value)} clicks`).join(', ')}. Is my mobile vs desktop ratio healthy? What device-specific optimizations should I focus on?`}
-                                activeSources={['gsc']}
-                            />
-                        </div>
-                        <div className="flex flex-col md:flex-row items-center gap-12">
-                            <div className="w-[200px] h-[200px]">
-                                {loading ? (
-                                    <div className="w-full h-full rounded-full bg-neutral-100 dark:bg-neutral-800 animate-pulse"></div>
-                                ) : (
-                                    <ResponsiveContainer width="100%" height={200}>
-                                        <PieChart>
-                                            <Pie
-                                                data={devices}
-                                                innerRadius={60}
-                                                outerRadius={80}
-                                                paddingAngle={10}
-                                                dataKey="value"
-                                            >
-                                                {devices.map((entry, index) => (
-                                                    <Cell key={index} fill={['#3B8ED4', '#8B5CF6', '#10B981'][index % 3]} />
-                                                ))}
-                                            </Pie>
-                                            <Tooltip 
-                                                contentStyle={{ 
-                                                    borderRadius: '15px', 
-                                                    border: 'none', 
-                                                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                                                    background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
-                                                    color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
-                                                }}
-                                                itemStyle={{ fontWeight: 'bold', fontSize: '10px' }}
-                                            />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                )}
-                            </div>
-                            <div className="flex-1 space-y-4 w-full">
-                                {devices.map((d, i) => (
-                                    <div key={i} className="flex items-center justify-between p-3 rounded-2xl bg-neutral-50 dark:bg-dark-surface/30 group-hover:bg-brand-500/5 transition-colors">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ['#3B8ED4', '#8B5CF6', '#10B981'][i % 3] }}></div>
-                                            <span className="text-xs font-black capitalize text-neutral-600 dark:text-neutral-400">{d.name}</span>
-                                        </div>
-                                        <span className="text-xs font-black text-neutral-900 dark:text-white">{formatNumber(d.value)}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Geography Breakdown */}
-                    <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-[2.5rem] p-8 shadow-sm group">
-                        <div className="flex items-center justify-between mb-6">
-                            <div>
-                                <h3 className="text-lg font-black text-neutral-900 dark:text-white">Geographical Reach</h3>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Top conversion landscapes</p>
-                            </div>
-                            <AiSectionChat
-                                sectionTitle="GSC - Geographic Distribution"
-                                contextPrompt={`My top GSC countries by clicks: ${countries.slice(0,5).map(c => `${c.name}: ${formatNumber(c.value)}`).join(', ')}. Should I focus more on specific geographies? Any localization opportunities?`}
-                                activeSources={['gsc']}
-                            />
-                        </div>
-                        <div className="space-y-4">
-                            {loading ? (
-                                Array(5).fill(0).map((_, i) => (
-                                    <div key={i} className="h-10 w-full bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"></div>
-                                ))
-                            ) : countries.map((loc, i) => {
-                                const maxVal = Math.max(...countries.map(l => l.value));
-                                const width = (loc.value / maxVal) * 100;
-                                return (
-                                    <div key={i} className="space-y-2">
-                                        <div className="flex justify-between items-end">
-                                            <span className="text-xs font-black text-neutral-700 dark:text-neutral-300 flex items-center gap-2">
-                                                <span className="w-5 h-5 flex items-center justify-center bg-neutral-100 dark:bg-dark-surface rounded-md text-[10px] font-bold">{i+1}</span>
-                                                {loc.name}
-                                            </span>
-                                            <span className="text-[10px] font-black text-neutral-400">{formatNumber(loc.value)} CLICKS</span>
-                                        </div>
-                                        <div className="h-2 w-full bg-neutral-100 dark:bg-dark-surface rounded-full overflow-hidden">
-                                            <div 
-                                                className="h-full bg-gradient-to-r from-brand-500 to-blue-400 rounded-full transition-all duration-1000"
-                                                style={{ width: `${width}%` }}
-                                            ></div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
                     </div>
                 </div>
 
