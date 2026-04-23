@@ -153,11 +153,34 @@ export const getDashboardSummary = async (req, res) => {
         // STEP 5: Strategic AI Intelligence
         const dataForAI = {
             siteName: acc?.siteName || 'Site',
-            ga4: { ...ga, priorSessions: pGa.sessions, growth: calculateGrowth(ga.sessions, pGa.sessions) },
-            gsc: { ...gs, avgPosition: gsRaw.position, priorClicks: pGs.clicks, growth: calculateGrowth(gs.clicks, pGs.clicks) },
-            googleAds: { ...ad.google, priorSpend: pAd.google.spend, priorConversions: pAd.google.conversions, growth: calculateGrowth(ad.google.conversions, pAd.google.conversions) },
-            facebookAds: { ...ad.facebook, priorSpend: pAd.facebook.spend, priorReach: pAd.facebook.reach, growth: calculateGrowth(ad.facebook.spend, pAd.facebook.spend) },
-            topPages: topPages.map(p => ({ url: p._id || '/', views: p.views }))
+            ga4: { 
+                ...ga, 
+                priorSessions: pGa.sessions, 
+                growthSessions: calculateGrowth(ga.sessions, pGa.sessions),
+                growthUsers: calculateGrowth(ga.users, pGa.users)
+            },
+            gsc: { 
+                ...gs, 
+                avgPosition: gs.position,
+                priorClicks: pGs.clicks, 
+                growthClicks: calculateGrowth(gs.clicks, pGs.clicks),
+                growthImpressions: calculateGrowth(gs.impressions, pGs.impressions)
+            },
+            googleAds: { 
+                ...ad.google, 
+                priorSpend: pAd.google.spend, 
+                priorConversions: pAd.google.conversions, 
+                growthConversions: calculateGrowth(ad.google.conversions, pAd.google.conversions),
+                growthSpend: calculateGrowth(ad.google.spend, pAd.google.spend)
+            },
+            facebookAds: { 
+                ...ad.facebook, 
+                priorSpend: pAd.facebook.spend, 
+                priorReach: pAd.facebook.reach, 
+                growthReach: calculateGrowth(ad.facebook.reach, pAd.facebook.reach),
+                growthSpend: calculateGrowth(ad.facebook.spend, pAd.facebook.spend)
+            },
+            topPages: topPages.map(p => ({ url: p._id || '/', views: p.views, users: p.users }))
         };
 
         const generateIntelligence = async (data) => {
@@ -180,29 +203,29 @@ export const getDashboardSummary = async (req, res) => {
                   - Facebook Ads: ${conn.facebookAds ? 'ONLINE' : 'OFFLINE'}
 
                   RAW DATA:
-                  - GA4: ${conn.ga4 ? `${data.ga4.sessions} sessions (${data.ga4.growth}% growth), ${data.ga4.bounceRate}% bounce (Prior: ${data.ga4.priorSessions})` : 'NO DATA'}
-                  - GSC: ${conn.gsc ? `${data.gsc.clicks} clicks (${data.gsc.growth}% growth), #${data.gsc.avgPosition} pos (Prior: ${data.gsc.priorClicks})` : 'NO DATA'}
-                  - Google Ads: ${conn.googleAds ? `$${data.googleAds.spend} spend, ${data.googleAds.conversions} conv (${data.googleAds.growth}% growth), ${data.googleAds.ctr}% CTR` : 'NO DATA'}
-                  - FB Ads: ${conn.facebookAds ? `$${data.facebookAds.spend} spend, ${data.facebookAds.roas}x ROAS, ${data.facebookAds.reach} reach` : 'NO DATA'}
-                  - Top page: ${data.topPages[0]?.url || 'Home'} (${data.topPages[0]?.views || 0} views).
+                  - GA4: ${conn.ga4 ? `${data.ga4.sessions} sessions (${data.ga4.growthSessions}% growth), ${data.ga4.users} users, ${data.ga4.bounceRate}% bounce (Prior: ${data.ga4.priorSessions} sessions)` : 'NO DATA'}
+                  - GSC: ${conn.gsc ? `${data.gsc.clicks} clicks (${data.gsc.growthClicks}% growth), ${data.gsc.impressions} impressions, #${data.gsc.avgPosition?.toFixed(1)} pos (Prior: ${data.gsc.priorClicks} clicks)` : 'NO DATA'}
+                  - Google Ads: ${conn.googleAds ? `$${data.googleAds.spend} spend (${data.googleAds.growthSpend}% growth), ${data.googleAds.conversions} conv (${data.googleAds.growthConversions}% growth), ${(data.googleAds.ctr * 100).toFixed(2)}% CTR` : 'NO DATA'}
+                  - FB Ads: ${conn.facebookAds ? `$${data.facebookAds.spend} spend (${data.facebookAds.growthSpend}% growth), ${data.facebookAds.roas}x ROAS, ${data.facebookAds.reach} reach (${data.facebookAds.growthReach}% growth)` : 'NO DATA'}
+                  - Top page: ${data.topPages[0]?.url || 'Home'} (${data.topPages[0]?.views || 0} views, ${data.topPages[0]?.users || 0} visitors).
 
                   EXPECTED JSON FORMAT:
                   {
-                    "websiteSummary": "A big-picture look at your site performance and a clear next step (20-25 words).",
-                    "overviewGA4": "Friendly summary of your traffic and engagement (25-30 words).",
-                    "overviewGSC": "Encouraging take on your Google search visibility (25-30 words).",
-                    "overviewGAds": "Simple summary of your Google Ads success and spend (25-30 words).",
-                    "overviewFAds": "Friendly look at your Facebook reach and brand impact (25-30 words).",
-                    "metricTraffic": "Simple take on your visit trends (20-25 words).",
-                    "metricClicks": "Encouraging note on your organic growth (20-25 words).",
-                    "metricSpend": "Comforting summary of your ad investment (20-25 words).",
-                    "metricConversions": "Exciting summary of your result-driven actions (20-25 words).",
-                    "metricImpressions": "A note on how many eyes are seeing your brand (20-25 words).",
-                    "metricEfficiency": "Quick tip on getting the most out of your budget (20-25 words).",
-                    "adWinnerInsight": "A clear, friendly comparison of where you're winning most: Google vs Meta (40-45 words).",
-                    "growthMatrixInsight": "Exciting analysis of your overall growth journey (40-45 words).",
-                    "topPagesInsight": "Simple advice on how to make your best pages work even harder for you (40-45 words).",
-                    "comparisonInsight": "A encouraging look at how you are doing today versus before (40-45 words)."
+                    "websiteSummary": "A big-picture look at your site performance for ${data.siteName}. Mention ${data.ga4.sessions} sessions and ${data.gsc.clicks} clicks. (20-25 words).",
+                    "overviewGA4": "Friendly summary of your traffic (${data.ga4.sessions} sessions) and ${data.ga4.growthSessions}% growth. (25-30 words).",
+                    "overviewGSC": "Encouraging take on your Google search visibility with ${data.gsc.clicks} clicks and #${data.gsc.avgPosition} avg position. (25-30 words).",
+                    "overviewGAds": "Simple summary of your Google Ads success: $${data.googleAds.spend} spend for ${data.googleAds.conversions} conversions. (25-30 words).",
+                    "overviewFAds": "Friendly look at your Facebook impact: $${data.facebookAds.spend} spend reaching ${data.facebookAds.reach} people with ${data.facebookAds.roas}x ROAS. (25-30 words).",
+                    "metricTraffic": "Simple take on your visit trends (${data.ga4.sessions} sessions). (20-25 words).",
+                    "metricClicks": "Encouraging note on your organic growth (${data.gsc.clicks} clicks). (20-25 words).",
+                    "metricSpend": "Comforting summary of your $${(data.googleAds.spend + data.facebookAds.spend).toFixed(2)} total ad investment. (20-25 words).",
+                    "metricConversions": "Exciting summary of your ${data.googleAds.conversions + data.facebookAds.conversions} total conversions. (20-25 words).",
+                    "metricImpressions": "A note on how many eyes (${data.googleAds.impressions + data.facebookAds.reach} impressions/reach) are seeing your brand. (20-25 words).",
+                    "metricEfficiency": "Quick tip on getting the most out of your budget based on your ${(data.googleAds.ctr * 100).toFixed(2)}% Google CTR and ${data.facebookAds.roas}x Meta ROAS. (20-25 words).",
+                    "adWinnerInsight": "A clear, friendly comparison of where you're winning most based on your Ad Platform Comparison table: Google ($${data.googleAds.spend} spend, ${data.googleAds.clicks} clicks, ${data.googleAds.conversions} conversions, $${data.googleAds.cpc.toFixed(2)} CPC, ${(data.googleAds.ctr * 100).toFixed(2)}% CTR) vs Meta ($${data.facebookAds.spend} spend, ${data.facebookAds.clicks} clicks, ${data.facebookAds.conversions} conversions, $${data.facebookAds.cpc.toFixed(2)} CPC, ${(data.facebookAds.ctr * 100).toFixed(2)}% CTR). (40-45 words).",
+                    "growthMatrixInsight": "Exciting analysis of your multi-channel growth journey. Analyze these trends: ${data.ga4.growthSessions}% sessions growth (GA4), ${data.gsc.growthClicks}% clicks growth (GSC), ${data.googleAds.growthConversions}% conversion growth (GAds), and ${data.facebookAds.growthReach}% reach growth (Meta). (40-45 words).",
+                    "topPagesInsight": "Simple advice on how to make your best page (${data.topPages[0]?.url || 'Home'} with ${data.topPages[0]?.views || 0} views and ${data.topPages[0]?.users || 0} unique visitors) work even harder. (40-45 words).",
+                    "comparisonInsight": "An encouraging look at your performance journey. Compare this period vs prior: Sessions (${data.ga4.sessions} vs ${data.ga4.priorSessions}), GSC Clicks (${data.gsc.clicks} vs ${data.gsc.priorClicks}), and Total Ad Spend ($${(data.googleAds.spend + data.facebookAds.spend).toFixed(2)} vs $${(data.googleAds.priorSpend + data.facebookAds.priorSpend).toFixed(2)}). (40-45 words).",
                   }
 
                   STRICT RULES:
@@ -225,21 +248,21 @@ export const getDashboardSummary = async (req, res) => {
                     facebookAds: !!acc?.facebookAdAccountId
                 };
                 return {
-                    websiteSummary: "Your site performance shows steady growth across core metrics; keep up the great work and maintain your current strategy for long-term brand success.", // 23 words
-                    overviewGA4: conn.ga4 ? "Your user engagement is looking healthy right now; your visitors are staying longer and finding your content highly relevant to their interests and your brand goals." : "Connect Google Analytics 4 to unlock unique traffic insights and see how your users interact with your brand in real-time for better growth opportunities.", // 28/26 words
-                    overviewGSC: conn.gsc ? "Your SEO visibility is growing steadily; try optimizing your page titles for better clicks from Google search results to boost your organic traffic and visibility." : "Connect Google Search Console to monitor keyword performance and see which organic search terms are driving the most traffic to your primary content pages.", // 27/28 words
-                    overviewGAds: conn.googleAds ? "Your Google Ads are actively reaching users; your budget is being smartly spent on keywords that drive real results for your business and scale your growth." : "Connect your Google Ads account to track your campaign efficiency and see how much value your search advertising is creating for your business overall.", // 27/26 words
-                    overviewFAds: conn.facebookAds ? "Your Facebook reach is expanding nicely; your creative ads are resonating well with your audience, giving you a great chance to scale your brand effectively." : "Connect your Facebook Ad account to measure your social reach and see how your creative assets are impacting your overall brand visibility and business growth.", // 26/27 words
-                    metricTraffic: conn.ga4 ? "Your visits are stable today; this consistent traffic gives you a great foundation to grow your brand much further." : "Connect Google Analytics 4 to track your visitors and see how people interact with your site in real-time across all your pages.", // 21/24 words
-                    metricClicks: conn.gsc ? "Google search is bringing you clicks; you are doing great, and adding more quality content will help you grow." : "Link Google Search Console to see your search clicks and find out which keywords bring people to your site every single day.", // 20/23 words
-                    metricSpend: (conn.googleAds || conn.facebookAds) ? "Your total ad investment is managed; you are spending wisely by focusing on platforms that deliver conversions for your business." : "Connect your Ad accounts to monitor your spend and ensure every marketing dollar is working hard for your business and your goals.", // 21/24 words
-                    metricConversions: (conn.googleAds || conn.facebookAds) ? "You have captured important actions; understanding these steps will help you create an even better journey for all your customers." : "Connect your Ad accounts to track your goals and see exactly how much value your marketing efforts are creating for your site.", // 21/23 words
-                    metricImpressions: (conn.googleAds || conn.facebookAds) ? "Your ads are getting visibility; all those impressions are helping more people recognize and trust your brand and business name." : "Connect your Ad accounts to see your reach and find out how many people are discovering your business through your paid campaigns.", // 21/24 words
-                    metricEfficiency: (conn.googleAds || conn.facebookAds) ? "Your marketing spend is efficient; staying within these profitable margins will give you the confidence to grow your reach safely." : "Connect your Ad accounts to identify which campaigns are giving you the best return on your investment and reaching the right audience.", // 21/25 words
-                    adWinnerInsight: (conn.googleAds && conn.facebookAds) ? "By comparing your platforms, we can see where your best results are coming from; we strongly recommend shifting more of your budget to the highest performing ads and channels for a much better return on investment." : "Connect both Google and Meta ads to compare them side-by-side; our AI will help you pick winners and spend your budget more effectively across every single digital channel to grow your business results.", // 42/43 words
-                    growthMatrixInsight: "Your growth trend is looking positive; your path forward looks bright, especially if you continue to mix quality content with targeted ad campaigns to reach new fans and expand your digital footprint effectively.", // 41 words
-                    topPagesInsight: conn.ga4 ? "Your top pages are getting great attention; adding a clearer call-to-action on these pages could help you turn that interest into even more business results and better long-term customer loyalty and growth." : "Connect Google Analytics 4 to find your most popular content; knowing your best pages is key to making your entire website perform better and turning your existing traffic into loyal business customers.", // 41/40 words
-                    comparisonInsight: "Comparing your data to the last period shows your marketing strategy is working; your organic and paid efforts are teaming up perfectly to grow your brand and reach new heights in the current landscape." // 42 words
+                    websiteSummary: `Your site performance for ${data.siteName} is looking stable with ${data.ga4.sessions} total sessions and ${data.gsc.clicks} organic clicks captured during this current analysis period.`,
+                    overviewGA4: conn.ga4 ? `Your traffic is holding steady at ${data.ga4.sessions} sessions with a ${data.ga4.growthSessions}% growth rate, showing that your audience engagement strategy is consistently reaching new people.` : "Connect Google Analytics 4 to unlock unique traffic insights and see how your users interact with your brand in real-time for better growth opportunities.",
+                    overviewGSC: conn.gsc ? `Your search visibility is active with ${data.gsc.clicks} clicks and an average position of #${data.gsc.avgPosition?.toFixed(1)}, indicating your content is ranking well for your target keywords.` : "Connect Google Search Console to monitor keyword performance and see which organic search terms are driving the most traffic to your primary content pages.",
+                    overviewGAds: conn.googleAds ? `Your Google Ads are performing with $${data.googleAds.spend} spend and ${data.googleAds.conversions} conversions, proving that your search campaigns are successfully driving valuable actions for your business.` : "Connect your Google Ads account to track your campaign efficiency and see how much value your search advertising is creating for your business overall.",
+                    overviewFAds: conn.facebookAds ? `Your Meta impact is clear with $${data.facebookAds.spend} spend reaching ${data.facebookAds.reach} people at a ${data.facebookAds.roas}x ROAS, showing strong resonance with your social audience.` : "Connect your Meta Ad account to measure your social reach and see how your creative assets are impacting your overall brand visibility and business growth.",
+                    metricTraffic: conn.ga4 ? `You've welcomed ${data.ga4.sessions} visitors this period; this consistent flow of traffic provides a solid foundation for your brand's digital growth and expansion.` : "Connect Google Analytics 4 to track your visitors and see how people interact with your site in real-time across all your pages.",
+                    metricClicks: conn.gsc ? `Your content earned ${data.gsc.clicks} clicks from Google; this organic interest shows that your SEO efforts are successfully capturing the attention of your target audience.` : "Link Google Search Console to see your search clicks and find out which keywords bring people to your site every single day.",
+                    metricSpend: (conn.googleAds || conn.facebookAds) ? `Your total ad investment of $${(data.googleAds.spend + data.facebookAds.spend).toFixed(2)} is being managed across platforms to ensure you're reaching customers where they are most active.` : "Connect your Ad accounts to monitor your spend and ensure every marketing dollar is working hard for your business and your goals.",
+                    metricConversions: (conn.googleAds || conn.facebookAds) ? `You have successfully captured ${data.googleAds.conversions + data.facebookAds.conversions} total conversions, showing that your marketing funnel is effectively turning visitors into valuable leads.` : "Connect your Ad accounts to track your goals and see exactly how much value your marketing efforts are creating for your site.",
+                    metricImpressions: (conn.googleAds || conn.facebookAds) ? `Your brand has earned ${data.googleAds.impressions + data.facebookAds.reach} total impressions and reach, significantly boosting your visibility and name recognition in the digital marketplace.` : "Connect your Ad accounts to see your reach and find out how many people are discovering your business through your paid campaigns.",
+                    metricEfficiency: (conn.googleAds || conn.facebookAds) ? `Your campaigns are operating with a ${(data.googleAds.ctr * 100).toFixed(2)}% Google CTR and ${data.facebookAds.roas}x Meta ROAS, showing a healthy level of efficiency in your current paid strategy.` : "Connect your Ad accounts to identify which campaigns are giving you the best return on your investment and reaching the right audience.",
+                    adWinnerInsight: (conn.googleAds && conn.facebookAds) ? `By comparing your performance across platforms, we see that Google Ads ($${data.googleAds.spend}) and Meta Ads ($${data.facebookAds.spend}) are both contributing to your overall growth. To maximize results, we recommend focusing your future budget on the specific channel currently delivering the lowest cost-per-action for your brand.` : "Connect both Google and Meta ads to compare them side-by-side; our AI will help you pick winners and spend your budget more effectively across every single digital channel.",
+                    growthMatrixInsight: `Your current multi-channel growth journey shows ${data.ga4.growthSessions}% session growth and ${data.gsc.growthClicks}% click growth this period. This positive upward trend suggests that your combined organic and paid strategies are working effectively together to expand your digital footprint and reach new potential customers across the web.`,
+                    topPagesInsight: conn.ga4 ? `Your top performing page (${data.topPages[0]?.url || 'Home'}) is attracting significant attention with ${data.topPages[0]?.views || 0} views this period. We suggest refining its conversion path and adding a clearer call-to-action to help you turn this high-intent traffic into even more measurable results and long-term brand loyalty.` : "Connect Google Analytics 4 to find your most popular content; knowing your best pages is key to making your entire website perform better.",
+                    comparisonInsight: `Comparing today's ${data.ga4.sessions} sessions to the prior period's ${data.ga4.priorSessions} sessions confirms that your marketing efforts are moving in the right direction. This steady increase in traffic across channels proves that your current strategy is resonating with your audience and building a solid foundation for your brand's long-term digital success.`
                 };
             }
         };

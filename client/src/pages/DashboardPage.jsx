@@ -148,7 +148,7 @@ const DashboardPage = () => {
         gsc: data.gsc || { clicks: 0, impressions: 0, position: 0, ctr: 0, growth: 0 },
         googleAds: data.googleAds || { spend: 0, conversions: 0, clicks: 0, impressions: 0, cpc: 0, ctr: 0, growth: 0 },
         facebookAds: data.facebookAds || { spend: 0, conversions: 0, clicks: 0, impressions: 0, reach: 0, purchaseValue: 0, roas: 0, growth: 0 },
-        intelligence: data.intelligence || { briefing: [], adStrategy: '', contentAudit: '', growthMomentum: '' },
+        intelligence: data.intelligence || {},
         adWinner: data.adWinner,
         syncMetadata: data.syncMetadata
       });
@@ -672,12 +672,12 @@ const DashboardPage = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                <KpiCard title="Website Traffic" value={formatNumber(overviewData.ga4?.sessions || 0)} change={overviewData.ga4?.growthSessions || 0} isPositive={(overviewData.ga4?.growthSessions || 0) >= 0} loading={loading} Icon={Ga4Logo} changeText="vs previous period" chartData={timeseriesData.map(d => d.Sessions)} disconnected={!activeGa4PropertyId} onClick={() => navigate(!activeGa4PropertyId ? '/connect-accounts' : '/dashboard/ga4')} insight={overviewData.intelligence?.metricTraffic} contextPrompt={`Analyze Audience Traffic: ${formatNumber(overviewData.ga4?.sessions || 0)} sessions with ${overviewData.ga4?.growthSessions || 0}% growth. What does this mean for our reach?`} />
-                <KpiCard title="Search Traffic" value={formatNumber(overviewData.gsc?.clicks || 0)} change={overviewData.gsc?.growthClicks || 0} isPositive={(overviewData.gsc?.growthClicks || 0) >= 0} loading={loading} Icon={GscLogo} changeText="vs previous period" chartData={timeseriesData.map(d => d.Clicks)} disconnected={!activeGscSite} onClick={() => navigate(!activeGscSite ? '/connect-accounts' : '/dashboard/gsc')} insight={overviewData.intelligence?.metricClicks} contextPrompt={`Examine Organic Search performance: ${formatNumber(overviewData.gsc?.clicks || 0)} clicks. How can we improve our SEO trajectory?`} />
-                <KpiCard title="Ad Spend" value={formatCurrency((overviewData.facebookAds?.spend || 0) + (overviewData.googleAds?.spend || 0))} change={Math.abs(overviewData.googleAds?.growthSpend || 0)} isPositive={(overviewData.googleAds?.growthSpend || 0) <= 0} loading={loading} Icon={GoogleAdsLogo} changeText="vs previous period" chartData={timeseriesData.map(d => d.Spend || 0)} disconnected={!activeGoogleAdsCustomerId && !activeFacebookAdAccountId} onClick={() => navigate((!activeGoogleAdsCustomerId && !activeFacebookAdAccountId) ? '/connect-accounts' : '/dashboard/google-ads')} insight={overviewData.intelligence?.metricSpend} contextPrompt={`Review our total ad investment of ${formatCurrency((overviewData.facebookAds?.spend || 0) + (overviewData.googleAds?.spend || 0))}. Is our spend allocation efficient?`} />
-                <KpiCard title="Conversions" value={formatNumber((overviewData.googleAds?.conversions || 0) + (overviewData.facebookAds?.conversions || 0))} change={overviewData.googleAds?.growthConversions || 0} isPositive={(overviewData.googleAds?.growthConversions || 0) >= 0} loading={loading} Icon={SuccessLogo} changeText="vs previous period" chartData={timeseriesData.map(d => d.Conversions || 0)} disconnected={!activeGoogleAdsCustomerId && !activeFacebookAdAccountId} onClick={() => navigate((!activeGoogleAdsCustomerId && !activeFacebookAdAccountId) ? '/connect-accounts' : '/dashboard/google-ads')} insight={overviewData.intelligence?.metricConversions} contextPrompt={`Analyze conversions: ${formatNumber((overviewData.googleAds?.conversions || 0) + (overviewData.facebookAds?.conversions || 0))} total actions. How do we maximize ROI from these leads?`} />
-                <KpiCard title="Ad Reach" value={formatNumber((overviewData.facebookAds?.impressions || 0) + (overviewData.googleAds?.impressions || 0))} change={overviewData.facebookAds?.growthReach || 0} isPositive={(overviewData.facebookAds?.growthReach || 0) >= 0} loading={loading} Icon={FacebookAdsLogo} changeText="vs previous period" chartData={timeseriesData.map(d => d.Impressions || 0)} disconnected={!activeGoogleAdsCustomerId && !activeFacebookAdAccountId} onClick={() => navigate((!activeGoogleAdsCustomerId && !activeFacebookAdAccountId) ? '/connect-accounts' : '/dashboard/facebook-ads')} insight={overviewData.intelligence?.metricImpressions} contextPrompt={`Marketing visibility: ${formatNumber((overviewData.facebookAds?.impressions || 0) + (overviewData.googleAds?.impressions || 0))} impressions. Are we building enough brand awareness?`} />
-                <KpiCard title="Conversion Efficiency" value={((overviewData.facebookAds?.spend || 0) + (overviewData.googleAds?.spend || 0)) > 0 ? `+${(((overviewData.googleAds?.conversions || 0) + (overviewData.facebookAds?.conversions || 0)) / (((overviewData.facebookAds?.spend || 0) + (overviewData.googleAds?.spend || 0)) / 100)).toFixed(1)}x` : '0.0x'} change={4.2} isPositive={true} loading={loading} Icon={PerformanceLogo} changeText="vs previous period" chartData={timeseriesData.map(d => d.Spend > 0 ? (d.Conversions || 0) / ((d.Spend || 1) / 100) : 0)} disconnected={!activeGoogleAdsCustomerId && !activeFacebookAdAccountId} onClick={() => navigate((!activeGoogleAdsCustomerId && !activeFacebookAdAccountId) ? '/connect-accounts' : '/dashboard/google-ads')} insight={overviewData.intelligence?.metricEfficiency} contextPrompt={`Audit our Efficiency Score. How can we lower the cost per conversion while scaling?`} />
+                <KpiCard title="Website Traffic" value={formatNumber(overviewData.ga4?.sessions || 0)} change={overviewData.ga4?.growthSessions || 0} isPositive={(overviewData.ga4?.growthSessions || 0) >= 0} loading={loading} Icon={Ga4Logo} changeText="vs previous period" chartData={timeseriesData.map(d => d.Sessions)} disconnected={!activeGa4PropertyId} onClick={() => navigate(!activeGa4PropertyId ? '/connect-accounts' : '/dashboard/ga4')} insight={overviewData.intelligence?.metricTraffic} contextPrompt={`Analyze Audience Traffic: ${formatNumber(overviewData.ga4?.sessions || 0)} sessions with ${overviewData.ga4?.growthSessions || 0}% growth. What are the key drivers for this traffic trend and how can we scale it further?`} />
+                <KpiCard title="Search Traffic" value={formatNumber(overviewData.gsc?.clicks || 0)} change={overviewData.gsc?.growthClicks || 0} isPositive={(overviewData.gsc?.growthClicks || 0) >= 0} loading={loading} Icon={GscLogo} changeText="vs previous period" chartData={timeseriesData.map(d => d.Clicks)} disconnected={!activeGscSite} onClick={() => navigate(!activeGscSite ? '/connect-accounts' : '/dashboard/gsc')} insight={overviewData.intelligence?.metricClicks} contextPrompt={`Examine Organic Search performance: ${formatNumber(overviewData.gsc?.clicks || 0)} clicks this period. How can we improve our SEO trajectory and keyword rankings?`} />
+                <KpiCard title="Ad Spend" value={formatCurrency((overviewData.facebookAds?.spend || 0) + (overviewData.googleAds?.spend || 0))} change={Math.abs(overviewData.googleAds?.growthSpend || 0)} isPositive={(overviewData.googleAds?.growthSpend || 0) <= 0} loading={loading} Icon={GoogleAdsLogo} changeText="vs previous period" chartData={timeseriesData.map(d => d.Spend || 0)} disconnected={!activeGoogleAdsCustomerId && !activeFacebookAdAccountId} onClick={() => navigate((!activeGoogleAdsCustomerId && !activeFacebookAdAccountId) ? '/connect-accounts' : '/dashboard/google-ads')} insight={overviewData.intelligence?.metricSpend} contextPrompt={`Review our total ad investment of ${formatCurrency((overviewData.facebookAds?.spend || 0) + (overviewData.googleAds?.spend || 0))}. Based on our growth, is our spend allocation between Google and Meta efficient?`} />
+                <KpiCard title="Conversions" value={formatNumber((overviewData.googleAds?.conversions || 0) + (overviewData.facebookAds?.conversions || 0))} change={overviewData.googleAds?.growthConversions || 0} isPositive={(overviewData.googleAds?.growthConversions || 0) >= 0} loading={loading} Icon={SuccessLogo} changeText="vs previous period" chartData={timeseriesData.map(d => d.Conversions || 0)} disconnected={!activeGoogleAdsCustomerId && !activeFacebookAdAccountId} onClick={() => navigate((!activeGoogleAdsCustomerId && !activeFacebookAdAccountId) ? '/connect-accounts' : '/dashboard/google-ads')} insight={overviewData.intelligence?.metricConversions} contextPrompt={`Analyze conversions: ${formatNumber((overviewData.googleAds?.conversions || 0) + (overviewData.facebookAds?.conversions || 0))} total actions. What specific strategies can we use to maximize ROI from these leads?`} />
+                <KpiCard title="Ad Reach" value={formatNumber((overviewData.facebookAds?.impressions || 0) + (overviewData.googleAds?.impressions || 0))} change={overviewData.facebookAds?.growthReach || 0} isPositive={(overviewData.facebookAds?.growthReach || 0) >= 0} loading={loading} Icon={FacebookAdsLogo} changeText="vs previous period" chartData={timeseriesData.map(d => d.Impressions || 0)} disconnected={!activeGoogleAdsCustomerId && !activeFacebookAdAccountId} onClick={() => navigate((!activeGoogleAdsCustomerId && !activeFacebookAdAccountId) ? '/connect-accounts' : '/dashboard/facebook-ads')} insight={overviewData.intelligence?.metricImpressions} contextPrompt={`Marketing visibility: ${formatNumber((overviewData.facebookAds?.impressions || 0) + (overviewData.googleAds?.impressions || 0))} impressions. Are we building enough brand awareness compared to our competitors?`} />
+                <KpiCard title="Conversion Efficiency" value={((overviewData.facebookAds?.spend || 0) + (overviewData.googleAds?.spend || 0)) > 0 ? `+${(((overviewData.googleAds?.conversions || 0) + (overviewData.facebookAds?.conversions || 0)) / (((overviewData.facebookAds?.spend || 0) + (overviewData.googleAds?.spend || 0)) / 100)).toFixed(1)}x` : '0.0x'} change={4.2} isPositive={true} loading={loading} Icon={PerformanceLogo} changeText="vs previous period" chartData={timeseriesData.map(d => d.Spend > 0 ? (d.Conversions || 0) / ((d.Spend || 1) / 100) : 0)} disconnected={!activeGoogleAdsCustomerId && !activeFacebookAdAccountId} onClick={() => navigate((!activeGoogleAdsCustomerId && !activeFacebookAdAccountId) ? '/connect-accounts' : '/dashboard/google-ads')} insight={overviewData.intelligence?.metricEfficiency} contextPrompt={`Audit our Efficiency Score. With a ${formatPct((overviewData.googleAds?.ctr || 0) * 100)} Google CTR and ${(overviewData.facebookAds?.roas || 0).toFixed(2)}x Meta ROAS, how can we lower the cost per conversion?`} />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -691,7 +691,7 @@ const DashboardPage = () => {
                       {activeGa4PropertyId && !loading && (
                         <button
                           onClick={() => openWithQuestion(`Provide a detailed analysis for this GA4 traffic summary: ${overviewData.intelligence?.overviewGA4 || 'Traffic engagement overview'}.
-                            Values: Users: ${formatNumber(overviewData.ga4?.users)}, Sessions: ${formatNumber(overviewData.ga4?.sessions)}, Bounce Rate: ${formatPct(overviewData.ga4?.bounceRate || 0)}, Avg Time: ${formatTime(overviewData.ga4?.avgSessionDuration)}, Page Views: ${formatNumber(overviewData.ga4?.pageViews)}`)}
+                            Current Data: Users: ${formatNumber(overviewData.ga4?.users)}, Sessions: ${formatNumber(overviewData.ga4?.sessions)}, Growth: ${overviewData.ga4?.growthSessions}%, Bounce Rate: ${formatPct(overviewData.ga4?.bounceRate || 0)}, Avg Time: ${formatTime(overviewData.ga4?.avgSessionDuration)}, Page Views: ${formatNumber(overviewData.ga4?.pageViews)}`)}
                           className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
                         >
                           <SparklesIcon className="w-3.5 h-3.5" />
@@ -755,8 +755,8 @@ const DashboardPage = () => {
                     <div className="flex items-center gap-2">
                       {activeGscSite && !loading && (
                         <button
-                          onClick={() => openWithQuestion(`How can I improve my SEO based on this GSC summary? ${overviewData.intelligence?.overviewGSC || 'Organic visibility overview'}.
-                            Values: Clicks: ${formatNumber(overviewData.gsc?.clicks)}, Impressions: ${formatNumber(overviewData.gsc?.impressions)}, CTR: ${formatPct((overviewData.gsc?.ctr || 0) * 100)}, Avg Position: #${(overviewData.gsc?.avgPosition || 0).toFixed(1)}`)}
+                          onClick={() => openWithQuestion(`How can I improve my SEO strategy based on this Search Console summary? ${overviewData.intelligence?.overviewGSC || 'Organic visibility overview'}.
+                            Current Data: Clicks: ${formatNumber(overviewData.gsc?.clicks)} (${overviewData.gsc?.growthClicks}% growth), Impressions: ${formatNumber(overviewData.gsc?.impressions)}, CTR: ${formatPct((overviewData.gsc?.ctr || 0) * 100)}, Avg Position: #${(overviewData.gsc?.avgPosition || 0).toFixed(1)}`)}
                           className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
                         >
                           <SparklesIcon className="w-3.5 h-3.5" />
@@ -819,8 +819,8 @@ const DashboardPage = () => {
                     <div className="flex items-center gap-2">
                       {activeGoogleAdsCustomerId && !loading && (
                         <button
-                          onClick={() => openWithQuestion(`Analyze Google Ads efficiency based on this: ${overviewData.intelligence?.overviewGAds || 'Ad campaign overview'}.
-                            Values: Spend: ${formatCurrency(overviewData.googleAds?.spend)}, Clicks: ${formatNumber(overviewData.googleAds?.clicks)}, Impressions: ${formatNumber(overviewData.googleAds?.impressions)}, Conversions: ${formatNumber(overviewData.googleAds?.conversions)}, CPC: ${formatCurrency(overviewData.googleAds?.cpc)}, CTR: ${formatPct((overviewData.googleAds?.ctr || 0) * 100)}`)}
+                          onClick={() => openWithQuestion(`Analyze Google Ads efficiency based on this overview: ${overviewData.intelligence?.overviewGAds || 'Ad campaign overview'}.
+                            Current Data: Spend: ${formatCurrency(overviewData.googleAds?.spend)} (${overviewData.googleAds?.growthSpend}% growth), Clicks: ${formatNumber(overviewData.googleAds?.clicks)}, Impressions: ${formatNumber(overviewData.googleAds?.impressions)}, Conversions: ${formatNumber(overviewData.googleAds?.conversions)} (${overviewData.googleAds?.growthConversions}% growth), CPC: ${formatCurrency(overviewData.googleAds?.cpc)}, CTR: ${formatPct((overviewData.googleAds?.ctr || 0) * 100)}`)}
                           className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
                         >
                           <SparklesIcon className="w-3.5 h-3.5" />
@@ -882,8 +882,8 @@ const DashboardPage = () => {
                     <div className="flex items-center gap-2">
                       {activeFacebookAdAccountId && !loading && (
                         <button
-                          onClick={() => openWithQuestion(`Give me strategies to scale Facebook ads based on this summary: ${overviewData.intelligence?.overviewFAds || 'Meta ads overview'}.
-                            Values: Spend: ${formatCurrency(overviewData.facebookAds?.spend)}, Reach: ${formatNumber(overviewData.facebookAds?.reach)}, Impressions: ${formatNumber(overviewData.facebookAds?.impressions)}, Clicks: ${formatNumber(overviewData.facebookAds?.clicks)}, ROAS: ${(overviewData.facebookAds?.roas || 0).toFixed(2)}x, CTR: ${formatPct((overviewData.facebookAds?.ctr || 0) * 100)}`)}
+                          onClick={() => openWithQuestion(`Give me actionable strategies to scale Meta Ads based on this summary: ${overviewData.intelligence?.overviewFAds || 'Meta ads overview'}.
+                            Current Data: Spend: ${formatCurrency(overviewData.facebookAds?.spend)} (${overviewData.facebookAds?.growthSpend}% growth), Reach: ${formatNumber(overviewData.facebookAds?.reach)} (${overviewData.facebookAds?.growthReach}% growth), Impressions: ${formatNumber(overviewData.facebookAds?.impressions)}, Clicks: ${formatNumber(overviewData.facebookAds?.clicks)}, ROAS: ${(overviewData.facebookAds?.roas || 0).toFixed(2)}x, CTR: ${formatPct((overviewData.facebookAds?.ctr || 0) * 100)}`)}
                           className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
                         >
                           <SparklesIcon className="w-3.5 h-3.5" />
@@ -955,7 +955,10 @@ const DashboardPage = () => {
 
                   {!loading && (activeGoogleAdsCustomerId || activeFacebookAdAccountId) && (
                     <button
-                      onClick={() => openWithQuestion(`Which platform should I prioritize according to this comparison?`)}
+                      onClick={() => openWithQuestion(`Based on the Ad Platform Comparison table, which channel should I prioritize? 
+                        Google Stats: $${formatNumber(overviewData.googleAds?.spend)} spend, ${formatNumber(overviewData.googleAds?.conversions)} conv, ${formatPct((overviewData.googleAds?.ctr || 0) * 100)} CTR.
+                        Meta Stats: $${formatNumber(overviewData.facebookAds?.spend)} spend, ${formatNumber(overviewData.facebookAds?.conversions)} conv, ${formatPct((overviewData.facebookAds?.ctr || 0) * 100)} CTR.
+                        AI Insight: ${overviewData.intelligence?.adWinnerInsight || 'Comparison analysis needed.'}`)}
                       className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-semibold flex items-center gap-1.5"
                     >
                       <SparklesIcon className="w-3 h-3" />
@@ -1074,7 +1077,10 @@ const DashboardPage = () => {
                     {!loading && (
                       <button
                         onClick={() => openWithQuestion(`Tell me more about this growth matrix insight: ${overviewData.intelligence?.growthMatrixInsight || 'Growth trends'}.
-                          Context: Analyzing ${selectedMetric} trends. Total ${selectedMetric}: ${selectedMetric === 'Spend' ? formatCurrency((overviewData.googleAds?.spend || 0) + (overviewData.facebookAds?.spend || 0)) : formatNumber(overviewData.ga4?.sessions || 0)}.`)}
+                          Detailed Context: Analyzing ${selectedMetric} trends over time. 
+                          GA4 Sessions: ${formatNumber(overviewData.ga4?.sessions)} (${overviewData.ga4?.growthSessions}% growth).
+                          GSC Clicks: ${formatNumber(overviewData.gsc?.clicks)} (${overviewData.gsc?.growthClicks}% growth).
+                          Current Selection: Total ${selectedMetric} is ${selectedMetric === 'Spend' ? formatCurrency((overviewData.googleAds?.spend || 0) + (overviewData.facebookAds?.spend || 0)) : formatNumber(overviewData.ga4?.sessions || 0)}.`)}
                         className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
                       >
                         <SparklesIcon className="w-3.5 h-3.5" />
@@ -1137,8 +1143,8 @@ const DashboardPage = () => {
                   <div className="flex items-center gap-3">
                     {!loading && (
                       <button
-                        onClick={() => openWithQuestion(`Analyze these top pages further: ${overviewData.intelligence?.topPagesInsight || 'Page performance'}.
-                          Top Pages Data: ${topPages.slice(0, 3).map(p => `${p.url} (${formatNumber(p.visitors)} visitors)`).join(', ')}.`)}
+                        onClick={() => openWithQuestion(`Analyze these top pages performance further: ${overviewData.intelligence?.topPagesInsight || 'Page performance'}.
+                          Top Pages Breakdown: ${topPages.slice(0, 3).map(p => `${p.url} with ${formatNumber(p.visitors)} unique visitors and ${formatNumber(p.views)} views`).join(', ')}.`)}
                         className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
                       >
                         <SparklesIcon className="w-3.5 h-3.5" />
@@ -1180,9 +1186,9 @@ const DashboardPage = () => {
                   <div className="flex items-center gap-3">
                     {!loading && (
                       <button
-                        onClick={() => openWithQuestion(`What should I do about these period comparisons? ${overviewData.intelligence?.comparisonInsight || 'Comparison trends'}. 
-                          Current Period: Sessions ${formatNumber(overviewData.ga4?.sessions)}, GSC Clicks ${formatNumber(overviewData.gsc?.clicks)}, GAds Spend ${formatCurrency(overviewData.googleAds?.spend)}, Meta Spend ${formatCurrency(overviewData.facebookAds?.spend)}.
-                          Prior Period: Sessions ${formatNumber(overviewData.ga4?.priorSessions)}, GSC Clicks ${formatNumber(overviewData.gsc?.priorClicks)}, GAds Spend ${formatCurrency(overviewData.googleAds?.priorSpend)}, Meta Spend ${formatCurrency(overviewData.facebookAds?.priorSpend)}.`)}
+                        onClick={() => openWithQuestion(`What actionable steps should I take based on these period comparisons? ${overviewData.intelligence?.comparisonInsight || 'Comparison trends'}. 
+                          Current Period Metrics: Sessions ${formatNumber(overviewData.ga4?.sessions)}, GSC Clicks ${formatNumber(overviewData.gsc?.clicks)}, GAds Spend ${formatCurrency(overviewData.googleAds?.spend)}, Meta Spend ${formatCurrency(overviewData.facebookAds?.spend)}.
+                          Prior Period Metrics: Sessions ${formatNumber(overviewData.ga4?.priorSessions)}, GSC Clicks ${formatNumber(overviewData.gsc?.priorClicks)}, GAds Spend ${formatCurrency(overviewData.googleAds?.priorSpend)}, Meta Spend ${formatCurrency(overviewData.facebookAds?.priorSpend)}.`)}
                         className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
                       >
                         <SparklesIcon className="w-3.5 h-3.5" />
