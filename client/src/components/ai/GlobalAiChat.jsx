@@ -7,13 +7,16 @@ import {
     ArrowPathIcon,
     ChatBubbleLeftRightIcon,
     MinusIcon,
-    ExclamationTriangleIcon
+    ExclamationTriangleIcon,
+    DocumentTextIcon
 } from '@heroicons/react/24/outline';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import ChartRenderer from './ChartRenderer';
 import { useAuthStore } from '../../store/authStore';
 import { useAccountsStore } from '../../store/accountsStore';
 import { getApiUrl } from '../../api';
+import { getSuggestedQuestions } from '../../api/aiApi';
 import { useAiChatStore } from '../../store/aiChatStore';
 
 
@@ -27,10 +30,57 @@ const MD = {
     h1: ({ children }) => <h1 className="text-sm font-black text-neutral-900 dark:text-white mb-1">{children}</h1>,
     h2: ({ children }) => <h2 className="text-sm font-bold text-neutral-900 dark:text-white mb-1">{children}</h2>,
     h3: ({ children }) => <h3 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 mb-1">{children}</h3>,
-    code: ({ inline, children }) =>
-        inline
+    code: ({ inline, className, children, ...props }) => {
+        const match = /language-json-chart-(\w+)/.exec(className || '');
+        const isJson = /language-json/.test(className || '');
+        const text = String(children).trim();
+
+        if (!inline && (match || isJson)) {
+            try {
+                const cleanedJson = text
+                    .replace(/\/\/.*/g, '') 
+                    .replace(/\/\*[\s\S]*?\*\//g, '') 
+                    .replace(/\n$/g, '') 
+                    .trim();
+
+                const chartData = JSON.parse(cleanedJson);
+                
+                const hasChartKeys = (obj) => {
+                    const keys = ['labels', 'label', 'datasets', 'dataset', 'chartType', 'series', 'categories', 'xAxis', 'yAxis'];
+                    const rootKeys = Object.keys(obj || {});
+                    const nestedKeys = (obj?.data && !Array.isArray(obj.data)) ? Object.keys(obj.data) : [];
+                    const isDataArray = Array.isArray(obj?.data);
+                    return keys.some(k => rootKeys.includes(k) || nestedKeys.includes(k)) || (isDataArray && rootKeys.includes('series'));
+                };
+
+                if (!match && isJson && !hasChartKeys(chartData)) {
+                    return (
+                        <div className="my-3 rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800 shadow-sm bg-neutral-900 p-3">
+                            <div className="flex items-center gap-2 mb-2 pb-1 border-b border-white/5">
+                                <DocumentTextIcon className="w-3 h-3 text-neutral-400" />
+                                <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">Raw Data</span>
+                            </div>
+                            <code className="text-[11px] font-mono text-neutral-300 block whitespace-pre overflow-x-auto" {...props}>{children}</code>
+                        </div>
+                    );
+                }
+                
+                const finalType = match ? match[1] : (chartData.chartType || 'line');
+
+                return (
+                    <div className="my-4 w-full overflow-hidden scale-90 -mx-4 origin-left">
+                        <ChartRenderer type={finalType} data={chartData} />
+                    </div>
+                );
+            } catch (err) {
+                // Fallback to normal code block on error
+            }
+        }
+
+        return inline
             ? <code className="bg-neutral-100 dark:bg-neutral-800 px-1 py-0.5 rounded text-[11px] font-mono text-brand-600 dark:text-brand-400">{children}</code>
-            : <pre className="bg-neutral-900 text-neutral-100 p-2 rounded-lg text-[11px] overflow-x-auto my-2 border border-neutral-800 tracking-tight font-mono">{children}</pre>,
+            : <pre className="bg-neutral-900 text-neutral-100 p-2 rounded-lg text-[11px] overflow-x-auto my-2 border border-neutral-800 tracking-tight font-mono">{children}</pre>;
+    },
 };
 
 const TypingIndicator = () => {
@@ -76,6 +126,8 @@ const GlobalAiChat = () => {
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [conversationId, setConversationId] = useState(null);
+    const [suggestions, setSuggestions] = useState([]);
+    const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
@@ -184,6 +236,36 @@ const GlobalAiChat = () => {
             setLoading(false);
         }
     }, [input, loading, token, activeSiteId, messages, conversationId]);
+
+    const loadSuggestions = useCallback(async () => {
+        if (!activeSiteId) return;
+        setSuggestionsLoading(true);
+        try {
+            const res = await getSuggestedQuestions(activeSiteId);
+            if (res.data && res.data.questions) {
+                setSuggestions(res.data.questions);
+            }
+        } catch (err) {
+            console.error("Failed to load suggestions:", err);
+            setSuggestions([
+                "How is my site performing?",
+                "Top 5 organic keywords?",
+                "Where is my traffic leaving?",
+            ]);
+        } finally {
+            setSuggestionsLoading(false);
+        }
+    }, [activeSiteId]);
+
+    useEffect(() => {
+        if (isOpen && suggestions.length === 0) {
+            loadSuggestions();
+        }
+    }, [isOpen, suggestions.length, loadSuggestions]);
+
+    useEffect(() => {
+        setSuggestions([]); // Reset when site changes to force re-fetch
+    }, [activeSiteId]);
 
     /* ── Scroll to bottom ── */
     useEffect(() => {
@@ -308,19 +390,25 @@ const GlobalAiChat = () => {
                                     I can analyze your marketing data, identify SEO gaps, or suggest growth strategies.
                                 </p>
                                 <div className="mt-8 grid grid-cols-1 gap-2 w-full max-w-[280px]">
-                                    {[
-                                        "How is my site performing?",
-                                        "Top 5 organic keywords?",
-                                        "Where is my traffic leaving?",
-                                    ].map((q, i) => (
-                                        <button
-                                            key={i}
-                                            onClick={() => sendMessage(q)}
-                                            className="px-4 py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-[11px] font-bold text-neutral-500 hover:text-brand-600 hover:border-brand-500 transition-all text-left shadow-sm active:scale-95"
-                                        >
-                                            {q}
-                                        </button>
-                                    ))}
+                                    {suggestionsLoading ? (
+                                        [1, 2, 3].map(i => (
+                                            <div key={i} className="h-10 bg-neutral-100 dark:bg-neutral-800 rounded-2xl animate-pulse" />
+                                        ))
+                                    ) : (
+                                        (suggestions.length > 0 ? suggestions : [
+                                            "How is my site performing?",
+                                            "Top 5 organic keywords?",
+                                            "Where is my traffic leaving?",
+                                        ]).map((q, i) => (
+                                            <button
+                                                key={i}
+                                                onClick={() => sendMessage(q)}
+                                                className="px-4 py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-[11px] font-bold text-neutral-500 hover:text-brand-600 hover:border-brand-500 transition-all text-left shadow-sm active:scale-95"
+                                            >
+                                                {q}
+                                            </button>
+                                        ))
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -338,7 +426,7 @@ const GlobalAiChat = () => {
                                             user?.avatar ? (
                                                 <img src={user.avatar} alt="User" className="w-full h-full object-cover" />
                                             ) : (
-                                                user?.name?.charAt(0) || 'U'
+                                                user?.name?.charAt(0)?.toUpperCase() || 'U'
                                             )
                                         ) : (
                                             <img src="/favicon.png" alt="AI" className="w-5 h-5 object-contain" />
@@ -386,7 +474,7 @@ const GlobalAiChat = () => {
                                 onKeyDown={handleKeyDown}
                                 disabled={loading}
                                 placeholder="Type a message..."
-                                className="flex-1 bg-transparent border-none outline-none text-sm text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 resize-none max-h-32 min-h-[22px] py-1 font-medium"
+                                className="flex-1 bg-transparent border-none outline-none text-sm text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 resize-none max-h-32 min-h-[22px] py-2 leading-normal font-medium"
                             />
                             <button
                                 onClick={() => sendMessage()}

@@ -5,9 +5,11 @@ import {
     XMarkIcon,
     PaperAirplaneIcon,
     ArrowPathIcon,
+    DocumentTextIcon
 } from '@heroicons/react/24/outline';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import ChartRenderer from './ChartRenderer';
 import { useAuthStore } from '../../store/authStore';
 import { useAccountsStore } from '../../store/accountsStore';
 import { getApiUrl } from '../../api';
@@ -22,23 +24,89 @@ const MD = {
     h1: ({ children }) => <h1 className="text-sm font-black text-neutral-900 dark:text-white mb-1">{children}</h1>,
     h2: ({ children }) => <h2 className="text-sm font-bold text-neutral-900 dark:text-white mb-1">{children}</h2>,
     h3: ({ children }) => <h3 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 mb-1">{children}</h3>,
-    code: ({ inline, children }) =>
-        inline
+    code: ({ inline, className, children, ...props }) => {
+        const match = /language-json-chart-(\w+)/.exec(className || '');
+        const isJson = /language-json/.test(className || '');
+        const text = String(children).trim();
+
+        if (!inline && (match || isJson)) {
+            try {
+                const cleanedJson = text
+                    .replace(/\/\/.*/g, '') 
+                    .replace(/\/\*[\s\S]*?\*\//g, '') 
+                    .replace(/\n$/g, '') 
+                    .trim();
+
+                const chartData = JSON.parse(cleanedJson);
+                
+                const hasChartKeys = (obj) => {
+                    const keys = ['labels', 'label', 'datasets', 'dataset', 'chartType', 'series', 'categories', 'xAxis', 'yAxis'];
+                    const rootKeys = Object.keys(obj || {});
+                    const nestedKeys = (obj?.data && !Array.isArray(obj.data)) ? Object.keys(obj.data) : [];
+                    const isDataArray = Array.isArray(obj?.data);
+                    return keys.some(k => rootKeys.includes(k) || nestedKeys.includes(k)) || (isDataArray && rootKeys.includes('series'));
+                };
+
+                if (!match && isJson && !hasChartKeys(chartData)) {
+                    return (
+                        <div className="my-3 rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800 shadow-sm bg-neutral-900 p-3">
+                            <div className="flex items-center gap-2 mb-2 pb-1 border-b border-white/5">
+                                <DocumentTextIcon className="w-3 h-3 text-neutral-400" />
+                                <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">Raw Data</span>
+                            </div>
+                            <code className="text-[11px] font-mono text-neutral-300 block whitespace-pre overflow-x-auto" {...props}>{children}</code>
+                        </div>
+                    );
+                }
+                
+                const finalType = match ? match[1] : (chartData.chartType || 'line');
+
+                return (
+                    <div className="my-4 w-full overflow-hidden scale-90 -mx-4 origin-left">
+                        <ChartRenderer type={finalType} data={chartData} />
+                    </div>
+                );
+            } catch (err) {
+                // Fallback
+            }
+        }
+
+        return inline
             ? <code className="bg-neutral-100 dark:bg-neutral-800 px-1 py-0.5 rounded text-[11px] font-mono text-brand-600 dark:text-brand-400">{children}</code>
-            : <pre className="bg-neutral-900 text-neutral-100 p-2 rounded-lg text-[11px] overflow-x-auto my-2 border border-neutral-800 tracking-tight font-mono">{children}</pre>,
+            : <pre className="bg-neutral-900 text-neutral-100 p-2 rounded-lg text-[11px] overflow-x-auto my-2 border border-neutral-800 tracking-tight font-mono">{children}</pre>;
+    },
 };
 
-const TypingDots = () => (
-    <div className="flex items-center gap-1.5 py-2">
-        {[0, 150, 300].map(delay => (
-            <span
-                key={delay}
-                className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-bounce"
-                style={{ animationDelay: `${delay}ms` }}
-            />
-        ))}
-    </div>
-);
+const TypingIndicator = () => {
+    const [phrase, setPhrase] = useState("Thinking");
+    const phrases = ["Thinking", "Analyzing Data", "Drafting Response", "Refining Insights"];
+
+    useEffect(() => {
+        let i = 0;
+        const interval = setInterval(() => {
+            i = (i + 1) % phrases.length;
+            setPhrase(phrases[i]);
+        }, 1500);
+        return () => clearInterval(interval);
+    }, []);
+
+    return (
+        <div className="flex items-center gap-3 py-1">
+            <div className="flex items-center gap-1">
+                {[0, 150, 300].map(delay => (
+                    <span
+                        key={delay}
+                        className="w-1 h-1 rounded-full bg-brand-500 animate-bounce"
+                        style={{ animationDelay: `${delay}ms` }}
+                    />
+                ))}
+            </div>
+            <span className="text-[10px] font-black text-brand-600/60 dark:text-brand-400/60 uppercase tracking-[0.15em] animate-pulse">
+                {phrase}
+            </span>
+        </div>
+    );
+};
 
 /**
  * AiSectionChat — Reusable AI sparkle button + slide-up chat panel
@@ -326,12 +394,16 @@ const AiSectionChat = ({
                         {/* Avatar */}
                         <div className="flex-shrink-0 mt-0.5">
                             {msg.role === 'user' ? (
-                            <div className="w-7 h-7 rounded-full bg-neutral-800 dark:bg-neutral-700 text-white flex items-center justify-center text-[10px] font-black">
-                                {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                            <div className="w-7 h-7 rounded-full bg-neutral-800 dark:bg-neutral-700 text-white flex items-center justify-center text-[10px] font-black overflow-hidden border border-neutral-100 dark:border-neutral-700">
+                                {user?.avatar ? (
+                                    <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                                ) : (
+                                    user?.name?.charAt(0)?.toUpperCase() || 'U'
+                                )}
                             </div>
                             ) : (
-                            <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center shadow-sm">
-                                <SparklesIcon className="w-3.5 h-3.5 text-white"/>
+                            <div className="w-7 h-7 rounded-full bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700 flex items-center justify-center shadow-sm p-1">
+                                <img src="/favicon.png" alt="AI" className="w-full h-full object-contain" />
                             </div>
                             )}
                         </div>
@@ -346,7 +418,7 @@ const AiSectionChat = ({
                         }`}>
                             {msg.role === 'assistant' ? (
                             msg.isLoading ? (
-                                <TypingDots/>
+                                <TypingIndicator/>
                             ) : msg.content ? (
                                 <>
                                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD}>
@@ -389,7 +461,7 @@ const AiSectionChat = ({
                         onKeyDown={handleKeyDown}
                         disabled={loading}
                         placeholder="Ask a follow-up question..."
-                        className="flex-1 bg-transparent border-none outline-none text-sm text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 resize-none max-h-28 min-h-[22px] leading-snug font-medium"
+                        className="flex-1 bg-transparent border-none outline-none text-sm text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 resize-none max-h-28 min-h-[22px] py-2 leading-normal font-medium"
                     />
                     <button
                         onClick={() => sendMessage()}

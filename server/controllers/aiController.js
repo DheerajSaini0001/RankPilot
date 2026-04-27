@@ -532,7 +532,7 @@ export const generateSuggestedQuestionsInternal = async (userId, siteId) => {
             suggestPrompt = fs.readFileSync(path.join(process.cwd(), 'prompts', 'suggested-questions.txt'), 'utf8');
         }
 
-        const dateContext = `\n\n[REAL-TIME CONTEXT]: Today's date is ${todayStr}. suggestedQuestions must be a JSON array of 4 strings. Analyze the last 30 days of data and return ONLY the JSON array.`;
+        const dateContext = `\n\n[REAL-TIME CONTEXT]: Today's date is ${todayStr}. suggestedQuestions must be a JSON array of 4 strings. Analyze the last 30 days of data and return ONLY the JSON array. Each question MUST be under 15 words and a single sentence.`;
 
         const chat = await startAgenticChat([], aiTools, systemIns + dateContext);
         

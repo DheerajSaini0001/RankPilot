@@ -136,15 +136,50 @@ const MarkdownComponents = {
     td: ({ children }) => <td className="px-6 py-5 text-[14px] text-neutral-700 dark:text-neutral-100 font-bold">{children}</td>
 };
 
-const ChatMessage = React.memo(({ msg, userName }) => {
+const TypingIndicator = () => {
+    const [phrase, setPhrase] = useState("Thinking");
+    const phrases = ["Thinking", "Analyzing Data", "Drafting Response", "Refining Insights"];
+
+    useEffect(() => {
+        let i = 0;
+        const interval = setInterval(() => {
+            i = (i + 1) % phrases.length;
+            setPhrase(phrases[i]);
+        }, 1500);
+        return () => clearInterval(interval);
+    }, []);
+
+    return (
+        <div className="flex items-center gap-3 py-1">
+            <div className="flex items-center gap-1">
+                {[0, 150, 300].map(delay => (
+                    <span
+                        key={delay}
+                        className="w-1 h-1 rounded-full bg-brand-500 animate-bounce"
+                        style={{ animationDelay: `${delay}ms` }}
+                    />
+                ))}
+            </div>
+            <span className="text-[10px] font-black text-brand-600/60 dark:text-brand-400/60 uppercase tracking-[0.15em] animate-pulse">
+                {phrase}
+            </span>
+        </div>
+    );
+};
+
+const ChatMessage = React.memo(({ msg, userName, userAvatar }) => {
     const isUser = msg.role === 'user';
 
     if (isUser) {
         return (
             <div className="flex justify-end">
                 <div className="flex items-end gap-2.5 flex-row-reverse max-w-[90%] sm:max-w-[85%]">
-                    <div className="w-7 h-7 rounded-full bg-neutral-800 dark:bg-neutral-600 text-white flex items-center justify-center text-[10px] font-black flex-shrink-0">
-                        {userName?.charAt(0)?.toUpperCase() || 'U'}
+                    <div className="w-7 h-7 rounded-full bg-neutral-800 dark:bg-neutral-600 text-white flex items-center justify-center text-[10px] font-black flex-shrink-0 overflow-hidden border border-neutral-200 dark:border-neutral-700">
+                        {userAvatar ? (
+                            <img src={userAvatar} alt={userName} className="w-full h-full object-cover" />
+                        ) : (
+                            userName?.charAt(0)?.toUpperCase() || 'U'
+                        )}
                     </div>
                     <div className="px-4 py-3 bg-neutral-100 dark:bg-neutral-800 rounded-2xl rounded-br-sm text-sm font-medium text-neutral-900 dark:text-white leading-relaxed max-w-full">
                         {msg.content}
@@ -157,8 +192,8 @@ const ChatMessage = React.memo(({ msg, userName }) => {
     return (
         <div className="flex justify-start">
             <div className="flex items-start gap-3 max-w-[99%] sm:max-w-[96%]">
-                <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
-                    <SparklesIcon className="w-3.5 h-3.5 text-white" />
+                <div className="w-7 h-7 rounded-full bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm p-1">
+                    <img src="/favicon.png" alt="AI" className="w-full h-full object-contain" />
                 </div>
                 <div className="flex-1 min-w-0">
                     {msg.isError ? (
@@ -180,11 +215,7 @@ const ChatMessage = React.memo(({ msg, userName }) => {
                                     {msg.content}
                                 </ReactMarkdown>
                             ) : msg.isLoading ? (
-                                <div className="flex items-center space-x-2 py-2">
-                                    <div className="w-1.5 h-1.5 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                                    <div className="w-1.5 h-1.5 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                                    <div className="w-1.5 h-1.5 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                                </div>
+                                <TypingIndicator />
                             ) : (
                                 <div className="py-2 text-neutral-400 font-medium italic text-[14px] flex items-center gap-2">
                                     <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 animate-pulse" />
@@ -747,7 +778,7 @@ const AIChatPage = () => {
                         <div className="px-3 sm:px-5 md:px-8 py-5 sm:py-8">
                             <div className="max-w-3xl mx-auto w-full space-y-6 pb-4">
                                 {messages.map((msg, idx) => (
-                                    <ChatMessage key={idx} msg={msg} userName={user?.name} />
+                                    <ChatMessage key={idx} msg={msg} userName={user?.name} userAvatar={user?.avatar} />
                                 ))}
                                 <div ref={messagesEndRef} className="h-4" />
                             </div>
@@ -792,7 +823,7 @@ const AIChatPage = () => {
                                 placeholder="Message RankPilot AI..."
                                 disabled={loading}
                                 rows={1}
-                                className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500 py-1.5 sm:py-2 min-w-0 resize-none max-h-40 leading-relaxed [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                                className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500 py-2 min-h-[20px] min-w-0 resize-none max-h-40 leading-normal [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
                             />
 
                             {/* Right: Send */}
