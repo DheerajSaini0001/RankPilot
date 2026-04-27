@@ -527,7 +527,7 @@
                                         </div>
                                         <div className="flex flex-col">
                                             <span className="text-[7px] font-black text-neutral-400 uppercase tracking-widest leading-none mb-0.5">{item.label}</span>
-                                            <span className="text-xs font-bold text-neutral-700 dark:text-neutral-200 tracking-tight">{item.value}</span>
+                                            <span className="text-xs font-bold text-neutral-700 dark:text-neutral-200 tracking-tight" title={item.value}>{item.value}</span>
                                         </div>
                                     </div>
                                 ))}

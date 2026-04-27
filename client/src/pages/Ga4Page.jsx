@@ -566,19 +566,19 @@ const Ga4Page = () => {
                         <div className="hidden xl:block w-[1px] h-8 bg-neutral-100 dark:bg-neutral-800/60"></div>
 
                         {/* 3. Information Row - Improved Responsiveness */}
-                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
+                        <div className="flex-1 flex flex-wrap items-center gap-x-8 gap-y-3">
                             {[
                                 { label: 'WEBSITE', value: (userSites?.find(s => s._id === activeSiteId)?.siteName?.toLowerCase().replace(/\s+/g, '') || 'carweek') + '.com', icon: GlobeAltIcon },
                                 { label: 'PROPERTY ID', value: '#' + (activeGa4PropertyId?.replace('properties/', '') || '297612575'), icon: ChartBarIcon },
                                 { label: 'SYNC ACCOUNT', value: userSites?.find(s => s._id === activeSiteId)?.ga4TokenId?.email || 'seo@slt.work', icon: EnvelopeIcon }
                             ].map((item, idx) => (
-                                <div key={idx} className="flex items-center gap-2.5 min-w-0">
+                                <div key={idx} className="flex items-center gap-2.5 min-w-max">
                                     <div className="w-8 h-8 rounded-lg bg-neutral-50 dark:bg-neutral-800/40 flex items-center justify-center border border-neutral-100 dark:border-neutral-700/30 shrink-0">
                                         <item.icon className="w-4 h-4 text-neutral-400" />
                                     </div>
-                                    <div className="flex flex-col min-w-0">
+                                    <div className="flex flex-col">
                                         <span className="text-[7px] font-black text-neutral-400 uppercase tracking-widest leading-none mb-0.5">{item.label}</span>
-                                        <span className="text-[10px] sm:text-xs font-bold text-neutral-700 dark:text-neutral-200 tracking-tight truncate">{item.value}</span>
+                                        <span className="text-[10px] sm:text-xs font-bold text-neutral-700 dark:text-neutral-200 tracking-tight" title={item.value}>{item.value}</span>
                                     </div>
                                 </div>
                             ))}
