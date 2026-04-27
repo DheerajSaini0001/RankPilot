@@ -34,7 +34,8 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
         userSites = [],
         activeSiteId,
         setAccounts,
-        syncMetadata
+        syncMetadata,
+        connectedSources = []
     } = useAccountsStore();
     const {
         notifications,
@@ -108,11 +109,18 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
                         setAccounts({ activeSiteId: null });
                     }
 
+                    const connected = [];
+                    if (data.gscSiteUrl) connected.push('gsc');
+                    if (data.ga4PropertyId) connected.push('ga4');
+                    if (data.googleAdsCustomerId) connected.push('google-ads');
+                    if (data.facebookAdAccountId) connected.push('facebook-ads');
+
                     setAccounts({
                         activeGscSite: data.gscSiteUrl || '',
                         activeGa4PropertyId: data.ga4PropertyId || '',
                         activeGoogleAdsCustomerId: data.googleAdsCustomerId || '',
                         activeFacebookAdAccountId: data.facebookAdAccountId || '',
+                        connectedSources: connected,
                         syncMetadata: {
                             isHistoricalSyncComplete: data.isHistoricalSyncComplete || false,
                             lastDailySyncAt: data.lastDailySyncAt || null,
@@ -200,41 +208,45 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
         { 
             label: 'Dashboard', 
             path: '/dashboard', 
-            icon: () => <img src="https://img.icons8.com/fluency/48/dashboard.png" className="w-4 h-4 object-contain" alt="Dashboard" /> 
+            icon: () => <ChartPieIcon className="w-5 h-5 text-blue-500 drop-shadow-[0_0_3px_rgba(59,130,246,0.3)]" strokeWidth={2.5} /> 
         },
         { 
-            label: 'Connected Sites', 
+            label: 'My Sites', 
             path: '/dashboard/sites', 
-            icon: () => <img src="https://img.icons8.com/fluency/48/internet.png" className="w-4 h-4 object-contain" alt="Sites" /> 
+            icon: () => <GlobeAltIcon className="w-5 h-5 text-emerald-500 drop-shadow-[0_0_3px_rgba(16,185,129,0.3)]" strokeWidth={2.5} /> 
         },
         { 
-            label: 'AI Analyst', 
+            label: 'AI Assistant', 
             path: '/dashboard/ai-chat', 
-            icon: () => <img src="https://img.icons8.com/fluency/48/artificial-intelligence.png" className="w-4 h-4 object-contain" alt="AI" /> 
+            icon: () => <SparklesIcon className="w-5 h-5 text-amber-500 drop-shadow-[0_0_3px_rgba(245,158,11,0.3)]" strokeWidth={2.5} /> 
         },
         { 
             label: 'Google Search Console', 
             path: '/dashboard/gsc', 
             icon: () => <img src="https://www.gstatic.com/images/branding/product/2x/search_console_64dp.png" className="w-4 h-4 object-contain" alt="GSC" />, 
-            isSubItem: true 
+            isSubItem: true,
+            sourceKey: 'gsc'
         },
         { 
             label: 'Google Analytics 4', 
             path: '/dashboard/ga4', 
             icon: () => <img src="https://www.gstatic.com/images/branding/product/2x/google_analytics_64dp.png" className="w-4 h-4 object-contain" alt="GA4" />, 
-            isSubItem: true 
+            isSubItem: true,
+            sourceKey: 'ga4'
         },
         { 
             label: 'Google Ads', 
             path: '/dashboard/google-ads', 
             icon: () => <img src="https://www.vectorlogo.zone/logos/google_ads/google_ads-icon.svg" className="w-4 h-4 object-contain" alt="Ads" />, 
-            isSubItem: true 
+            isSubItem: true,
+            sourceKey: 'google-ads'
         },
         { 
             label: 'Facebook Ads', 
             path: '/dashboard/facebook-ads', 
             icon: () => <img src="https://www.vectorlogo.zone/logos/facebook/facebook-icon.svg" className="w-4 h-4 object-contain" alt="FB" />, 
-            isSubItem: true 
+            isSubItem: true,
+            sourceKey: 'facebook-ads'
         },
     ];
 
@@ -318,7 +330,7 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
 
                 <nav className="flex-1 px-3 space-y-1 overflow-y-auto relative z-10 scrollbar-hide py-3">
                     <p className="text-[9px] font-black uppercase tracking-[0.18em] text-neutral-400 dark:text-neutral-500 px-3 py-2 mt-2">
-                        Main Menu
+                        Menu
                     </p>
                     {navItems.filter(i => !i.isSubItem).map((item, i) => (
                         <NavLink
@@ -329,7 +341,7 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
                             className={({ isActive }) => `
                                 flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all group
                                 ${isActive
-                                    ? 'bg-brand-600 text-white shadow-md shadow-brand-500/20'
+                                    ? 'bg-neutral-100 dark:bg-neutral-800 text-brand-600 dark:text-brand-400'
                                     : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800/50'
                                 }
                             `}
@@ -340,7 +352,7 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
                     ))}
 
                     <p className="text-[9px] font-black uppercase tracking-[0.18em] text-neutral-400 dark:text-neutral-500 px-3 py-2 mt-4">
-                        Connections
+                        DATA SOURCES
                     </p>
                     {navItems.filter(i => i.isSubItem).map((item, i) => (
                         <NavLink
@@ -351,12 +363,19 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
                                 flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all group
                                 ${isActive
                                     ? 'bg-neutral-100 dark:bg-neutral-800 text-brand-600 dark:text-brand-400'
-                                    : 'text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/30'
+                                    : connectedSources.includes(item.sourceKey)
+                                        ? 'text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-50 dark:hover:bg-neutral-800/30'
+                                        : 'text-neutral-400/70 dark:text-neutral-500/60 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/30'
                                 }
                             `}
                         >
                                 {typeof item.icon === 'function' ? <item.icon /> : <item.icon className="w-3.5 h-3.5" strokeWidth={2.5} />}
-                            <span>{item.label}</span>
+                            <span className="flex-1">{item.label}</span>
+                            
+                            {/* Status Indicator */}
+                            {item.sourceKey && (
+                                <div className={`w-1.5 h-1.5 rounded-full ${connectedSources.includes(item.sourceKey) ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]' : 'bg-neutral-300'}`} />
+                            )}
                         </NavLink>
                     ))}
 
@@ -385,6 +404,34 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
                         </>
                     )}
                 </nav>
+
+                {/* Sidebar Bottom Actions */}
+                <div className="mt-auto p-4 border-t border-neutral-100 dark:border-neutral-800">
+                    <div className="space-y-1">
+                        <NavLink
+                            to="/settings"
+                            onClick={() => setIsSidebarOpen(false)}
+                            className={({ isActive }) => `
+                                flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all group
+                                ${isActive
+                                    ? 'bg-neutral-100 dark:bg-neutral-800 text-brand-600 dark:text-brand-400'
+                                    : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800/50'
+                                }
+                            `}
+                        >
+                            <img src="https://img.icons8.com/fluency/48/settings.png" className="w-4 h-4 object-contain group-hover:scale-110 transition-transform" alt="Settings" />
+                            <span>Settings</span>
+                        </NavLink>
+                        
+                        <button
+                            onClick={() => window.open('https://rankpilot.ai/docs', '_blank')}
+                            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800/50 transition-all group"
+                        >
+                            <img src="https://img.icons8.com/fluency/48/help.png" className="w-4 h-4 object-contain group-hover:scale-110 transition-transform" alt="Help" />
+                            <span>Help & Support</span>
+                        </button>
+                    </div>
+                </div>
             </aside>
 
             {/* Main Content Area */}
@@ -404,11 +451,11 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
 
                         <div className="hidden md:flex flex-col">
                             <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400">
-                                <span>Platform</span>
+                                <span>Home</span>
                                 <span className="text-neutral-300">/</span>
-                                <span className="text-brand-500">Overview</span>
+                                <span className="text-brand-500">Dashboard</span>
                             </div>
-                            <h2 className="text-sm sm:text-base font-black text-neutral-900 dark:text-white leading-tight">{title || 'Insight Dashboard'}</h2>
+                            <h2 className="text-sm sm:text-base font-black text-neutral-900 dark:text-white leading-tight">{title || 'Dashboard'}</h2>
                         </div>
 
                         <div className="hidden lg:flex flex-col flex-1 max-w-md relative group">
@@ -421,7 +468,7 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     onFocus={() => setIsSearchFocused(true)}
                                     onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
-                                    placeholder="Press / to search anything..."
+                                    placeholder="Search pages, keywords, reports..."
                                     className="bg-transparent border-none focus:ring-0 text-sm font-bold w-full ml-3 text-neutral-900 dark:text-white placeholder:text-neutral-400"
                                 />
                                 {searchQuery && (
@@ -432,8 +479,8 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
                                         <span className="text-xs font-black">×</span>
                                     </button>
                                 )}
-                                <div className="hidden sm:flex items-center gap-1.5 ml-2">
-                                    <kbd className="px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-[10px] font-black text-neutral-400 shadow-sm transition-colors group-focus-within:border-brand-500/30 group-focus-within:text-brand-500 uppercase whitespace-nowrap">{navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'} K</kbd>
+                                <div className="hidden sm:flex items-center gap-1.5 ml-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300">
+                                    <kbd className="px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-[10px] font-black text-neutral-400 shadow-sm group-focus-within:border-brand-500/30 group-focus-within:text-brand-500 uppercase whitespace-nowrap">{navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'} K</kbd>
                                 </div>
                             </div>
 
