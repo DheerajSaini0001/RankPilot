@@ -422,9 +422,8 @@ const Ga4Page = () => {
                                 <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium leading-none mt-1.5 selection:bg-brand-500/20">
                                     Understand your visitors in real-time and get AI-powered insights to grow your site.
                                 </p>
-
-                                <div className="mt-2.5 flex items-center gap-3">
-                                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/5 rounded-full border border-emerald-500/10">
+                                <div className="mt-2.5 flex items-center flex-wrap gap-3">
+                                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/5 rounded-full border border-emerald-500/10 shrink-0">
                                         <div className="w-1 h-1 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]"></div>
                                         <span className="text-[8px] font-black text-emerald-600 dark:text-emerald-500 uppercase tracking-widest">Active</span>
                                     </div>
@@ -566,20 +565,20 @@ const Ga4Page = () => {
                         {/* 2. Divider (Desktop) */}
                         <div className="hidden xl:block w-[1px] h-8 bg-neutral-100 dark:bg-neutral-800/60"></div>
 
-                        {/* 3. Information Row */}
-                        <div className="flex-1 flex flex-wrap items-center gap-x-10 gap-y-3">
+                        {/* 3. Information Row - Improved Responsiveness */}
+                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
                             {[
                                 { label: 'WEBSITE', value: (userSites?.find(s => s._id === activeSiteId)?.siteName?.toLowerCase().replace(/\s+/g, '') || 'carweek') + '.com', icon: GlobeAltIcon },
                                 { label: 'PROPERTY ID', value: '#' + (activeGa4PropertyId?.replace('properties/', '') || '297612575'), icon: ChartBarIcon },
                                 { label: 'SYNC ACCOUNT', value: userSites?.find(s => s._id === activeSiteId)?.ga4TokenId?.email || 'seo@slt.work', icon: EnvelopeIcon }
                             ].map((item, idx) => (
-                                <div key={idx} className="flex items-center gap-2.5 min-w-max">
-                                    <div className="w-8 h-8 rounded-lg bg-neutral-50 dark:bg-neutral-800/40 flex items-center justify-center border border-neutral-100 dark:border-neutral-700/30">
+                                <div key={idx} className="flex items-center gap-2.5 min-w-0">
+                                    <div className="w-8 h-8 rounded-lg bg-neutral-50 dark:bg-neutral-800/40 flex items-center justify-center border border-neutral-100 dark:border-neutral-700/30 shrink-0">
                                         <item.icon className="w-4 h-4 text-neutral-400" />
                                     </div>
-                                    <div className="flex flex-col">
+                                    <div className="flex flex-col min-w-0">
                                         <span className="text-[7px] font-black text-neutral-400 uppercase tracking-widest leading-none mb-0.5">{item.label}</span>
-                                        <span className="text-xs font-bold text-neutral-700 dark:text-neutral-200 tracking-tight">{item.value}</span>
+                                        <span className="text-[10px] sm:text-xs font-bold text-neutral-700 dark:text-neutral-200 tracking-tight truncate">{item.value}</span>
                                     </div>
                                 </div>
                             ))}

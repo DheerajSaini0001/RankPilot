@@ -17,20 +17,22 @@ const LandingPage = () => {
     const { theme, toggleTheme } = useThemeStore();
     const isDark = theme === 'dark';
 
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+
     return (
         <div className="min-h-screen bg-neutral-50 dark:bg-slate-950 font-sans selection:bg-brand-500/30 selection:text-brand-200 transition-colors duration-500">
 
             {/* 1. NAVIGATION — glassmorphism sticky nav */}
             <nav className="sticky top-0 z-50 border-b border-neutral-200 dark:border-white/5">
                 <div className="absolute inset-0 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl"/>
-                <div className="relative max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
+                <div className="relative max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16 sm:h-20">
 
                     {/* Logo */}
                     <div className="flex items-center gap-2.5">
-                        <Logo className="w-8 h-8" />
+                        <Logo className="w-7 h-7 sm:w-8 sm:h-8" />
                     </div>
 
-                    {/* Center links */}
+                    {/* Center links - Hidden on mobile */}
                     <div className="hidden md:flex items-center gap-8">
                         {['Features','Integrations','Pricing'].map(link => (
                             <a key={link} href={`#${link === 'Features' ? 'features' : link === 'Integrations' ? 'how-it-works' : link.toLowerCase()}`}
@@ -43,23 +45,75 @@ const LandingPage = () => {
                         </NavLink>
                     </div>
 
-                    {/* CTA buttons */}
-                    <div className="flex items-center gap-2 sm:gap-3">
+                    {/* CTA buttons and Toggle */}
+                    <div className="flex items-center gap-1 sm:gap-3">
                         <button 
                             onClick={toggleTheme}
                             className="p-2 text-neutral-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-white transition-colors"
                         >
                             {isDark ? <SunIcon className="w-5 h-5"/> : <MoonIcon className="w-5 h-5"/>}
                         </button>
-                        <NavLink to="/login" className="text-xs sm:text-sm font-bold text-neutral-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-white transition-colors px-2 sm:px-4 py-2">
-                            Log in
-                        </NavLink>
-                        <NavLink to="/register"
-                            className="text-xs sm:text-sm font-bold text-white bg-brand-600 hover:bg-brand-500 px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl transition-all shadow-lg shadow-brand-500/25 hover:-translate-y-0.5 active:scale-95">
-                            Get Started
-                        </NavLink>
+                        
+                        <div className="hidden sm:flex items-center gap-3">
+                            <NavLink to="/login" className="text-sm font-bold text-neutral-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-white transition-colors px-4 py-2">
+                                Log in
+                            </NavLink>
+                            <NavLink to="/register"
+                                className="text-sm font-bold text-white bg-brand-600 hover:bg-brand-500 px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-brand-500/25 hover:-translate-y-0.5 active:scale-95">
+                                Get Started
+                            </NavLink>
+                        </div>
+
+                        {/* Mobile Menu Toggle */}
+                        <button 
+                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                            className="md:hidden p-2 text-neutral-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-white transition-colors"
+                        >
+                            {isMobileMenuOpen ? (
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            ) : (
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+                                </svg>
+                            )}
+                        </button>
                     </div>
                 </div>
+
+                {/* Mobile Menu Drawer */}
+                {isMobileMenuOpen && (
+                    <div className="md:hidden absolute top-full left-0 right-0 bg-white dark:bg-slate-900 border-b border-neutral-200 dark:border-white/5 animate-in slide-in-from-top duration-300">
+                        <div className="flex flex-col p-6 gap-4">
+                            {['Features','Integrations','Pricing'].map(link => (
+                                <a key={link} 
+                                    href={`#${link === 'Features' ? 'features' : link === 'Integrations' ? 'how-it-works' : link.toLowerCase()}`}
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className="text-lg font-bold text-neutral-900 dark:text-white border-b border-neutral-100 dark:border-white/5 pb-2">
+                                    {link}
+                                </a>
+                            ))}
+                            <NavLink to="/about" 
+                                onClick={() => setIsMobileMenuOpen(false)}
+                                className="text-lg font-bold text-neutral-900 dark:text-white border-b border-neutral-100 dark:border-white/5 pb-2">
+                                About
+                            </NavLink>
+                            <div className="flex flex-col gap-3 pt-2">
+                                <NavLink to="/login" 
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className="flex items-center justify-center w-full py-4 text-neutral-900 dark:text-white font-bold border border-neutral-200 dark:border-white/10 rounded-2xl">
+                                    Log in
+                                </NavLink>
+                                <NavLink to="/register"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className="flex items-center justify-center w-full py-4 bg-brand-600 text-white font-black rounded-2xl shadow-lg shadow-brand-500/25">
+                                    Get Started
+                                </NavLink>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </nav>
 
             {/* 2. HERO SECTION — dramatic bg */}

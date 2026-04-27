@@ -454,9 +454,9 @@ const DashboardPage = () => {
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                     <div className="flex-1 space-y-4">
                       <div className="space-y-0.5">
-                        <h1 className="text-xl lg:text-4xl font-black tracking-tight text-neutral-900 dark:text-white leading-none">
+                        <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black tracking-tight text-neutral-900 dark:text-white leading-none">
                           Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'},
-                          <span className="ml-2 bg-gradient-to-r from-brand-600 to-accent-500 bg-clip-text text-transparent capitalize">
+                          <span className="block sm:inline ml-0 sm:ml-2 bg-gradient-to-r from-brand-600 to-accent-500 bg-clip-text text-transparent capitalize">
                             {overviewData.userName || user?.name || 'Pilot'}
                           </span>
                         </h1>
@@ -464,13 +464,13 @@ const DashboardPage = () => {
 
                         <div className="space-y-1 border-l-2 border-brand-500/20 pl-4">
                           <p className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-600 dark:text-brand-400 shrink-0">Overview</p>
-                          <div className="flex items-center gap-3">
-                            <h2 className="text-xl lg:text-2xl font-black text-neutral-900 dark:text-white tracking-tight leading-none">{overviewData.siteName || activeSite?.siteName || 'RankPilot'}</h2>
+                          <div className="flex flex-wrap items-center gap-3">
+                            <h2 className="text-lg lg:text-2xl font-black text-neutral-900 dark:text-white tracking-tight leading-none">{overviewData.siteName || activeSite?.siteName || 'RankPilot'}</h2>
                             <div className="px-1.5 py-0.5 rounded-full text-[6px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
                               Active
                             </div>
                           </div>
-                          <p className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-sm mt-1">
+                          <p className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-sm mt-1 line-clamp-2">
                             {overviewData.intelligence?.websiteSummary || `Monitoring ${overviewData.siteName || activeSite?.siteName} performance across your marketing channels.`}
                           </p>
                         </div>

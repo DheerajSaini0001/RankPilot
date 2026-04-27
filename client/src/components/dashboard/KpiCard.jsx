@@ -60,7 +60,7 @@ const KpiCard = ({ title, value, change, changeText, valueSuffix, isPositive, Ic
               </p>
             ) : (
               <>
-                <h3 className="text-3xl font-black text-neutral-900 dark:text-white tabular-nums tracking-tight leading-none">
+                <h3 className="text-2xl sm:text-3xl font-black text-neutral-900 dark:text-white tabular-nums tracking-tight leading-none">
                   {value}
                 </h3>
                 {valueSuffix && (

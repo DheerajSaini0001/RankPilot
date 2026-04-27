@@ -449,18 +449,20 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
                             </svg>
                         </button>
 
-                        <div className="hidden md:flex flex-col">
+                        {/* Breadcrumbs - Hidden on small mobile */}
+                        <div className="hidden sm:flex flex-col">
                             <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400">
                                 <span>Home</span>
                                 <span className="text-neutral-300">/</span>
                                 <span className="text-brand-500">Dashboard</span>
                             </div>
-                            <h2 className="text-sm sm:text-base font-black text-neutral-900 dark:text-white leading-tight">{title || 'Dashboard'}</h2>
+                            <h2 className="text-xs sm:text-sm md:text-base font-black text-neutral-900 dark:text-white leading-tight truncate max-w-[120px] sm:max-w-none">{title || 'Dashboard'}</h2>
                         </div>
 
-                        <div className="hidden lg:flex flex-col flex-1 max-w-md relative group">
-                            <div className="flex items-center bg-neutral-100 dark:bg-dark-surface border border-neutral-200 dark:border-neutral-700 rounded-2xl px-4 py-2.5 w-full group focus-within:border-brand-500 focus-within:ring-4 focus-within:ring-brand-500/10 transition-all shadow-inner relative z-30">
-                                <MagnifyingGlassIcon className="w-4 h-4 text-neutral-400 group-focus-within:text-brand-500" strokeWidth={3} />
+                        {/* Search - Condensed on small screens */}
+                        <div className="flex flex-col flex-1 max-w-[140px] sm:max-w-xs md:max-w-md relative group">
+                            <div className="flex items-center bg-neutral-100 dark:bg-dark-surface border border-neutral-200 dark:border-neutral-700 rounded-xl sm:rounded-2xl px-2.5 sm:px-4 py-1.5 sm:py-2.5 w-full group focus-within:border-brand-500 focus-within:ring-4 focus-within:ring-brand-500/10 transition-all shadow-inner relative z-30">
+                                <MagnifyingGlassIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neutral-400 group-focus-within:text-brand-500" strokeWidth={3} />
                                 <input
                                     ref={searchInputRef}
                                     type="text"
@@ -468,18 +470,18 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     onFocus={() => setIsSearchFocused(true)}
                                     onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
-                                    placeholder="Search pages, keywords, reports..."
-                                    className="bg-transparent border-none focus:ring-0 text-sm font-bold w-full ml-3 text-neutral-900 dark:text-white placeholder:text-neutral-400"
+                                    placeholder={window.innerWidth < 640 ? "Search..." : "Search pages, keywords..."}
+                                    className="bg-transparent border-none focus:ring-0 text-[11px] sm:text-sm font-bold w-full ml-1.5 sm:ml-3 text-neutral-900 dark:text-white placeholder:text-neutral-400"
                                 />
                                 {searchQuery && (
                                     <button
                                         onClick={() => setSearchQuery('')}
-                                        className="p-1 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-lg transition-colors mr-2"
+                                        className="p-1 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-lg transition-colors mr-1 sm:mr-2"
                                     >
-                                        <span className="text-xs font-black">×</span>
+                                        <span className="text-[10px] sm:text-xs font-black">×</span>
                                     </button>
                                 )}
-                                <div className="hidden sm:flex items-center gap-1.5 ml-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300">
+                                <div className="hidden lg:flex items-center gap-1.5 ml-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300">
                                     <kbd className="px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-dark-card text-[10px] font-black text-neutral-400 shadow-sm group-focus-within:border-brand-500/30 group-focus-within:text-brand-500 uppercase whitespace-nowrap">{navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'} K</kbd>
                                 </div>
                             </div>
