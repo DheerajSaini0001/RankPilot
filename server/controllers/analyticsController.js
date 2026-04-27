@@ -330,7 +330,6 @@ export const getDashboardSummary = async (req, res) => {
                 share: totalSessions > 0 ? ((p.users / totalSessions) * 100).toFixed(1) : 0
             })),
 
-            // AI Intelligence Package
             intelligence: {
                 ...intelligence
             },
@@ -580,7 +579,6 @@ export const getGscSummary = async (req, res) => {
     if (cachedData) return res.status(200).json(cachedData);
 
     try {
-        // Fetch account metadata if siteId is provided
         let syncMetadata = null;
         if (siteId) {
             const acc = await UserAccounts.findOne({ _id: siteId, userId }).select('lastDailySyncAt syncStatus isHistoricalSyncComplete');
@@ -594,7 +592,6 @@ export const getGscSummary = async (req, res) => {
         }
         const filter = await buildMatchFilter(userId, req.query);
 
-        // Previous period
         const start = new Date(startDate);
         const end = new Date(endDate);
         const diff = end - start;
@@ -602,7 +599,7 @@ export const getGscSummary = async (req, res) => {
         const prevStart = new Date(prevEnd.getTime() - diff);
         const prevFilter = await buildMatchFilter(userId, { ...req.query, startDate: prevStart.toISOString().split('T')[0], endDate: prevEnd.toISOString().split('T')[0] });
 
-        const [overview, priorOverview, timeseries, queries, pages] = await Promise.all([
+        const [overview, priorOverview, timeseries, queries, pages, pagesCount, queriesCount, topPosData] = await Promise.all([
             GscMetric.aggregate([
                 { $match: filter },
                 {
@@ -662,16 +659,47 @@ export const getGscSummary = async (req, res) => {
                 },
                 { $sort: { clicks: -1 } },
                 { $limit: 10 }
+            ]),
+            GscMetric.aggregate([
+                { $match: filter },
+                { $group: { _id: "$metadata.dimensions.page" } },
+                { $count: "count" }
+            ]),
+            GscMetric.aggregate([
+                { $match: filter },
+                { $group: { _id: "$metadata.dimensions.query" } },
+                { $count: "count" }
+            ]),
+            GscMetric.aggregate([
+                { $match: filter },
+                { $group: { _id: null, minPos: { $min: "$metrics.position" } } }
             ])
         ]);
 
 
         const ov = overview[0] || { clicks: 0, impressions: 0, position: 0 };
         const pov = priorOverview[0] || { clicks: 0, impressions: 0, position: 0 };
+        const totalPages = pagesCount[0]?.count || 0;
+        const totalQueries = queriesCount[0]?.count || 0;
+        const topPosition = topPosData[0]?.minPos || 0;
+
+        const calculateChange = (curr, prior) => {
+            if (!prior || prior === 0) return 0;
+            return parseFloat(((curr - prior) / prior * 100).toFixed(1));
+        };
+
+        const ov_ctr = ov.impressions > 0 ? ov.clicks / ov.impressions : 0;
+        const pov_ctr = pov.impressions > 0 ? pov.clicks / pov.impressions : 0;
 
         const result = {
-            overview: { ...ov, ctr: ov.impressions > 0 ? ov.clicks / ov.impressions : 0 },
-            priorOverview: { ...pov, ctr: pov.impressions > 0 ? pov.clicks / pov.impressions : 0 },
+            overview: { ...ov, ctr: ov_ctr },
+            priorOverview: { ...pov, ctr: pov_ctr },
+            growth: {
+                clicks: calculateChange(ov.clicks, pov.clicks),
+                impressions: calculateChange(ov.impressions, pov.impressions),
+                ctr: calculateChange(ov_ctr, pov_ctr),
+                position: calculateChange(pov.position, ov.position)
+            },
             timeseries: timeseries.map(d => ({
                 date: d._id,
                 clicks: d.clicks,
@@ -681,8 +709,83 @@ export const getGscSummary = async (req, res) => {
             })),
             queries: queries.map(d => ({ query: d._id, clicks: d.clicks, impressions: d.impressions, ctr: d.impressions > 0 ? d.clicks / d.impressions : 0, position: d.position })),
             pages: pages.map(d => ({ page: d._id, clicks: d.clicks, impressions: d.impressions, ctr: d.impressions > 0 ? d.clicks / d.impressions : 0, position: d.position })),
+            totalPages,
+            totalQueries,
+            topPosition,
             syncMetadata
         };
+
+        const siteName = syncMetadata?.siteName || "your website";
+
+        const generateGscIntelligence = async (data) => {
+            try {
+                const prompt = `
+                  Act as an expert SEO & Marketing Intelligence Assistant for the website "${siteName}". 
+                  Analyze this Google Search Console (GSC) data and provide EXACTLY 10 friendly, data-driven summaries for the business owner.
+                  Your tone should be professional yet encouraging, using "you" and "your" to make it personal and actionable for ${siteName}.
+                  
+                  EXPECTED JSON FORMAT:
+                  {
+                    "searchClicks": "Search Clicks Card (8-10 words). Analyze ${data.overview.clicks} clicks vs ${data.priorOverview.clicks} prior. Summarize the growth or dip.",
+                    "impressions": "Impressions Card (8-10 words). Analyze ${data.overview.impressions} current vs ${data.priorOverview.impressions} prior. Comment on search visibility.",
+                    "avgCtr": "Avg. CTR Card (8-10 words). Current CTR is ${(data.overview.ctr * 100).toFixed(2)}%. Explain what this means for snippet attractiveness.",
+                    "avgPosition": "Avg. Position Card (8-10 words). Analyze #${data.overview.position?.toFixed(1)} current vs #${data.priorOverview.position?.toFixed(1)} prior. Comment on overall ranking trend.",
+                    "totalQueries": "Search Queries Summary (10-12 words). Total unique queries are ${data.totalQueries}. Discuss the breadth of your search reach.",
+                    "totalPages": "Total Pages Card (10-12 words). Analyze ${data.totalPages} ranking pages. Comment on the scope of your content visibility.",
+                    "topPosition": "Top Position Strip (10-12 words). Analyze your best rank of #${data.topPosition?.toFixed(1)}. Comment on your highest achievement.",
+                    "searchPerformanceOverview": "Search Patterns (40-45 words). Analyze the clicks and impressions trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({date: d.date, clicks: d.clicks, impressions: d.impressions})))}.",
+                    "clickThroughRateTrend": "CTR Trend Chart (20-25 words). Analyze this 7-day CTR trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({date: d.date, ctr: (d.ctr * 100).toFixed(2) + '%'})))}. Comment on the engagement trajectory.",
+                    "averageRankingPosition": "Position Trend Chart (20-25 words). Analyze this 7-day ranking trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({date: d.date, pos: d.position.toFixed(1)})))}. Identify if you are climbing or slipping.",
+                    "lowCTRKeywords": "CTR Opportunities (20-25 words). Analyze these low-CTR high-visibility keywords: ${JSON.stringify(data.queries.filter(q => q.impressions > 50 && q.ctr < 0.05).slice(0, 3).map(q => q.query))}. Suggest quick fixes.",
+                    "keywordsNearPage1": "Close to Page 1 (20-25 words). Analyze these keywords ranking 8-20: ${JSON.stringify(data.queries.filter(q => q.position >= 8 && q.position <= 20).slice(0, 3).map(q => q.query))}. Suggest a push strategy.",
+                    "topQueries": "Top Queries analysis (20-25 words). Analyze these top keywords: ${JSON.stringify(data.queries.slice(0, 3).map(q => q.query))}. Identify keyword winners.",
+                    "topLandingPages": "Top Pages analysis (20-25 words). Analyze these top landing pages: ${JSON.stringify(data.pages.slice(0, 3).map(p => p.page))}. Suggest content optimizations.",
+                    "dailyImpressionVolume": "Impression Volume Chart (40-45 words). Analyze this 7-day visibility trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({date: d.date, impr: d.impressions})))}. Comment on search reach density.",
+                    "periodComparison": "Master GSC Growth Report (40-45 words). Comprehensive comparison of current vs prior: Clicks (${data.overview.clicks} vs ${data.priorOverview.clicks}), Impressions (${data.overview.impressions} vs ${data.priorOverview.impressions}), CTR (${(data.overview.ctr * 100).toFixed(2)}% vs ${(data.priorOverview.ctr * 100).toFixed(2)}%), Position (#${data.overview.position?.toFixed(1)} vs #${data.priorOverview.position?.toFixed(1)}). Summarize overall SEO trajectory."
+                  }
+
+                  STRICT RULES:
+                  1. Maintain a high-quality "SEO Coach" persona.
+                  2. Use "you" and "your" to refer to the user's data.
+                  3. Combine a clear SUMMARY with a friendly STRATEGIC INSIGHT.
+                  4. Strictly follow the word limits. NEVER include word counts or bracketed limits like "(25 words)" in your response.
+                `;
+                const aiRes = await callGemini(prompt, [], "Respond ONLY with JSON.");
+                return JSON.parse(aiRes.content.replace(/```json|```/g, '').trim());
+            } catch (error) {
+                console.error("GSC AI Intelligence failed:", error);
+                const clickDiff = data.overview.clicks - data.priorOverview.clicks;
+                const impDiff = data.overview.impressions - data.priorOverview.impressions;
+                const posDiff = data.overview.position - data.priorOverview.position; // Lower is better
+
+                return {
+                    searchClicks: clickDiff >= 0 
+                        ? `Search clicks grew to ${data.overview.clicks}. Your content attracts interest.`
+                        : `Clicks are at ${data.overview.clicks}. Update title tags to boost CTR.`,
+                    impressions: impDiff >= 0
+                        ? `Visibility rose to ${data.overview.impressions}. Your brand appears more often.`
+                        : `Impressions are at ${data.overview.impressions}. Expand content to reach more.`,
+                    avgCtr: `CTR is ${(data.overview.ctr * 100).toFixed(2)}%. Your search snippets effectively convince visitors.`,
+                    totalPages: `You have ${data.totalPages} ranking pages. This ensures multiple entry points for visitors.`,
+                    avgPosition: posDiff <= 0
+                        ? `Rank improved to #${data.overview.position?.toFixed(1)}. You're climbing Google rankings.`
+                        : `Position is #${data.overview.position?.toFixed(1)}. Target high-intent keywords to improve.`,
+                    topPosition: `Achieved top rank #${data.topPosition?.toFixed(1)}. Maintaining this position is key to success.`,
+                    clickThroughRateTrend: `CTR is averaging ${(data.overview.ctr * 100).toFixed(2)}%. This indicates your snippets capture audience interest. Optimize meta tags to further boost your engagement rates.`,
+                    averageRankingPosition: `Ranking position shows ${posDiff <= 0 ? 'positive improvement' : 'steady performance'}. Continue optimizing top pages to maintain this competitive edge and secure higher organic visibility.`,
+                    lowCTRKeywords: `You have high-visibility keywords with low CTR. Updating titles to be more enticing could significantly boost click volume and traffic efficiency.`,
+                    keywordsNearPage1: `Keywords like "${data.queries.find(q => q.position >= 8 && q.position <= 20)?.query || 'secondary terms'}" are near Page 1. Small content updates or internal links could push them higher.`,
+                    dailyImpressionVolume: `Search visibility shows ${impDiff >= 0 ? 'growth' : 'stability'} with ${data.overview.impressions} total impressions. Consistent visibility across search results is a key indicator of your brand authority. Monitoring daily volume helps you understand how seasonal trends affect your overall search market share.`,
+                    topQueries: `Top queries drive most organic traffic. Focusing on maintaining these rankings ensures steady flow. Identify new keyword variations to expand your search reach.`,
+                    topLandingPages: `Top landing pages are valuable assets. Optimizing their conversion paths maximizes organic traffic ROI. Refresh content regularly to stay relevant and maintain authority.`,
+                    totalQueries: `You're ranking for ${data.totalQueries} unique queries. This diverse foundation helps growth.`,
+                    searchPerformanceOverview: `Your search trends show ${clickDiff >= 0 ? 'positive growth' : 'steady performance'}. By analyzing weekly peaks, you can identify high-activity periods. Your current volume of ${data.overview.clicks} clicks indicates that your content strategy is effectively capturing organic demand across your core search terms.`,
+                    periodComparison: `SEO trajectory for ${data.overview.clicks} clicks is ${clickDiff >= 0 ? 'positive' : 'stable'}. Focusing on winning keywords and improving page CTR positions you for expansion. Your combined metrics suggest that refined optimization of your highest-impression pages will yield the best growth.`
+                };
+            }
+        };
+
+        result.intelligence = await generateGscIntelligence(result);
 
         analyticsCache.set(cacheKey, result);
         res.status(200).json(result);

@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import DashboardLayout from '../components/ui/DashboardLayout';
 import { useAccountsStore } from '../store/accountsStore';
 import { useAuthStore } from '../store/authStore';
+import Logo from '../components/ui/Logo';
 import {
     PaperAirplaneIcon,
     SparklesIcon,
@@ -683,13 +684,13 @@ const AIChatPage = () => {
                 <div className="flex-1 min-h-0 flex flex-col overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                     {messages.length === 0 ? (
                         /* 5. EMPTY STATE — centered, compact */
-                        <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-4 py-10 sm:p-10">
+                        <div className="flex-1 flex flex-col items-center py-10 sm:py-20 px-4 sm:px-10 my-auto w-full">
                             {/* AI Icon with glow */}
-                            <div className="relative mb-5 shrink-0">
-                                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-brand-600 flex items-center justify-center shadow-2xl shadow-brand-500/40 relative z-10 transition-transform hover:scale-105 duration-300">
-                                    <SparklesIcon className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
+                            <div className="relative mb-8 shrink-0">
+                                <div className="relative z-10 transition-transform hover:scale-105 duration-300">
+                                    <Logo className="w-16 h-16 sm:w-20 sm:h-20" iconOnly />
                                 </div>
-                                <div className="absolute -inset-2 rounded-2xl bg-brand-400/15 animate-pulse blur-xl" />
+                                <div className="absolute -inset-4 rounded-full bg-brand-400/10 animate-pulse blur-2xl" />
                             </div>
 
                             {/* Greeting */}

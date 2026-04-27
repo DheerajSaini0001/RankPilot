@@ -197,13 +197,45 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
     };
 
     const navItems = [
-        { label: 'Dashboard', path: '/dashboard', icon: ChartPieIcon },
-        { label: 'Connected Sites', path: '/dashboard/sites', icon: GlobeAltIcon },
-        { label: 'AI Analyst', path: '/dashboard/ai-chat', icon: ChatBubbleLeftRightIcon },
-        { label: 'Google Search Console', path: '/dashboard/gsc', icon: ChartBarIcon, isSubItem: true },
-        { label: 'Google Analytics 4', path: '/dashboard/ga4', icon: ChartBarIcon, isSubItem: true },
-        { label: 'Google Ads', path: '/dashboard/google-ads', icon: ChartBarIcon, isSubItem: true },
-        { label: 'Facebook Ads', path: '/dashboard/facebook-ads', icon: ChartBarIcon, isSubItem: true },
+        { 
+            label: 'Dashboard', 
+            path: '/dashboard', 
+            icon: () => <img src="https://img.icons8.com/fluency/48/dashboard.png" className="w-4 h-4 object-contain" alt="Dashboard" /> 
+        },
+        { 
+            label: 'Connected Sites', 
+            path: '/dashboard/sites', 
+            icon: () => <img src="https://img.icons8.com/fluency/48/internet.png" className="w-4 h-4 object-contain" alt="Sites" /> 
+        },
+        { 
+            label: 'AI Analyst', 
+            path: '/dashboard/ai-chat', 
+            icon: () => <img src="https://img.icons8.com/fluency/48/artificial-intelligence.png" className="w-4 h-4 object-contain" alt="AI" /> 
+        },
+        { 
+            label: 'Google Search Console', 
+            path: '/dashboard/gsc', 
+            icon: () => <img src="https://www.gstatic.com/images/branding/product/2x/search_console_64dp.png" className="w-4 h-4 object-contain" alt="GSC" />, 
+            isSubItem: true 
+        },
+        { 
+            label: 'Google Analytics 4', 
+            path: '/dashboard/ga4', 
+            icon: () => <img src="https://www.gstatic.com/images/branding/product/2x/google_analytics_64dp.png" className="w-4 h-4 object-contain" alt="GA4" />, 
+            isSubItem: true 
+        },
+        { 
+            label: 'Google Ads', 
+            path: '/dashboard/google-ads', 
+            icon: () => <img src="https://www.vectorlogo.zone/logos/google_ads/google_ads-icon.svg" className="w-4 h-4 object-contain" alt="Ads" />, 
+            isSubItem: true 
+        },
+        { 
+            label: 'Facebook Ads', 
+            path: '/dashboard/facebook-ads', 
+            icon: () => <img src="https://www.vectorlogo.zone/logos/facebook/facebook-icon.svg" className="w-4 h-4 object-contain" alt="FB" />, 
+            isSubItem: true 
+        },
     ];
 
     const adminNavItems = [
@@ -302,7 +334,7 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
                                 }
                             `}
                         >
-                            <item.icon className="w-4 h-4" strokeWidth={2.5} />
+                                {typeof item.icon === 'function' ? <item.icon /> : <item.icon className="w-4 h-4" strokeWidth={2.5} />}
                             <span className="flex-1">{item.label}</span>
                         </NavLink>
                     ))}
@@ -323,7 +355,7 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
                                 }
                             `}
                         >
-                            <item.icon className="w-3.5 h-3.5" strokeWidth={2.5} />
+                                {typeof item.icon === 'function' ? <item.icon /> : <item.icon className="w-3.5 h-3.5" strokeWidth={2.5} />}
                             <span>{item.label}</span>
                         </NavLink>
                     ))}
