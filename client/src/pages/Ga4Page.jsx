@@ -26,6 +26,8 @@ import {
     DeviceTabletIcon,
     XMarkIcon,
     SparklesIcon,
+    ClockIcon,
+    CursorArrowRaysIcon,
 } from '@heroicons/react/24/outline';
 import { exportToPdf } from '../utils/reportExport';
 import {
@@ -631,7 +633,7 @@ const Ga4Page = () => {
                         title="Active Users"
                         value={overview ? formatNumber(overview.activeUsers || 0) : '0'}
                         loading={loading}
-                        Icon={Ga4Logo}
+                        Icon={UsersIcon}
                         change={12.4}
                         isPositive={true}
                         changeText="vs last period"
@@ -643,7 +645,7 @@ const Ga4Page = () => {
                         title="Total Sessions"
                         value={overview ? formatNumber(overview.sessions || 0) : '0'}
                         loading={loading}
-                        Icon={Ga4Logo}
+                        Icon={ChartBarIcon}
                         change={7.2}
                         isPositive={true}
                         changeText="vs last period"
@@ -655,7 +657,7 @@ const Ga4Page = () => {
                         title="Engagement Rate"
                         value={overview ? `${(100 - (overview.bounceRate || 0)).toFixed(1)}%` : '0%'}
                         loading={loading}
-                        Icon={Ga4Logo}
+                        Icon={CursorArrowRaysIcon}
                         change={2.1}
                         isPositive={true}
                         changeText="vs last period"
@@ -666,7 +668,7 @@ const Ga4Page = () => {
                         title="Avg. Session Duration"
                         value={overview ? formatTime(overview.avgSessionDuration) : '0m 0s'}
                         loading={loading}
-                        Icon={Ga4Logo}
+                        Icon={ClockIcon}
                         change={-0.5}
                         isPositive={false}
                         changeText="vs last period"
