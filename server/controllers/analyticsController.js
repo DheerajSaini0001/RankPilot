@@ -81,15 +81,17 @@ export const getDashboardSummary = async (req, res) => {
             GscMetric.aggregate([{ $match: filters[0] }, { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, clicks: { $sum: "$metrics.clicks" }, impressions: { $sum: "$metrics.impressions" } } }, { $sort: { _id: 1 } }]),
             // Combined Ads Spend for Timeseries
             Promise.all([
-                GoogleAdsMetric.aggregate([{ $match: filters[0] }, { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, spend: { $sum: "$metrics.spend" }, conversions: { $sum: "$metrics.conversions" } } }]),
-                FacebookAdsMetric.aggregate([{ $match: filters[0] }, { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, spend: { $sum: "$metrics.spend" }, conversions: { $sum: "$metrics.conversions" } } }])
+                GoogleAdsMetric.aggregate([{ $match: filters[0] }, { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, spend: { $sum: "$metrics.spend" }, conversions: { $sum: "$metrics.conversions" }, clicks: { $sum: "$metrics.clicks" }, impressions: { $sum: "$metrics.impressions" } } }]),
+                FacebookAdsMetric.aggregate([{ $match: filters[0] }, { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, spend: { $sum: "$metrics.spend" }, conversions: { $sum: "$metrics.conversions" }, clicks: { $sum: "$metrics.clicks" }, impressions: { $sum: "$metrics.impressions" } } }])
             ]).then(([g, f]) => {
                 const combined = [...g, ...f];
                 const map = {};
                 combined.forEach(d => {
-                    if (!map[d._id]) map[d._id] = { _id: d._id, spend: 0, conversions: 0 };
-                    map[d._id].spend += d.spend;
-                    map[d._id].conversions += d.conversions;
+                    if (!map[d._id]) map[d._id] = { _id: d._id, spend: 0, conversions: 0, clicks: 0, impressions: 0 };
+                    map[d._id].spend += (d.spend || 0);
+                    map[d._id].conversions += (d.conversions || 0);
+                    map[d._id].clicks += (d.clicks || 0);
+                    map[d._id].impressions += (d.impressions || 0);
                 });
                 return Object.values(map).sort((a,b) => a._id.localeCompare(b._id));
             }),
@@ -139,16 +141,44 @@ export const getDashboardSummary = async (req, res) => {
         ])].sort((a, b) => new Date(a) - new Date(b));
 
         allDates.forEach(date => {
-            tsMap[date] = { date, Sessions: 0, Clicks: 0, Spend: 0, Conversions: 0, Impressions: 0 };
+            tsMap[date] = { 
+                date, 
+                Sessions: 0, 
+                Clicks: 0, 
+                OrganicClicks: 0,
+                PaidClicks: 0,
+                Impressions: 0,
+                OrganicImpressions: 0,
+                PaidImpressions: 0,
+                Spend: 0, 
+                Conversions: 0 
+            };
         });
 
         ga4Ts.forEach(d => { if (tsMap[d._id]) tsMap[d._id].Sessions = d.sessions; });
-        gscTs.forEach(d => { if (tsMap[d._id]) tsMap[d._id].Clicks = d.clicks; });
+        gscTs.forEach(d => { 
+            if (tsMap[d._id]) {
+                const c = (d.clicks || 0);
+                const i = (d.impressions || 0);
+                tsMap[d._id].Clicks += c; 
+                tsMap[d._id].OrganicClicks = c;
+                tsMap[d._id].Impressions += i; 
+                tsMap[d._id].OrganicImpressions = i;
+            } 
+        });
         adsTs.forEach(d => {
             if (tsMap[d._id]) {
-                tsMap[d._id].Spend = d.spend;
-                tsMap[d._id].Conversions = d.conversions;
-                tsMap[d._id].Impressions = d.impressions;
+                const s = (d.spend || 0);
+                const conv = (d.conversions || 0);
+                const c = (d.clicks || 0);
+                const i = (d.impressions || 0);
+
+                tsMap[d._id].Spend += s;
+                tsMap[d._id].Conversions += conv;
+                tsMap[d._id].Clicks += c;
+                tsMap[d._id].PaidClicks = c;
+                tsMap[d._id].Impressions += i;
+                tsMap[d._id].PaidImpressions = i;
             }
         });
 

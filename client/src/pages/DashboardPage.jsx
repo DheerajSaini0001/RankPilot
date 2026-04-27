@@ -756,7 +756,7 @@ const DashboardPage = () => {
                       {activeGscSite && !loading && (
                         <button
                           onClick={() => openWithQuestion(`How can I improve my SEO strategy based on this Search Console summary? ${overviewData.intelligence?.overviewGSC || 'Organic visibility overview'}.
-                            Current Data: Clicks: ${formatNumber(overviewData.gsc?.clicks)} (${overviewData.gsc?.growthClicks}% growth), Impressions: ${formatNumber(overviewData.gsc?.impressions)}, CTR: ${formatPct((overviewData.gsc?.ctr || 0) * 100)}, Avg Position: #${(overviewData.gsc?.avgPosition || 0).toFixed(1)}`)}
+                            Current Data: Clicks: ${formatNumber(overviewData.gsc?.clicks)} (${overviewData.gsc?.growthClicks}% growth), Impressions: ${formatNumber(overviewData.gsc?.impressions)}, CTR: ${formatPct((overviewData.gsc?.ctr || 0) * 100)}, Avg Position: #${(overviewData.gsc?.position || 0).toFixed(1)}`)}
                           className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
                         >
                           <SparklesIcon className="w-3.5 h-3.5" />
@@ -780,7 +780,7 @@ const DashboardPage = () => {
                         { label: 'Search Clicks', value: formatNumber(overviewData.gsc?.clicks) },
                         { label: 'Impressions', value: formatNumber(overviewData.gsc?.impressions) },
                         { label: 'Click Rate', value: formatPct((overviewData.gsc?.ctr || 0) * 100) },
-                        { label: 'Avg. Position', value: `${(overviewData.gsc?.avgPosition || 0).toFixed(1)}` },
+                        { label: 'Avg. Position', value: `${(overviewData.gsc?.position || 0).toFixed(1)}` },
                         { label: 'Traffic Change', value: `${(overviewData.gsc?.growthClicks || 0) >= 0 ? '↑' : '↓'} ${Math.abs(overviewData.gsc?.growthClicks || 0).toFixed(1)}%` },
                       ].map((m, i) => (
                         <div key={i} className="p-3 bg-green-50 dark:bg-green-900/10 rounded-xl transition-all">
@@ -1104,12 +1104,34 @@ const DashboardPage = () => {
                   ) : (
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={chartDataToUse}>
-                        <defs><linearGradient id="colorMetric" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={metricColor} stopOpacity={0.25} /><stop offset="95%" stopColor={metricColor} stopOpacity={0} /></linearGradient></defs>
+                        <defs>
+                          <linearGradient id="colorMetric" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={metricColor} stopOpacity={0.25} /><stop offset="95%" stopColor={metricColor} stopOpacity={0} /></linearGradient>
+                          <linearGradient id="colorOrganic" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10B981" stopOpacity={0.25} /><stop offset="95%" stopColor="#10B981" stopOpacity={0} /></linearGradient>
+                          <linearGradient id="colorPaid" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3B82F6" stopOpacity={0.25} /><stop offset="95%" stopColor="#3B82F6" stopOpacity={0} /></linearGradient>
+                          <linearGradient id="colorOrganicImpr" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.25} /><stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} /></linearGradient>
+                          <linearGradient id="colorPaidImpr" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#F59E0B" stopOpacity={0.25} /><stop offset="95%" stopColor="#F59E0B" stopOpacity={0} /></linearGradient>
+                        </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" className="dark:stroke-neutral-800/20" />
                         <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} tickFormatter={(str) => { const d = new Date(str); return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }} minTickGap={30} />
                         <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} />
-                        <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', background: '#FFFFFF', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                        <Area type="monotone" dataKey={selectedMetric} stroke={metricColor} strokeWidth={3} fill="url(#colorMetric)" />
+                        <Tooltip 
+                          contentStyle={{ borderRadius: '16px', border: 'none', background: '#FFFFFF', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                          itemStyle={{ fontSize: '11px', fontWeight: 'bold' }}
+                          labelStyle={{ fontSize: '10px', color: '#64748B', marginBottom: '4px', fontWeight: 'bold' }}
+                        />
+                        {selectedMetric === 'Clicks' ? (
+                          <>
+                            <Area type="monotone" dataKey="OrganicClicks" name="Organic Clicks" stroke="#10B981" strokeWidth={3} fill="url(#colorOrganic)" />
+                            <Area type="monotone" dataKey="PaidClicks" name="Paid Clicks" stroke="#3B82F6" strokeWidth={3} fill="url(#colorPaid)" />
+                          </>
+                        ) : selectedMetric === 'Impressions' ? (
+                          <>
+                            <Area type="monotone" dataKey="OrganicImpressions" name="Organic Impressions" stroke="#8B5CF6" strokeWidth={3} fill="url(#colorOrganicImpr)" />
+                            <Area type="monotone" dataKey="PaidImpressions" name="Paid Impressions" stroke="#F59E0B" strokeWidth={3} fill="url(#colorPaidImpr)" />
+                          </>
+                        ) : (
+                          <Area type="monotone" dataKey={selectedMetric} stroke={metricColor} strokeWidth={3} fill="url(#colorMetric)" />
+                        )}
                       </AreaChart>
                     </ResponsiveContainer>
                   )}
