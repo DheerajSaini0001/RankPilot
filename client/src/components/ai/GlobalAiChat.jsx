@@ -22,11 +22,11 @@ import { useAiChatStore } from '../../store/aiChatStore';
 
 /* ─── Markdown Component Overrides (Compact for Sidebar/Bubble) ─── */
 const MD = {
-    p: ({ children }) => <p className="leading-relaxed text-[13px] text-neutral-700 dark:text-neutral-300 mb-2 last:mb-0">{children}</p>,
-    strong: ({ children }) => <strong className="font-bold text-neutral-900 dark:text-white">{children}</strong>,
+    p: ({ children }) => <p className="leading-relaxed text-[13px] text-neutral-700 dark:text-neutral-300 mb-2 last:mb-0 break-words [word-break:break-word]">{children}</p>,
+    strong: ({ children }) => <strong className="font-bold text-neutral-900 dark:text-white break-words [word-break:break-word]">{children}</strong>,
     ul: ({ children }) => <ul className="space-y-1 mb-2 pl-4 list-disc marker:text-brand-500">{children}</ul>,
     ol: ({ children }) => <ol className="space-y-1 mb-2 pl-4 list-decimal marker:text-brand-500">{children}</ol>,
-    li: ({ children }) => <li className="text-[13px] text-neutral-700 dark:text-neutral-300">{children}</li>,
+    li: ({ children }) => <li className="text-[13px] text-neutral-700 dark:text-neutral-300 break-words [word-break:break-word]">{children}</li>,
     h1: ({ children }) => <h1 className="text-sm font-black text-neutral-900 dark:text-white mb-1">{children}</h1>,
     h2: ({ children }) => <h2 className="text-sm font-bold text-neutral-900 dark:text-white mb-1">{children}</h2>,
     h3: ({ children }) => <h3 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 mb-1">{children}</h3>,
@@ -270,7 +270,11 @@ const GlobalAiChat = () => {
     /* ── Scroll to bottom ── */
     useEffect(() => {
         if (isOpen) {
-            setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 60);
+            setTimeout(() => {
+                if (messages.length > 0) {
+                    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, 60);
         }
     }, [messages, isOpen]);
 
@@ -379,17 +383,17 @@ const GlobalAiChat = () => {
                     </div>
 
                     {/* Messages Area */}
-                    <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] bg-neutral-50/30 dark:bg-neutral-900/10">
+                    <div className="flex-1 flex flex-col overflow-y-auto px-4 py-5 space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] bg-neutral-50/30 dark:bg-neutral-900/10">
                         {messages.length === 0 && (
-                            <div className="flex flex-col items-center justify-center py-12 text-center h-full">
-                                <div className="w-16 h-16 rounded-3xl bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200/50 dark:border-neutral-700/50 flex items-center justify-center mb-4 rotate-3 group-hover:rotate-0 transition-transform">
+                            <div className="flex flex-col items-center pt-2 pb-6 text-center min-h-min">
+                                <div className="shrink-0 w-16 h-16 rounded-3xl bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200/50 dark:border-neutral-700/50 flex items-center justify-center mb-4 rotate-3 group-hover:rotate-0 transition-transform">
                                     <ChatBubbleLeftRightIcon className="w-8 h-8 text-neutral-300 dark:text-neutral-600" />
                                 </div>
-                                <h3 className="text-sm font-black text-neutral-900 dark:text-white uppercase tracking-tight">How can I help today?</h3>
-                                <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-2 max-w-[200px] leading-relaxed font-medium">
+                                <h3 className="shrink-0 text-sm font-black text-neutral-900 dark:text-white uppercase tracking-tight">How can I help today?</h3>
+                                <p className="shrink-0 text-xs text-neutral-400 dark:text-neutral-500 mt-2 max-w-[240px] leading-relaxed font-medium">
                                     I can analyze your marketing data, identify SEO gaps, or suggest growth strategies.
                                 </p>
-                                <div className="mt-8 grid grid-cols-1 gap-2 w-full max-w-[280px]">
+                                <div className="shrink-0 mt-6 grid grid-cols-1 gap-2.5 w-full max-w-[320px]">
                                     {suggestionsLoading ? (
                                         [1, 2, 3].map(i => (
                                             <div key={i} className="h-10 bg-neutral-100 dark:bg-neutral-800 rounded-2xl animate-pulse" />

@@ -75,8 +75,10 @@ const MarkdownComponents = {
                 const finalType = match ? match[1] : (chartData.chartType || 'line');
 
                 return (
-                    <div className="my-10 w-full overflow-hidden">
-                        <ChartRenderer type={finalType} data={chartData} />
+                    <div className="my-8 w-full overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                        <div className="min-w-[500px]">
+                            <ChartRenderer type={finalType} data={chartData} />
+                        </div>
                     </div>
                 );
             } catch (err) {
@@ -103,26 +105,26 @@ const MarkdownComponents = {
     li: ({ children, ordered }) => {
         if (ordered) {
             return (
-                <li className="list-item text-[15.5px] leading-relaxed text-neutral-700 dark:text-neutral-100/90 mb-2 !ml-0 font-medium">
+                <li className="list-item text-[15.5px] leading-relaxed text-neutral-700 dark:text-neutral-100/90 mb-2 !ml-0 font-medium break-words [word-break:break-word]">
                     {children}
                 </li>
             );
         }
         return (
-            <li className="!list-none !p-0 !m-0 relative !pl-6 text-[15.5px] leading-relaxed text-neutral-750 dark:text-neutral-100 group mb-3 font-medium">
+            <li className="!list-none !p-0 !m-0 relative !pl-6 text-[15.5px] leading-relaxed text-neutral-750 dark:text-neutral-100 group mb-3 font-medium break-words [word-break:break-word]">
                 <span className="absolute left-0 top-[10px] h-2 w-2 rounded-full bg-brand-500 shadow-[0_0_12px_rgba(59,130,246,0.4)] group-hover:scale-125 transition-transform" />
                 <div className="!m-0 !p-0 inline-block w-full">{children}</div>
             </li>
         );
     },
-    p: ({ children }) => <p className="mb-6 leading-relaxed text-[15.5px] text-neutral-800 dark:text-neutral-200 font-medium">{children}</p>,
+    p: ({ children }) => <p className="mb-6 leading-relaxed text-[15.5px] text-neutral-800 dark:text-neutral-200 font-medium break-words [word-break:break-word]">{children}</p>,
     h1: ({ children }) => <h1 className="text-3xl font-black !m-0 !mb-8 tracking-tight text-neutral-900 dark:text-white border-b-4 border-brand-500/10 pb-4">{children}</h1>,
     h2: ({ children }) => <h2 className="text-xl font-extrabold !m-0 !mb-5 mt-10 tracking-tight text-neutral-800 dark:text-neutral-100 flex items-center gap-3">
         <span className="w-1.5 h-6 bg-brand-500 rounded-full" />
         {children}
     </h2>,
     h3: ({ children }) => <h3 className="text-lg font-bold !m-0 !mb-4 mt-8 text-neutral-800 dark:text-neutral-100 border-l-4 border-neutral-200 dark:border-neutral-700 pl-4">{children}</h3>,
-    strong: ({ children }) => <strong className="font-bold text-neutral-900 dark:text-white bg-brand-500/5 px-1 rounded">{children}</strong>,
+    strong: ({ children }) => <strong className="font-bold text-neutral-900 dark:text-white bg-brand-500/5 px-1 rounded break-words [word-break:break-word]">{children}</strong>,
     table: ({ children }) => (
         <div className="my-10 w-full overflow-x-auto border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-xl">
             <table className="w-full text-left border-collapse min-w-[600px]">
@@ -191,12 +193,12 @@ const ChatMessage = React.memo(({ msg, userName, userAvatar }) => {
     }
 
     return (
-        <div className="flex justify-start">
-            <div className="flex items-start gap-3 max-w-[99%] sm:max-w-[96%]">
+        <div className="flex justify-start w-full max-w-full">
+            <div className="flex items-start gap-3 w-full max-w-[99%] sm:max-w-[96%]">
                 <div className="w-7 h-7 rounded-full bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm p-1">
                     <img src="/favicon.png" alt="AI" className="w-full h-full object-contain" />
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 overflow-hidden w-full">
                     {msg.isError ? (
                         <div className="px-4 py-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-800/30 rounded-xl text-sm text-red-600 dark:text-red-400">
                                 <ReactMarkdown
@@ -207,7 +209,7 @@ const ChatMessage = React.memo(({ msg, userName, userAvatar }) => {
                                 </ReactMarkdown>
                         </div>
                     ) : (
-                        <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed text-neutral-800 dark:text-neutral-200">
+                        <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed text-neutral-800 dark:text-neutral-200 break-words [word-break:break-word] [&_a]:break-all">
                             {msg.content ? (
                                 <ReactMarkdown
                                     remarkPlugins={[remarkGfm]}
@@ -567,318 +569,323 @@ const AIChatPage = () => {
                     </div>
                 </div>
 
-                {/* 3. HISTORY DRAWER — absolute overlay */}
-                {isHistoryOpen && (
-                    <div className="absolute inset-0 z-50 flex flex-col overflow-hidden bg-white dark:bg-dark-card animate-in slide-in-from-left duration-300">
-                        {/* Header */}
-                        <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-neutral-800">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center">
-                                    <ChatBubbleLeftRightIcon className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-                                </div>
-                                <div>
-                                    <h2 className="text-sm font-black text-neutral-900 dark:text-white">Chat History</h2>
-                                    <p className="text-[10px] text-neutral-400 font-medium">{conversations.length} conversations</p>
-                                </div>
-                            </div>
-                            <button onClick={() => setIsHistoryOpen(false)}
-                                className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-all">
-                                <PlusIcon className="w-4 h-4 rotate-45" />
-                            </button>
-                        </div>
-
-                        {/* List */}
-                        <div className="flex-1 min-h-0 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] p-3">
-                            {conversations.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-full text-center py-12">
-                                    <div className="w-14 h-14 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mb-4">
-                                        <ChatBubbleLeftRightIcon className="w-7 h-7 text-neutral-300 dark:text-neutral-600" />
+                <div className="flex-1 flex min-h-0 relative w-full overflow-hidden">
+                    {/* 3. HISTORY DRAWER */}
+                    {isHistoryOpen && (
+                        <div className="absolute inset-0 lg:static lg:w-72 lg:border-r border-neutral-100 dark:border-neutral-800 z-50 flex flex-col overflow-hidden bg-white dark:bg-dark-card animate-in slide-in-from-left duration-300 shrink-0">
+                            {/* Header */}
+                            <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-neutral-800">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center">
+                                        <ChatBubbleLeftRightIcon className="w-4 h-4 text-brand-600 dark:text-brand-400" />
                                     </div>
-                                    <p className="text-sm font-black text-neutral-500 dark:text-neutral-400">No chats yet</p>
-                                    <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1 font-medium">Start a new conversation</p>
+                                    <div>
+                                        <h2 className="text-sm font-black text-neutral-900 dark:text-white">Chat History</h2>
+                                        <p className="text-[10px] text-neutral-400 font-medium">{conversations.length} conversations</p>
+                                    </div>
                                 </div>
-                            ) : (
-                                <div className="space-y-1">
-                                    {conversations.map(conv => (
-                                        <div key={conv._id}
-                                            onClick={() => { loadConversationDetails(conv._id); setIsHistoryOpen(false); }}
-                                            className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${activeConversationId === conv._id
-                                                ? 'bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800'
-                                                : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/50 border border-transparent'
-                                                }`}>
-                                            <div className="flex items-center gap-3 min-w-0">
-                                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${activeConversationId === conv._id
-                                                    ? 'bg-brand-600 text-white shadow-md shadow-brand-500/20'
-                                                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'
+                                <button onClick={() => setIsHistoryOpen(false)}
+                                    className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-all">
+                                    <PlusIcon className="w-4 h-4 rotate-45" />
+                                </button>
+                            </div>
+
+                            {/* List */}
+                            <div className="flex-1 min-h-0 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] p-3">
+                                {conversations.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                                        <div className="w-14 h-14 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mb-4">
+                                            <ChatBubbleLeftRightIcon className="w-7 h-7 text-neutral-300 dark:text-neutral-600" />
+                                        </div>
+                                        <p className="text-sm font-black text-neutral-500 dark:text-neutral-400">No chats yet</p>
+                                        <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1 font-medium">Start a new conversation</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-1">
+                                        {conversations.map(conv => (
+                                            <div key={conv._id}
+                                                onClick={() => { loadConversationDetails(conv._id); setIsHistoryOpen(window.innerWidth >= 1024); }}
+                                                className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${activeConversationId === conv._id
+                                                    ? 'bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800'
+                                                    : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/50 border border-transparent'
                                                     }`}>
-                                                    <ChatBubbleLeftRightIcon className="w-3.5 h-3.5" />
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${activeConversationId === conv._id
+                                                        ? 'bg-brand-600 text-white shadow-md shadow-brand-500/20'
+                                                        : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'
+                                                        }`}>
+                                                        <ChatBubbleLeftRightIcon className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200 truncate">{conv.title || 'New Chat'}</p>
+                                                        {conv.updatedAt && (
+                                                            <p className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-0.5">
+                                                                {new Date(conv.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                <div className="min-w-0">
-                                                    <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200 truncate">{conv.title || 'New Chat'}</p>
-                                                    {conv.updatedAt && (
-                                                        <p className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-0.5">
-                                                            {new Date(conv.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                                        </p>
-                                                    )}
-                                                </div>
+                                                <button onClick={e => handleDeleteConversation(conv._id, e)}
+                                                    className="opacity-0 group-hover:opacity-100 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 text-neutral-400 transition-all flex-shrink-0 ml-2">
+                                                    <TrashIcon className="w-3.5 h-3.5" />
+                                                </button>
                                             </div>
-                                            <button onClick={e => handleDeleteConversation(conv._id, e)}
-                                                className="opacity-0 group-hover:opacity-100 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 text-neutral-400 transition-all flex-shrink-0 ml-2">
-                                                <TrashIcon className="w-3.5 h-3.5" />
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Footer */}
-                        <div className="shrink-0 p-4 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/20">
-                            <button onClick={() => { handleNewChat(); setIsHistoryOpen(false); }}
-                                className="w-full flex items-center justify-center gap-2 py-3 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-xl text-xs font-black transition-all hover:opacity-90 active:scale-95 shadow-lg">
-                                <PlusIcon className="w-4 h-4" />
-                                Start New Conversation
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* 4. INSIGHT DRAWER — absolute overlay */}
-                {isInsightOpen && (
-                    <div className="absolute inset-0 z-50 flex flex-col overflow-hidden bg-white dark:bg-dark-card animate-in slide-in-from-right duration-300">
-                        {/* Header */}
-                        <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-neutral-800">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center">
-                                    <InboxStackIcon className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-                                </div>
-                                <div>
-                                    <h2 className="text-sm font-black text-neutral-900 dark:text-white">Weekly Insight</h2>
-                                    <p className="text-[10px] text-neutral-400 font-medium">AI-powered performance report</p>
-                                </div>
-                            </div>
-                            <button onClick={() => setIsInsightOpen(false)}
-                                className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 transition-all">
-                                <PlusIcon className="w-4 h-4 rotate-45" />
-                            </button>
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1 min-h-0 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] p-5">
-                            {insightLoading ? (
-                                <div className="flex flex-col items-center justify-center h-full gap-5">
-                                    <div className="relative">
-                                        <div className="w-14 h-14 rounded-2xl bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center">
-                                            <SparklesIcon className="w-7 h-7 text-brand-600 dark:text-brand-400" />
-                                        </div>
-                                        <div className="absolute -inset-1 rounded-2xl border-2 border-brand-500/30 animate-ping" />
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-sm font-black text-neutral-700 dark:text-neutral-300 mb-1">Analyzing your data...</p>
-                                        <p className="text-xs text-neutral-400 font-medium animate-pulse">Running advanced analytics across all sources</p>
-                                    </div>
-                                </div>
-                            ) : weeklyInsight ? (
-                                <div className="max-w-2xl mx-auto">
-                                    <div className="flex items-center gap-2 mb-4 pb-4 border-b border-neutral-100 dark:border-neutral-800">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Weekly Report</span>
-                                        <span className="text-neutral-300 dark:text-neutral-700">·</span>
-                                        <span className="text-[10px] font-bold text-brand-600 dark:text-brand-400">AI Generated</span>
-                                        {weeklyInsight?.updatedAt && (
-                                            <>
-                                                <span className="text-neutral-300 dark:text-neutral-700">·</span>
-                                                <span className="text-[10px] font-bold text-neutral-400">
-                                                    Generated {format(new Date(weeklyInsight.updatedAt), 'MMM d, yyyy p')}
-                                                </span>
-                                            </>
-                                        )}
-                                    </div>
-                                    <div className="bg-white dark:bg-[#1a1a1a] border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-8 sm:p-12 shadow-2xl relative overflow-hidden group">
-                                        <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 blur-[120px] pointer-events-none group-hover:bg-brand-500/10 transition-all duration-1000" />
-                                        <div className="prose prose-md dark:prose-invert max-w-none prose-headings:tracking-tighter prose-p:text-neutral-700 dark:prose-p:text-neutral-300">
-                                            <ReactMarkdown 
-                                                remarkPlugins={[remarkGfm]}
-                                                components={MarkdownComponents}
-                                            >
-                                                {typeof weeklyInsight === 'string' ? weeklyInsight : (weeklyInsight?.content || '')}
-                                            </ReactMarkdown>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center h-full text-center px-6">
-                                    <div className="w-16 h-16 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mb-4">
-                                        <InboxStackIcon className="w-8 h-8 text-neutral-300 dark:text-neutral-600" />
-                                    </div>
-                                    <p className="text-sm font-black text-neutral-600 dark:text-neutral-400 mb-2">No insights yet</p>
-                                    <p className="text-xs text-neutral-400 dark:text-neutral-500 mb-6 max-w-xs leading-relaxed">Generate your first weekly performance report powered by AI analysis of all your connected platforms.</p>
-                                    <button onClick={handleRefreshInsight}
-                                        className="flex items-center gap-2 px-5 py-2.5 bg-brand-600 text-white text-xs font-black rounded-xl hover:bg-brand-700 transition-all shadow-md shadow-brand-500/25 active:scale-95">
-                                        <SparklesIcon className="w-3.5 h-3.5" />
-                                        Generate Report
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Footer */}
-                        <div className="shrink-0 p-4 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/20">
-                            <button onClick={handleRefreshInsight} disabled={insightLoading}
-                                className="w-full flex items-center justify-center gap-2 py-3 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-xl text-xs font-black transition-all hover:opacity-90 active:scale-95 disabled:opacity-40 shadow-lg">
-                                <ArrowPathIcon className={`w-4 h-4 ${insightLoading ? 'animate-spin' : ''}`} />
-                                {insightLoading ? 'Generating...' : 'Refresh Weekly Summary'}
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                <div className="flex-1 min-h-0 flex flex-col overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                    {messages.length === 0 ? (
-                        /* 5. EMPTY STATE — centered, compact */
-                        <div className="flex-1 flex flex-col items-center py-6 sm:py-12 px-4 sm:px-10 my-auto w-full">
-                            {/* AI Icon with glow */}
-                            <div className="relative mb-4 shrink-0">
-                                <div className="relative z-10 transition-transform hover:scale-105 duration-300">
-                                    <Logo className="w-16 h-16 sm:w-20 sm:h-20" iconOnly />
-                                </div>
-                                <div className="absolute -inset-4 rounded-full bg-brand-400/10 animate-pulse blur-2xl" />
-                            </div>
-
-                            {/* Greeting */}
-                            <h1 className="text-xl sm:text-3xl font-black text-neutral-900 dark:text-white tracking-tight mb-2 text-center shrink-0">
-                                {getTimeGreeting()}, {user?.name?.split(' ')[0] || 'Explorer'}
-                            </h1>
-                            <p className="text-[13px] sm:text-sm text-neutral-500 dark:text-neutral-400 font-medium mb-4 sm:mb-6 text-center max-w-xs sm:max-w-sm leading-relaxed shrink-0">
-                                Ask anything about your marketing data. I have access to all your connected platforms.
-                            </p>
-
-                            {/* Suggestions — moved here from footer */}
-                            <div className="w-full max-w-2xl mx-auto">
-                                {/* Loading skeleton */}
-                                {suggestionsLoading && (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-4">
-                                        {[1, 2, 3, 4].map(i => (
-                                            <div key={i} className="h-[72px] bg-neutral-100 dark:bg-neutral-800 rounded-2xl animate-pulse" />
                                         ))}
                                     </div>
                                 )}
-
-                                {/* Suggestion cards */}
-                                {!suggestionsLoading && suggestions.length > 0 && (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-4">
-                                        {suggestions.slice(0, 4).map((q, i) => (
-                                            <button key={i} onClick={() => setQuery(q)}
-                                                className="px-4 py-3.5 sm:px-5 sm:py-4 bg-neutral-50 dark:bg-neutral-800/50 hover:bg-brand-50 dark:hover:bg-brand-900/20 border border-neutral-200 dark:border-neutral-700 hover:border-brand-300 dark:hover:border-brand-700 rounded-2xl text-[11px] sm:text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-brand-600 dark:hover:text-brand-400 transition-all text-left leading-relaxed active:scale-[0.98] shadow-sm">
-                                                {q}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-
-                                {/* Quick action pills */}
-                                <div className="flex flex-wrap justify-center gap-2 mb-8">
-                                    {[
-                                        { 
-                                            label: 'Search Console', 
-                                            prompt: 'Analyze my Google Search Console performance and identify top-ranking keywords.',
-                                            logo: <img src="https://www.gstatic.com/images/branding/product/2x/search_console_64dp.png" alt="GSC" className="w-3.5 h-3.5 object-contain" />
-                                        },
-                                        { 
-                                            label: 'GA4 Analytics', 
-                                            prompt: 'Deep dive into my GA4 data to understand user behavior and conversions.',
-                                            logo: <img src="https://www.vectorlogo.zone/logos/google_analytics/google_analytics-icon.svg" alt="GA4" className="w-3.5 h-3.5 object-contain" />
-                                        },
-                                        { 
-                                            label: 'Google Ads', 
-                                            prompt: 'Evaluate my Google Ads campaign efficiency including CTR, CPC, and ROAS.',
-                                            logo: <img src="https://www.vectorlogo.zone/logos/google_ads/google_ads-icon.svg" alt="Google Ads" className="w-3.5 h-3.5 object-contain" />
-                                        },
-                                        { 
-                                            label: 'Facebook Ads', 
-                                            prompt: 'Review my Meta Ads reach and engagement metrics.',
-                                            logo: <img src="https://www.vectorlogo.zone/logos/facebook/facebook-icon.svg" alt="Meta Ads" className="w-3.5 h-3.5 object-contain" />
-                                        },
-                                    ].map((item, i) => (
-                                        <button key={i} onClick={() => setQuery(item.prompt)}
-                                            className="flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-[10px] sm:text-[11px] font-bold text-neutral-500 dark:text-neutral-400 hover:border-brand-400 dark:hover:border-brand-600 hover:text-brand-600 dark:hover:text-brand-400 transition-all active:scale-95 group shadow-sm">
-                                            {item.logo}
-                                            {item.label}
-                                        </button>
-                                    ))}
-                                </div>
                             </div>
 
-                        </div>
-                    ) : (
-                        /* 6. MESSAGES AREA — hidden scrollbar */
-                        <div className="px-3 sm:px-5 md:px-8 py-5 sm:py-8">
-                            <div className="max-w-3xl mx-auto w-full space-y-6 pb-4">
-                                {messages.map((msg, idx) => (
-                                    <ChatMessage key={idx} msg={msg} userName={user?.name} userAvatar={user?.avatar} />
-                                ))}
-                                <div ref={messagesEndRef} className="h-4" />
+                            {/* Footer */}
+                            <div className="shrink-0 p-4 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/20">
+                                <button onClick={() => { handleNewChat(); setIsHistoryOpen(window.innerWidth >= 1024); }}
+                                    className="w-full flex items-center justify-center gap-2 py-3 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-xl text-xs font-black transition-all hover:opacity-90 active:scale-95 shadow-lg">
+                                    <PlusIcon className="w-4 h-4" />
+                                    Start New Conversation
+                                </button>
                             </div>
                         </div>
                     )}
-                </div>
 
-                {/* 7. BOTTOM INPUT BAR — shrink-0, always at bottom */}
-                <div className="shrink-0 border-t border-neutral-100 dark:border-neutral-800 px-3 sm:px-4 py-4 bg-white dark:bg-dark-card w-full">
+                    {/* CHAT AREA */}
+                    <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+                        <div className="flex-1 min-h-0 flex flex-col overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                            {messages.length === 0 ? (
+                                /* 5. EMPTY STATE — centered, compact */
+                                <div className="flex-1 flex flex-col items-center py-6 sm:py-12 px-4 sm:px-10 my-auto w-full">
+                                    {/* AI Icon with glow */}
+                                    <div className="relative mb-4 shrink-0">
+                                        <div className="relative z-10 transition-transform hover:scale-105 duration-300">
+                                            <Logo className="w-16 h-16 sm:w-20 sm:h-20" iconOnly />
+                                        </div>
+                                        <div className="absolute -inset-4 rounded-full bg-brand-400/10 animate-pulse blur-2xl" />
+                                    </div>
+
+                                    {/* Greeting */}
+                                    <h1 className="text-xl sm:text-3xl font-black text-neutral-900 dark:text-white tracking-tight mb-2 text-center shrink-0">
+                                        {getTimeGreeting()}, {user?.name?.split(' ')[0] || 'Explorer'}
+                                    </h1>
+                                    <p className="text-[13px] sm:text-sm text-neutral-500 dark:text-neutral-400 font-medium mb-4 sm:mb-6 text-center max-w-xs sm:max-w-sm leading-relaxed shrink-0">
+                                        Ask anything about your marketing data. I have access to all your connected platforms.
+                                    </p>
+
+                                    {/* Suggestions — moved here from footer */}
+                                    <div className="w-full max-w-2xl mx-auto">
+                                        {/* Loading skeleton */}
+                                        {suggestionsLoading && (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-4">
+                                                {[1, 2, 3, 4].map(i => (
+                                                    <div key={i} className="h-[72px] bg-neutral-100 dark:bg-neutral-800 rounded-2xl animate-pulse" />
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Suggestion cards */}
+                                        {!suggestionsLoading && suggestions.length > 0 && (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-4">
+                                                {suggestions.slice(0, 4).map((q, i) => (
+                                                    <button key={i} onClick={() => setQuery(q)}
+                                                        className="px-4 py-3.5 sm:px-5 sm:py-4 bg-neutral-50 dark:bg-neutral-800/50 hover:bg-brand-50 dark:hover:bg-brand-900/20 border border-neutral-200 dark:border-neutral-700 hover:border-brand-300 dark:hover:border-brand-700 rounded-2xl text-[11px] sm:text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-brand-600 dark:hover:text-brand-400 transition-all text-left leading-relaxed active:scale-[0.98] shadow-sm">
+                                                        {q}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Quick action pills */}
+                                        <div className="flex flex-wrap justify-center gap-2 mb-8">
+                                            {[
+                                                { 
+                                                    label: 'Search Console', 
+                                                    prompt: 'Analyze my Google Search Console performance and identify top-ranking keywords.',
+                                                    logo: <img src="https://www.gstatic.com/images/branding/product/2x/search_console_64dp.png" alt="GSC" className="w-3.5 h-3.5 object-contain" />
+                                                },
+                                                { 
+                                                    label: 'GA4 Analytics', 
+                                                    prompt: 'Deep dive into my GA4 data to understand user behavior and conversions.',
+                                                    logo: <img src="https://www.vectorlogo.zone/logos/google_analytics/google_analytics-icon.svg" alt="GA4" className="w-3.5 h-3.5 object-contain" />
+                                                },
+                                                { 
+                                                    label: 'Google Ads', 
+                                                    prompt: 'Evaluate my Google Ads campaign efficiency including CTR, CPC, and ROAS.',
+                                                    logo: <img src="https://www.vectorlogo.zone/logos/google_ads/google_ads-icon.svg" alt="Google Ads" className="w-3.5 h-3.5 object-contain" />
+                                                },
+                                                { 
+                                                    label: 'Facebook Ads', 
+                                                    prompt: 'Review my Meta Ads reach and engagement metrics.',
+                                                    logo: <img src="https://www.vectorlogo.zone/logos/facebook/facebook-icon.svg" alt="Meta Ads" className="w-3.5 h-3.5 object-contain" />
+                                                },
+                                            ].map((item, i) => (
+                                                <button key={i} onClick={() => setQuery(item.prompt)}
+                                                    className="flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-[10px] sm:text-[11px] font-bold text-neutral-500 dark:text-neutral-400 hover:border-brand-400 dark:hover:border-brand-600 hover:text-brand-600 dark:hover:text-brand-400 transition-all active:scale-95 group shadow-sm">
+                                                    {item.logo}
+                                                    {item.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                </div>
+                            ) : (
+                                /* 6. MESSAGES AREA — hidden scrollbar */
+                                <div className="px-3 sm:px-5 md:px-8 py-5 sm:py-8">
+                                    <div className="max-w-3xl mx-auto w-full space-y-6 pb-4">
+                                        {messages.map((msg, idx) => (
+                                            <ChatMessage key={idx} msg={msg} userName={user?.name} userAvatar={user?.avatar} />
+                                        ))}
+                                        <div ref={messagesEndRef} className="h-4" />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 7. BOTTOM INPUT BAR — shrink-0, always at bottom */}
+                        <div className="shrink-0 border-t border-neutral-100 dark:border-neutral-800 px-3 sm:px-4 py-4 bg-white dark:bg-dark-card w-full">
 
 
-                    {/* Input form */}
-                    <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto">
-                        <div className="flex items-end gap-2 bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-2xl px-2.5 sm:px-3 py-2 sm:py-2.5 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/10 transition-all shadow-sm">
-                            {/* Left action buttons */}
-                            <div className="flex items-center gap-0.5 flex-shrink-0 pb-0.5">
-                                <button type="button" onClick={handleNewChat} title="New Chat"
-                                    className="hidden sm:flex w-8 h-8 items-center justify-center rounded-xl text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all">
-                                    <PlusIcon className="w-4 h-4" />
-                                </button>
-                                <button type="button" title="Weekly Insight"
-                                    onClick={() => { setIsInsightOpen(!isInsightOpen); if (!isInsightOpen) { setIsHistoryOpen(false); if (!weeklyInsight) loadWeeklyInsight(); } }}
-                                    className={`hidden sm:flex w-8 h-8 items-center justify-center rounded-xl transition-all ${isInsightOpen ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20'}`}>
-                                    <InboxStackIcon className={`w-4 h-4 ${insightLoading ? 'animate-pulse' : ''}`} />
-                                </button>
-                                <button type="button" title="Chat History"
-                                    onClick={() => { setIsHistoryOpen(!isHistoryOpen); if (!isHistoryOpen) setIsInsightOpen(false); }}
-                                    className={`hidden sm:flex w-8 h-8 items-center justify-center rounded-xl transition-all ${isHistoryOpen ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20'}`}>
-                                    <ChatBubbleLeftRightIcon className="w-4 h-4" />
+                            {/* Input form */}
+                            <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto">
+                                <div className="flex items-end gap-2 bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-2xl px-2.5 sm:px-3 py-2 sm:py-2.5 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/10 transition-all shadow-sm">
+                                    {/* Left action buttons */}
+                                    <div className="flex items-center gap-0.5 flex-shrink-0 pb-0.5">
+                                        <button type="button" onClick={handleNewChat} title="New Chat"
+                                            className="hidden lg:flex w-8 h-8 items-center justify-center rounded-xl text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all">
+                                            <PlusIcon className="w-4 h-4" />
+                                        </button>
+                                        <button type="button" title="Weekly Insight"
+                                            onClick={() => { setIsInsightOpen(!isInsightOpen); if (!isInsightOpen) { setIsHistoryOpen(false); if (!weeklyInsight) loadWeeklyInsight(); } }}
+                                            className={`hidden lg:flex w-8 h-8 items-center justify-center rounded-xl transition-all ${isInsightOpen ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20'}`}>
+                                            <InboxStackIcon className={`w-4 h-4 ${insightLoading ? 'animate-pulse' : ''}`} />
+                                        </button>
+                                        <button type="button" title="Chat History"
+                                            onClick={() => { setIsHistoryOpen(!isHistoryOpen); if (!isHistoryOpen) setIsInsightOpen(false); }}
+                                            className={`hidden lg:flex w-8 h-8 items-center justify-center rounded-xl transition-all ${isHistoryOpen ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20'}`}>
+                                            <ChatBubbleLeftRightIcon className="w-4 h-4" />
+                                        </button>
+                                    </div>
+
+                                    {/* Divider */}
+                                    <div className="hidden lg:block w-px h-5 bg-neutral-200 dark:bg-neutral-700 flex-shrink-0 mb-2" />
+
+                                    {/* Text input */}
+                                    <textarea
+                                        ref={textareaRef}
+                                        value={query}
+                                        onChange={e => setQuery(e.target.value)}
+                                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
+                                        placeholder="Message RankPilot AI..."
+                                        disabled={loading}
+                                        rows={1}
+                                        className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500 py-2 min-h-[20px] min-w-0 resize-none max-h-40 leading-normal [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                                    />
+
+                                    {/* Right: Send */}
+                                    <div className="flex items-end gap-1.5 flex-shrink-0 pb-0.5">
+                                        {/* Send button */}
+                                        <button type="submit" disabled={!query.trim() || loading}
+                                            className="w-9 h-9 flex items-center justify-center rounded-xl bg-brand-600 hover:bg-brand-700 text-white disabled:bg-neutral-200 dark:disabled:bg-neutral-700 disabled:text-neutral-400 transition-all shadow-md shadow-brand-500/20 active:scale-95">
+                                            {loading
+                                                ? <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                                                : <PaperAirplaneIcon className="w-4 h-4" />
+                                            }
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <p className="text-center text-[10px] text-neutral-400 dark:text-neutral-500 mt-2 font-medium">
+                                    RankPilot AI can make mistakes. Always verify critical metrics before making decisions.
+                                </p>
+                            </form>
+                        </div>
+                    </div>
+
+                    {/* 4. INSIGHT DRAWER */}
+                    {isInsightOpen && (
+                        <div className="absolute inset-0 lg:static lg:w-[28rem] lg:border-l border-neutral-100 dark:border-neutral-800 z-50 flex flex-col overflow-hidden bg-white dark:bg-dark-card animate-in slide-in-from-right duration-300 shrink-0">
+                            {/* Header */}
+                            <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-neutral-800">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center">
+                                        <InboxStackIcon className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-sm font-black text-neutral-900 dark:text-white">Weekly Insight</h2>
+                                        <p className="text-[10px] text-neutral-400 font-medium">AI-powered performance report</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setIsInsightOpen(false)}
+                                    className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 transition-all">
+                                    <PlusIcon className="w-4 h-4 rotate-45" />
                                 </button>
                             </div>
 
-                            {/* Divider */}
-                            <div className="w-px h-5 bg-neutral-200 dark:bg-neutral-700 flex-shrink-0 mb-2" />
+                            {/* Content */}
+                            <div className="flex-1 min-h-0 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] p-5">
+                                {insightLoading ? (
+                                    <div className="flex flex-col items-center justify-center h-full gap-5">
+                                        <div className="relative">
+                                            <div className="w-14 h-14 rounded-2xl bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center">
+                                                <SparklesIcon className="w-7 h-7 text-brand-600 dark:text-brand-400" />
+                                            </div>
+                                            <div className="absolute -inset-1 rounded-2xl border-2 border-brand-500/30 animate-ping" />
+                                        </div>
+                                        <div className="text-center">
+                                            <p className="text-sm font-black text-neutral-700 dark:text-neutral-300 mb-1">Analyzing your data...</p>
+                                            <p className="text-xs text-neutral-400 font-medium animate-pulse">Running advanced analytics across all sources</p>
+                                        </div>
+                                    </div>
+                                ) : weeklyInsight ? (
+                                    <div className="max-w-2xl mx-auto">
+                                        <div className="flex items-center gap-2 mb-4 pb-4 border-b border-neutral-100 dark:border-neutral-800">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Weekly Report</span>
+                                            <span className="text-neutral-300 dark:text-neutral-700">·</span>
+                                            <span className="text-[10px] font-bold text-brand-600 dark:text-brand-400">AI Generated</span>
+                                            {weeklyInsight?.updatedAt && (
+                                                <>
+                                                    <span className="text-neutral-300 dark:text-neutral-700">·</span>
+                                                    <span className="text-[10px] font-bold text-neutral-400">
+                                                        Generated {format(new Date(weeklyInsight.updatedAt), 'MMM d, yyyy p')}
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                        <div className="bg-white dark:bg-[#1a1a1a] border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-8 sm:p-12 shadow-2xl relative overflow-hidden group">
+                                            <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 blur-[120px] pointer-events-none group-hover:bg-brand-500/10 transition-all duration-1000" />
+                                            <div className="prose prose-md dark:prose-invert max-w-none prose-headings:tracking-tighter prose-p:text-neutral-700 dark:prose-p:text-neutral-300">
+                                                <ReactMarkdown 
+                                                    remarkPlugins={[remarkGfm]}
+                                                    components={MarkdownComponents}
+                                                >
+                                                    {typeof weeklyInsight === 'string' ? weeklyInsight : (weeklyInsight?.content || '')}
+                                                </ReactMarkdown>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-full text-center px-6">
+                                        <div className="w-16 h-16 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mb-4">
+                                            <InboxStackIcon className="w-8 h-8 text-neutral-300 dark:text-neutral-600" />
+                                        </div>
+                                        <p className="text-sm font-black text-neutral-600 dark:text-neutral-400 mb-2">No insights yet</p>
+                                        <p className="text-xs text-neutral-400 dark:text-neutral-500 mb-6 max-w-xs leading-relaxed">Generate your first weekly performance report powered by AI analysis of all your connected platforms.</p>
+                                        <button onClick={handleRefreshInsight}
+                                            className="flex items-center gap-2 px-5 py-2.5 bg-brand-600 text-white text-xs font-black rounded-xl hover:bg-brand-700 transition-all shadow-md shadow-brand-500/25 active:scale-95">
+                                            <SparklesIcon className="w-3.5 h-3.5" />
+                                            Generate Report
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
 
-                            {/* Text input */}
-                            <textarea
-                                ref={textareaRef}
-                                value={query}
-                                onChange={e => setQuery(e.target.value)}
-                                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
-                                placeholder="Message RankPilot AI..."
-                                disabled={loading}
-                                rows={1}
-                                className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500 py-2 min-h-[20px] min-w-0 resize-none max-h-40 leading-normal [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-                            />
-
-                            {/* Right: Send */}
-                            <div className="flex items-end gap-1.5 flex-shrink-0 pb-0.5">
-                                {/* Send button */}
-                                <button type="submit" disabled={!query.trim() || loading}
-                                    className="w-9 h-9 flex items-center justify-center rounded-xl bg-brand-600 hover:bg-brand-700 text-white disabled:bg-neutral-200 dark:disabled:bg-neutral-700 disabled:text-neutral-400 transition-all shadow-md shadow-brand-500/20 active:scale-95">
-                                    {loading
-                                        ? <ArrowPathIcon className="w-4 h-4 animate-spin" />
-                                        : <PaperAirplaneIcon className="w-4 h-4" />
-                                    }
+                            {/* Footer */}
+                            <div className="shrink-0 p-4 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/20">
+                                <button onClick={handleRefreshInsight} disabled={insightLoading}
+                                    className="w-full flex items-center justify-center gap-2 py-3 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-xl text-xs font-black transition-all hover:opacity-90 active:scale-95 disabled:opacity-40 shadow-lg">
+                                    <ArrowPathIcon className={`w-4 h-4 ${insightLoading ? 'animate-spin' : ''}`} />
+                                    {insightLoading ? 'Generating...' : 'Refresh Weekly Summary'}
                                 </button>
                             </div>
                         </div>
-
-                        <p className="text-center text-[10px] text-neutral-400 dark:text-neutral-500 mt-2 font-medium">
-                            RankPilot AI can make mistakes. Always verify critical metrics before making decisions.
-                        </p>
-                    </form>
+                    )}
                 </div>
 
                 {/* 8. DELETE MODAL — absolute overlay */}
