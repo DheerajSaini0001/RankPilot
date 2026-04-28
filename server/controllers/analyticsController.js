@@ -3,6 +3,7 @@ import GscMetric from '../models/GscMetric.js';
 import GoogleAdsMetric from '../models/GoogleAdsMetric.js';
 import FacebookAdsMetric from '../models/FacebookAdsMetric.js';
 import UserAccounts from '../models/UserAccounts.js';
+import AiIntelligence from '../models/AiIntelligence.js';
 import mongoose from 'mongoose';
 import { syncGsc, syncGa4, syncGoogleAds, syncFacebookAds } from '../services/syncService.js';
 import NodeCache from 'node-cache';
@@ -93,7 +94,7 @@ export const getDashboardSummary = async (req, res) => {
                     map[d._id].clicks += (d.clicks || 0);
                     map[d._id].impressions += (d.impressions || 0);
                 });
-                return Object.values(map).sort((a,b) => a._id.localeCompare(b._id));
+                return Object.values(map).sort((a, b) => a._id.localeCompare(b._id));
             }),
             // Prior Period for Growth
             Ga4Metric.aggregate([{ $match: filters[1] }, { $group: { _id: null, sessions: { $sum: "$metrics.sessions" }, users: { $sum: "$metrics.users" } } }]),
@@ -141,30 +142,30 @@ export const getDashboardSummary = async (req, res) => {
         ])].sort((a, b) => new Date(a) - new Date(b));
 
         allDates.forEach(date => {
-            tsMap[date] = { 
-                date, 
-                Sessions: 0, 
-                Clicks: 0, 
+            tsMap[date] = {
+                date,
+                Sessions: 0,
+                Clicks: 0,
                 OrganicClicks: 0,
                 PaidClicks: 0,
                 Impressions: 0,
                 OrganicImpressions: 0,
                 PaidImpressions: 0,
-                Spend: 0, 
-                Conversions: 0 
+                Spend: 0,
+                Conversions: 0
             };
         });
 
         ga4Ts.forEach(d => { if (tsMap[d._id]) tsMap[d._id].Sessions = d.sessions; });
-        gscTs.forEach(d => { 
+        gscTs.forEach(d => {
             if (tsMap[d._id]) {
                 const c = (d.clicks || 0);
                 const i = (d.impressions || 0);
-                tsMap[d._id].Clicks += c; 
+                tsMap[d._id].Clicks += c;
                 tsMap[d._id].OrganicClicks = c;
-                tsMap[d._id].Impressions += i; 
+                tsMap[d._id].Impressions += i;
                 tsMap[d._id].OrganicImpressions = i;
-            } 
+            }
         });
         adsTs.forEach(d => {
             if (tsMap[d._id]) {
@@ -183,32 +184,33 @@ export const getDashboardSummary = async (req, res) => {
         });
 
         // STEP 5: Strategic AI Intelligence
+        const device = req.query.device || 'all';
         const dataForAI = {
             siteName: acc?.siteName || 'Site',
-            ga4: { 
-                ...ga, 
-                priorSessions: pGa.sessions, 
+            ga4: {
+                ...ga,
+                priorSessions: pGa.sessions,
                 growthSessions: calculateGrowth(ga.sessions, pGa.sessions),
                 growthUsers: calculateGrowth(ga.users, pGa.users)
             },
-            gsc: { 
-                ...gs, 
+            gsc: {
+                ...gs,
                 avgPosition: gs.position,
-                priorClicks: pGs.clicks, 
+                priorClicks: pGs.clicks,
                 growthClicks: calculateGrowth(gs.clicks, pGs.clicks),
                 growthImpressions: calculateGrowth(gs.impressions, pGs.impressions)
             },
-            googleAds: { 
-                ...ad.google, 
-                priorSpend: pAd.google.spend, 
-                priorConversions: pAd.google.conversions, 
+            googleAds: {
+                ...ad.google,
+                priorSpend: pAd.google.spend,
+                priorConversions: pAd.google.conversions,
                 growthConversions: calculateGrowth(ad.google.conversions, pAd.google.conversions),
                 growthSpend: calculateGrowth(ad.google.spend, pAd.google.spend)
             },
-            facebookAds: { 
-                ...ad.facebook, 
-                priorSpend: pAd.facebook.spend, 
-                priorReach: pAd.facebook.reach, 
+            facebookAds: {
+                ...ad.facebook,
+                priorSpend: pAd.facebook.spend,
+                priorReach: pAd.facebook.reach,
                 growthReach: calculateGrowth(ad.facebook.reach, pAd.facebook.reach),
                 growthSpend: calculateGrowth(ad.facebook.spend, pAd.facebook.spend)
             },
@@ -268,7 +270,7 @@ export const getDashboardSummary = async (req, res) => {
                 `;
                 const aiRes = await callGemini(prompt, [], "Respond ONLY with JSON.");
                 const parsedRes = JSON.parse(aiRes.content.replace(/```json|```/g, '').trim());
-                
+
                 return parsedRes;
 
             } catch (error) {
@@ -299,7 +301,45 @@ export const getDashboardSummary = async (req, res) => {
             }
         };
 
-        const intelligence = await generateIntelligence(dataForAI);
+        // Check if we have valid intelligence in DB
+        const latestSync = Math.max(
+            new Date(acc?.gscLastSyncedAt || 0),
+            new Date(acc?.ga4LastSyncedAt || 0),
+            new Date(acc?.googleAdsLastSyncedAt || 0),
+            new Date(acc?.facebookAdsLastSyncedAt || 0)
+        );
+
+        const existingAi = await AiIntelligence.findOne({
+            siteId,
+            platform: 'dash',
+            startDate,
+            endDate,
+            device
+        });
+
+        const isAiValid = existingAi &&
+            existingAi.lastSyncedAtOnGeneration >= latestSync;
+
+        let intelligence;
+        if (isAiValid) {
+            intelligence = existingAi.content;
+        } else {
+            intelligence = await generateIntelligence(dataForAI);
+
+            // Save or Update in DB for persistent caching
+            if (siteId) {
+                await AiIntelligence.findOneAndUpdate(
+                    { siteId, platform: 'dash', startDate, endDate, device },
+                    {
+                        userId,
+                        content: intelligence,
+                        lastSyncedAtOnGeneration: new Date(latestSync),
+                        createdAt: new Date()
+                    },
+                    { upsert: true }
+                );
+            }
+        }
         const totalSessions = ga.sessions || 0;
         const result = {
             userName: req.user?.displayName || 'User',
@@ -523,10 +563,9 @@ export const getGa4Summary = async (req, res) => {
             },
             syncMetadata
         };
-
         // STEP: Strategic AI Intelligence for GA4
         const siteName = syncMetadata?.siteName || "your website";
-        
+
         const generateGa4Intelligence = async (data) => {
             try {
                 const prompt = `
@@ -543,11 +582,11 @@ export const getGa4Summary = async (req, res) => {
                     "kpiPageViews": "Page Views Strip (15-20 words). Total views are ${data.overview.pageViews}. Discuss the scale of content discovery.",
                     "kpiNewUsers": "New Users Strip (15-20 words). Based on ${data.overview.newUsers} new users out of ${data.overview.users} total, comment on reach.",
                     "kpiPagesPerSession": "Content Depth Strip (15-20 words). Average ${(data.overview.pageViews / (data.overview.sessions || 1)).toFixed(2)} pages per session. Comment on how deep users explore your site.",
-                    "matrix": "Sessions Trend Summary (25-30 words). Analyze this 7-day trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({date: d.date, sessions: d.sessions})))}.",
+                    "matrix": "Sessions Trend Summary (25-30 words). Analyze this 7-day trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({ date: d.date, sessions: d.sessions })))}.",
                     "userType": "Loyalty Summary (25-30 words). Analyze the audience split: ${data.overview.newUsers} New vs ${data.overview.users - data.overview.newUsers} Returning users. Evaluate brand loyalty.",
-                    "retention": "Engagement Deep Dive (40-45 words). Analyze: ${(100 - data.overview.bounceRate).toFixed(1)}% engagement rate, ${data.overview.avgSessionDuration}s duration, and trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({date: d.date, bounce: d.bounceRate})))}.",
-                    "trendBounce": "Bounce Trend (25-30 words). Interpret daily bounce changes from this trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({date: d.date, bounce: d.bounceRate})))}.",
-                    "trendVolume": "Traffic Patterns (25-30 words). Analyze daily fluctuations from this trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({date: d.date, views: d.pageViews})))}.",
+                    "retention": "Engagement Deep Dive (40-45 words). Analyze: ${(100 - data.overview.bounceRate).toFixed(1)}% engagement rate, ${data.overview.avgSessionDuration}s duration, and trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({ date: d.date, bounce: d.bounceRate })))}.",
+                    "trendBounce": "Bounce Trend (25-30 words). Interpret daily bounce changes from this trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({ date: d.date, bounce: d.bounceRate })))}.",
+                    "trendVolume": "Traffic Patterns (25-30 words). Analyze daily fluctuations from this trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({ date: d.date, views: d.pageViews })))}.",
                     "sources": "Traffic Channels (25-30 words). Analyze these top sources: ${JSON.stringify(data.traffic.slice(0, 3))}. Identify winners.",
                     "pages": "Content Performance (25-30 words). Analyze these top pages: ${JSON.stringify(data.pages.slice(0, 3))}. Suggest optimizations.",
                     "devices": "Device Experience (25-30 words). Analyze this split: ${data.breakdowns.devices.map(d => `${d.name}: ${d.value} sessions`).join(', ')}. Compare mobile vs desktop behavior.",
@@ -570,7 +609,7 @@ export const getGa4Summary = async (req, res) => {
                 const bounceDiff = data.overview.bounceRate - data.priorOverview.bounceRate;
 
                 return {
-                    kpiUsers: userDiff >= 0 
+                    kpiUsers: userDiff >= 0
                         ? `Great news! Active users grew to ${data.overview.users}. Your acquisition strategy is performing well.`
                         : `Active users are at ${data.overview.users}. Consider a quick campaign to boost your reach.`,
                     kpiSessions: sessDiff >= 0
@@ -589,7 +628,7 @@ export const getGa4Summary = async (req, res) => {
                     trendBounce: `Daily bounce trends are ${bounceDiff <= 0 ? 'improving steadily' : 'stabilizing'}. Keep a close watch for any unexpected spikes on your high-traffic pages and ensure that your technical performance remains fast and inviting for all users.`,
                     trendVolume: `Traffic patterns for your ${data.overview.pageViews} views are ${sessDiff >= 0 ? 'climbing consistently' : 'steady'}. Keep your top-performing content fresh and updated to ensure that your growing audience finds significant value every time they return to your site.`,
                     sources: `${data.traffic[0]?.source || data.traffic[0]?.channel || 'Direct'} is currently your #1 traffic source. Doubling down on your top-performing channels while testing one new acquisition strategy this month will yield the best long-term growth results for you.`,
-                    pages: `Your top page "${data.pages[0]?.path || '/'}" is performing ${userDiff >= 0 ? 'exceptionally well' : 'consistently'} right now. Consider adding a clear, friendly call-to-action here to convert this high volume of traffic into loyal brand subscribers.`,
+                    pages: `Your top page "${data.pages[0]?.path || '/'}" is performing ${userDiff >= 0 ? 'exceptionally well' : 'consistently'} right now. Consider adding a friendly call-to-action here to convert this high volume of traffic into loyal brand subscribers.`,
                     devices: `${data.breakdowns.devices[0]?.name || 'Mobile'} users are currently your biggest audience segment. Ensure your site experience is perfectly optimized for smaller screens with fast loading times and intuitive navigation to keep these visitors highly engaged.`,
                     geo: `Your brand is currently strongest in ${data.breakdowns.locations[0]?.name || 'your top region'}. Expanding your marketing reach to similar geographical areas could unlock significant new growth opportunities and help you build a truly global audience.`,
                     growth: `The overall trajectory for your ${data.overview.users} users is ${userDiff >= 0 ? 'positive' : 'stable'} and shows great potential. Keep scaling your winning campaigns and top content paths to ensure future success, as your current foundation is strong enough to support higher levels of global brand visibility.`
@@ -597,7 +636,40 @@ export const getGa4Summary = async (req, res) => {
             }
         };
 
-        result.intelligence = await generateGa4Intelligence(result);
+        // STEP: Strategic AI Intelligence for GA4
+        const device = req.query.device || 'all';
+
+        // Check if we have valid intelligence in DB
+        const existingAi = await AiIntelligence.findOne({
+            siteId,
+            platform: 'ga4',
+            startDate,
+            endDate,
+            device
+        });
+
+        const isAiValid = existingAi &&
+            existingAi.lastSyncedAtOnGeneration >= (syncMetadata?.lastSyncedAt || 0);
+
+        if (isAiValid) {
+            result.intelligence = existingAi.content;
+        } else {
+            result.intelligence = await generateGa4Intelligence(result);
+
+            // Save or Update in DB for persistent caching
+            if (siteId) {
+                await AiIntelligence.findOneAndUpdate(
+                    { siteId, platform: 'ga4', startDate, endDate, device },
+                    {
+                        userId,
+                        content: result.intelligence,
+                        lastSyncedAtOnGeneration: syncMetadata?.lastSyncedAt || new Date(),
+                        createdAt: new Date() // Refresh for TTL
+                    },
+                    { upsert: true }
+                );
+            }
+        }
 
         analyticsCache.set(cacheKey, result);
         res.status(200).json(result);
@@ -769,14 +841,14 @@ export const getGscSummary = async (req, res) => {
                     "totalQueries": "Search Queries Summary (10-12 words). Total unique queries are ${data.totalQueries}. Discuss the breadth of your search reach.",
                     "totalPages": "Total Pages Card (10-12 words). Analyze ${data.totalPages} ranking pages. Comment on the scope of your content visibility.",
                     "topPosition": "Top Position Strip (10-12 words). Analyze your best rank of #${data.topPosition?.toFixed(1)}. Comment on your highest achievement.",
-                    "searchPerformanceOverview": "Search Patterns (40-45 words). Analyze the clicks and impressions trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({date: d.date, clicks: d.clicks, impressions: d.impressions})))}.",
-                    "clickThroughRateTrend": "CTR Trend Chart (20-25 words). Analyze this 7-day CTR trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({date: d.date, ctr: (d.ctr * 100).toFixed(2) + '%'})))}. Comment on the engagement trajectory.",
-                    "averageRankingPosition": "Position Trend Chart (20-25 words). Analyze this 7-day ranking trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({date: d.date, pos: d.position.toFixed(1)})))}. Identify if you are climbing or slipping.",
+                    "searchPerformanceOverview": "Search Patterns (40-45 words). Analyze the clicks and impressions trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({ date: d.date, clicks: d.clicks, impressions: d.impressions })))}.",
+                    "clickThroughRateTrend": "CTR Trend Chart (20-25 words). Analyze this 7-day CTR trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({ date: d.date, ctr: (d.ctr * 100).toFixed(2) + '%' })))}. Comment on the engagement trajectory.",
+                    "averageRankingPosition": "Position Trend Chart (20-25 words). Analyze this 7-day ranking trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({ date: d.date, pos: d.position.toFixed(1) })))}. Identify if you are climbing or slipping.",
                     "lowCTRKeywords": "CTR Opportunities (20-25 words). Analyze these low-CTR high-visibility keywords: ${JSON.stringify(data.queries.filter(q => q.impressions > 50 && q.ctr < 0.05).slice(0, 3).map(q => q.query))}. Suggest quick fixes.",
                     "keywordsNearPage1": "Close to Page 1 (20-25 words). Analyze these keywords ranking 8-20: ${JSON.stringify(data.queries.filter(q => q.position >= 8 && q.position <= 20).slice(0, 3).map(q => q.query))}. Suggest a push strategy.",
                     "topQueries": "Top Queries analysis (20-25 words). Analyze these top keywords: ${JSON.stringify(data.queries.slice(0, 3).map(q => q.query))}. Identify keyword winners.",
                     "topLandingPages": "Top Pages analysis (20-25 words). Analyze these top landing pages: ${JSON.stringify(data.pages.slice(0, 3).map(p => p.page))}. Suggest content optimizations.",
-                    "dailyImpressionVolume": "Impression Volume Chart (40-45 words). Analyze this 7-day visibility trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({date: d.date, impr: d.impressions})))}. Comment on search reach density.",
+                    "dailyImpressionVolume": "Impression Volume Chart (40-45 words). Analyze this 7-day visibility trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({ date: d.date, impr: d.impressions })))}. Comment on search reach density.",
                     "periodComparison": "Master GSC Growth Report (40-45 words). Comprehensive comparison of current vs prior: Clicks (${data.overview.clicks} vs ${data.priorOverview.clicks}), Impressions (${data.overview.impressions} vs ${data.priorOverview.impressions}), CTR (${(data.overview.ctr * 100).toFixed(2)}% vs ${(data.priorOverview.ctr * 100).toFixed(2)}%), Position (#${data.overview.position?.toFixed(1)} vs #${data.priorOverview.position?.toFixed(1)}). Summarize overall SEO trajectory."
                   }
 
@@ -795,7 +867,7 @@ export const getGscSummary = async (req, res) => {
                 const posDiff = data.overview.position - data.priorOverview.position; // Lower is better
 
                 return {
-                    searchClicks: clickDiff >= 0 
+                    searchClicks: clickDiff >= 0
                         ? `Search clicks grew to ${data.overview.clicks}. Your content attracts interest.`
                         : `Clicks are at ${data.overview.clicks}. Update title tags to boost CTR.`,
                     impressions: impDiff >= 0
@@ -821,7 +893,40 @@ export const getGscSummary = async (req, res) => {
             }
         };
 
-        result.intelligence = await generateGscIntelligence(result);
+        // STEP: Strategic AI Intelligence for GSC
+        const device = req.query.device || 'all';
+
+        // Check if we have valid intelligence in DB
+        const existingAi = await AiIntelligence.findOne({
+            siteId,
+            platform: 'gsc',
+            startDate,
+            endDate,
+            device
+        });
+
+        const isAiValid = existingAi &&
+            existingAi.lastSyncedAtOnGeneration >= (syncMetadata?.lastSyncedAt || 0);
+
+        if (isAiValid) {
+            result.intelligence = existingAi.content;
+        } else {
+            result.intelligence = await generateGscIntelligence(result);
+
+            // Save or Update in DB for persistent caching
+            if (siteId) {
+                await AiIntelligence.findOneAndUpdate(
+                    { siteId, platform: 'gsc', startDate, endDate, device },
+                    {
+                        userId,
+                        content: result.intelligence,
+                        lastSyncedAtOnGeneration: syncMetadata?.lastSyncedAt || new Date(),
+                        createdAt: new Date() // Refresh for TTL
+                    },
+                    { upsert: true }
+                );
+            }
+        }
 
         analyticsCache.set(cacheKey, result);
         res.status(200).json(result);
