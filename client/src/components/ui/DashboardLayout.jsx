@@ -439,13 +439,20 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
                             <span>Settings</span>
                         </NavLink>
                         
-                        <button
-                            onClick={() => window.open('https://rankpilot.ai/docs', '_blank')}
-                            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800/50 transition-all group"
+                        <NavLink
+                            to="/dashboard/support"
+                            onClick={() => setIsSidebarOpen(false)}
+                            className={({ isActive }) => `
+                                flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all group
+                                ${isActive
+                                    ? 'bg-neutral-100 dark:bg-neutral-800 text-brand-600 dark:text-brand-400'
+                                    : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800/50 transition-all'
+                                }
+                            `}
                         >
                             <img src="https://img.icons8.com/fluency/48/help.png" className="w-4 h-4 object-contain group-hover:scale-110 transition-transform" alt="Help" />
                             <span>Help & Support</span>
-                        </button>
+                        </NavLink>
                     </div>
                 </div>
             </aside>

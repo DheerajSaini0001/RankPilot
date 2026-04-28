@@ -80,20 +80,52 @@ export const fetchPlatformData = async (userId, startDate, endDate, siteId, acti
     data.comparisonRange = { startDate: prevStartStr, endDate: prevEndStr };
 
     const sourceConfigs = [
-        { key: 'ga4', model: Ga4Metric, id: userAcc.ga4PropertyId, metrics: ['users', 'sessions', 'pageViews', 'revenue', 'transactions', 'engagementRate', 'bounceRate'], type: 'analytics' },
-        { key: 'gsc', model: GscMetric, id: userAcc.gscSiteUrl, metrics: ['clicks', 'impressions', 'position', 'ctr'], type: 'search' },
-        { key: 'google-ads', model: GoogleAdsMetric, id: userAcc.googleAdsCustomerId, metrics: ['spend', 'clicks', 'conversions', 'conversionValue', 'ctr'], type: 'ads' },
-        { key: 'facebook-ads', model: FacebookAdsMetric, id: userAcc.facebookAdAccountId, metrics: ['spend', 'clicks', 'conversions', 'ctr'], type: 'ads' }
+        { 
+            key: 'ga4', 
+            model: Ga4Metric, 
+            id: userAcc.ga4PropertyId, 
+            metrics: ['users', 'newUsers', 'sessions', 'engagedSessions', 'pageViews', 'avgSessionDuration', 'engagementRate', 'bounceRate', 'revenue', 'transactions', 'conversions'], 
+            type: 'analytics' 
+        },
+        { 
+            key: 'gsc', 
+            model: GscMetric, 
+            id: userAcc.gscSiteUrl, 
+            metrics: ['clicks', 'impressions', 'position', 'ctr'], 
+            type: 'search' 
+        },
+        { 
+            key: 'google-ads', 
+            model: GoogleAdsMetric, 
+            id: userAcc.googleAdsCustomerId, 
+            metrics: ['spend', 'impressions', 'clicks', 'conversions', 'conversionValue', 'allConversions', 'viewThroughConversions', 'searchImpressionShare', 'cpc', 'ctr', 'cpm'], 
+            type: 'ads' 
+        },
+        { 
+            key: 'facebook-ads', 
+            model: FacebookAdsMetric, 
+            id: userAcc.facebookAdAccountId, 
+            metrics: ['spend', 'impressions', 'clicks', 'reach', 'conversions', 'purchase_value', 'landing_page_views', 'link_clicks', 'frequency', 'engagement', 'cpc', 'cpm', 'ctr'], 
+            type: 'ads' 
+        }
     ].filter(s => s.id && (normalizedActiveSources.length === 0 || normalizedActiveSources.includes(s.key)));
 
     const results = {
         totals: [],
         dailyBreakdown: [],
         topQueries: [],
+        topGscPages: [],
         topPages: [],
+        topPageTitles: [],
+        topLandingPages: [],
         topCampaigns: [],
+        topAdGroups: [],
+        topAdsets: [],
         topDevices: [],
-        topChannels: []
+        topChannels: [],
+        topSources: [],
+        topCountries: [],
+        topNetworks: []
     };
 
     const aggTasks = sourceConfigs.map(async (config) => {
@@ -105,7 +137,7 @@ export const fetchPlatformData = async (userId, startDate, endDate, siteId, acti
             {
                 $group: {
                     _id: { period: { $cond: [{ $gte: ['$date', currentStart] }, 'current', 'previous'] } },
-                    ...Object.fromEntries(config.metrics.map(m => [m, ['position', 'ctr', 'bounceRate', 'avgSessionDuration', 'engagementRate'].includes(m) ? { $avg: `$metrics.${m}` } : { $sum: `$metrics.${m}` }])),
+                    ...Object.fromEntries(config.metrics.map(m => [m, ['position', 'ctr', 'bounceRate', 'avgSessionDuration', 'engagementRate', 'cpc', 'cpm', 'frequency', 'searchImpressionShare'].includes(m) ? { $avg: `$metrics.${m}` } : { $sum: `$metrics.${m}` }])),
                     count: { $sum: 1 }
                 }
             }
@@ -122,7 +154,7 @@ export const fetchPlatformData = async (userId, startDate, endDate, siteId, acti
             {
                 $group: {
                     _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
-                    ...Object.fromEntries(config.metrics.map(m => [m, ['position', 'ctr', 'bounceRate', 'avgSessionDuration', 'engagementRate'].includes(m) ? { $avg: `$metrics.${m}` } : { $sum: `$metrics.${m}` }]))
+                    ...Object.fromEntries(config.metrics.map(m => [m, ['position', 'ctr', 'bounceRate', 'avgSessionDuration', 'engagementRate', 'cpc', 'cpm', 'frequency', 'searchImpressionShare'].includes(m) ? { $avg: `$metrics.${m}` } : { $sum: `$metrics.${m}` }]))
                 }
             },
             { $sort: { _id: 1 } }
@@ -137,35 +169,149 @@ export const fetchPlatformData = async (userId, startDate, endDate, siteId, acti
         if (config.key === 'gsc') {
             const q = await GscMetric.aggregate([
                 { $match: { 'metadata.platformAccountId': config.id, date: { $gte: currentStart, $lte: currentEnd } } },
-                { $group: { _id: "$metadata.dimensions.query", clicks: { $sum: "$metrics.clicks" }, impressions: { $sum: "$metrics.impressions" }, position: { $avg: "$metrics.position" } } },
+                { $group: { 
+                    _id: "$metadata.dimensions.query", 
+                    clicks: { $sum: "$metrics.clicks" }, 
+                    impressions: { $sum: "$metrics.impressions" }, 
+                    position: { $avg: "$metrics.position" } 
+                } },
                 { $sort: { clicks: -1 } }, { $limit: 10 }
             ]);
-            results.topQueries = q.map(i => ({ name: i._id, clicks: i.clicks, impressions: i.impressions, ctr: i.impressions > 0 ? (i.clicks/i.impressions)*100 : 0, position: i.position }));
+            results.topQueries = q.map(i => ({ 
+                name: i._id, 
+                clicks: i.clicks, 
+                impressions: i.impressions, 
+                ctr: i.impressions > 0 ? ((i.clicks / i.impressions) * 100).toFixed(2) + '%' : "0.00%",
+                position: i.position.toFixed(1)
+            }));
+
+            const gscPages = await GscMetric.aggregate([
+                { $match: { 'metadata.platformAccountId': config.id, date: { $gte: currentStart, $lte: currentEnd } } },
+                { $group: { _id: "$metadata.dimensions.page", clicks: { $sum: "$metrics.clicks" }, impressions: { $sum: "$metrics.impressions" } } },
+                { $sort: { clicks: -1 } }, { $limit: 10 }
+            ]);
+            results.topGscPages = gscPages.map(i => ({ name: i._id, clicks: i.clicks, impressions: i.impressions }));
         }
 
         if (config.key === 'ga4') {
             const p = await Ga4Metric.aggregate([
                 { $match: { 'metadata.platformAccountId': config.id, date: { $gte: currentStart, $lte: currentEnd } } },
-                { $group: { _id: "$metadata.dimensions.pagePath", sessions: { $sum: "$metrics.sessions" }, pageViews: { $sum: "$metrics.pageViews" }, bounceRate: { $avg: "$metrics.bounceRate" } } },
+                { $group: { 
+                    _id: "$metadata.dimensions.pagePath", 
+                    sessions: { $sum: "$metrics.sessions" }, 
+                    pageViews: { $sum: "$metrics.pageViews" }, 
+                    engagedSessions: { $sum: "$metrics.engagedSessions" },
+                    bounceRate: { $avg: "$metrics.bounceRate" } 
+                } },
                 { $sort: { sessions: -1 } }, { $limit: 10 }
             ]);
-            results.topPages = p.map(i => ({ name: i._id, sessions: i.sessions, pageViews: i.pageViews, bounceRate: i.bounceRate }));
+            results.topPages = p.map(i => ({ 
+                name: i._id, 
+                sessions: i.sessions, 
+                pageViews: i.pageViews, 
+                bounceRate: i.bounceRate,
+                engagementRate: i.sessions > 0 ? ((i.engagedSessions / i.sessions) * 100).toFixed(1) : "0.0"
+            }));
 
             const c = await Ga4Metric.aggregate([
                 { $match: { 'metadata.platformAccountId': config.id, date: { $gte: currentStart, $lte: currentEnd } } },
-                { $group: { _id: "$metadata.dimensions.channel", value: { $sum: "$metrics.sessions" } } },
-                { $sort: { value: -1 } }
+                { $group: { 
+                    _id: "$metadata.dimensions.channel", 
+                    sessions: { $sum: "$metrics.sessions" },
+                    engagedSessions: { $sum: "$metrics.engagedSessions" }
+                } },
+                { $sort: { sessions: -1 } }
             ]);
-            results.topChannels = c.map(i => ({ name: i._id, value: i.value }));
+            results.topChannels = c.map(i => ({ 
+                name: i._id, 
+                value: i.sessions, 
+                engagementRate: i.sessions > 0 ? ((i.engagedSessions / i.sessions) * 100).toFixed(1) : "0.0"
+            }));
+
+            const countries = await Ga4Metric.aggregate([
+                { $match: { 'metadata.platformAccountId': config.id, date: { $gte: currentStart, $lte: currentEnd } } },
+                { $group: { _id: "$metadata.dimensions.country", value: { $sum: "$metrics.sessions" } } },
+                { $sort: { value: -1 } }, { $limit: 10 }
+            ]);
+            results.topCountries = countries.map(i => ({ name: i._id, value: i.value }));
+
+            const lp = await Ga4Metric.aggregate([
+                { $match: { 'metadata.platformAccountId': config.id, date: { $gte: currentStart, $lte: currentEnd } } },
+                { $group: { _id: "$metadata.dimensions.landingPage", sessions: { $sum: "$metrics.sessions" }, engagementRate: { $avg: "$metrics.engagementRate" } } },
+                { $sort: { sessions: -1 } }, { $limit: 10 }
+            ]);
+            results.topLandingPages = lp.map(i => ({ name: i._id, sessions: i.sessions, engagementRate: (i.engagementRate || 0).toFixed(2) }));
+
+            const sources = await Ga4Metric.aggregate([
+                { $match: { 'metadata.platformAccountId': config.id, date: { $gte: currentStart, $lte: currentEnd } } },
+                { $group: { _id: "$metadata.dimensions.source", value: { $sum: "$metrics.sessions" } } },
+                { $sort: { value: -1 } }, { $limit: 10 }
+            ]);
+            results.topSources = sources.map(i => ({ name: i._id, value: i.value }));
+
+            const titles = await Ga4Metric.aggregate([
+                { $match: { 'metadata.platformAccountId': config.id, date: { $gte: currentStart, $lte: currentEnd } } },
+                { $group: { _id: "$metadata.dimensions.pageTitle", value: { $sum: "$metrics.sessions" } } },
+                { $sort: { value: -1 } }, { $limit: 10 }
+            ]);
+            results.topPageTitles = titles.map(i => ({ name: i._id, value: i.value }));
         }
 
         if (config.type === 'ads') {
             const camp = await config.model.aggregate([
                 { $match: { 'metadata.platformAccountId': config.id, date: { $gte: currentStart, $lte: currentEnd } } },
-                { $group: { _id: "$metadata.dimensions.campaign", value: { $sum: "$metrics.spend" }, conversions: { $sum: "$metrics.conversions" } } },
-                { $sort: { value: -1 } }, { $limit: 10 }
+                { $group: { 
+                    _id: "$metadata.dimensions.campaign", 
+                    spend: { $sum: "$metrics.spend" }, 
+                    clicks: { $sum: "$metrics.clicks" },
+                    impressions: { $sum: "$metrics.impressions" },
+                    conversions: { $sum: "$metrics.conversions" },
+                    conversionValue: { $sum: config.key === 'ga4' ? 0 : (config.key === 'google-ads' ? "$metrics.conversionValue" : "$metrics.purchase_value") }
+                } },
+                { $sort: { spend: -1 } }, { $limit: 10 }
             ]);
-            results.topCampaigns.push(...camp.map(i => ({ name: i._id, value: i.value, conversions: i.conversions, source: config.key })));
+            results.topCampaigns.push(...camp.map(i => ({ 
+                name: i._id, 
+                spend: i.spend.toFixed(2), 
+                clicks: i.clicks,
+                impressions: i.impressions,
+                conversions: i.conversions,
+                status: config.key === 'google-ads' ? i.status : 'active',
+                cpc: i.clicks > 0 ? (i.spend / i.clicks).toFixed(2) : "0.00",
+                ctr: i.impressions > 0 ? ((i.clicks / i.impressions) * 100).toFixed(2) + '%' : "0.00%",
+                roas: i.spend > 0 ? (i.conversionValue / i.spend).toFixed(2) + 'x' : "0.00x",
+                source: config.key 
+            })));
+
+            if (config.key === 'google-ads') {
+                const ag = await config.model.aggregate([
+                    { $match: { 'metadata.platformAccountId': config.id, date: { $gte: currentStart, $lte: currentEnd } } },
+                    { $group: { 
+                        _id: "$metadata.dimensions.adGroup", 
+                        spend: { $sum: "$metrics.spend" }, 
+                        conversions: { $sum: "$metrics.conversions" },
+                        status: { $first: "$metadata.dimensions.adGroupStatus" } 
+                    } },
+                    { $sort: { spend: -1 } }, { $limit: 10 }
+                ]);
+                results.topAdGroups = ag.map(i => ({ name: i._id, spend: i.spend.toFixed(2), conversions: i.conversions, status: i.status }));
+
+                const net = await config.model.aggregate([
+                    { $match: { 'metadata.platformAccountId': config.id, date: { $gte: currentStart, $lte: currentEnd } } },
+                    { $group: { _id: "$metadata.dimensions.network", value: { $sum: "$metrics.spend" } } },
+                    { $sort: { value: -1 } }
+                ]);
+                results.topNetworks = net.map(i => ({ name: i._id, value: i.value.toFixed(2) }));
+            }
+
+            if (config.key === 'facebook-ads') {
+                const as = await config.model.aggregate([
+                    { $match: { 'metadata.platformAccountId': config.id, date: { $gte: currentStart, $lte: currentEnd } } },
+                    { $group: { _id: "$metadata.dimensions.adset", spend: { $sum: "$metrics.spend" }, conversions: { $sum: "$metrics.conversions" } } },
+                    { $sort: { spend: -1 } }, { $limit: 10 }
+                ]);
+                results.topAdsets = as.map(i => ({ name: i._id, spend: i.spend.toFixed(2), conversions: i.conversions }));
+            }
         }
 
         if (config.key !== 'gsc') {
@@ -202,11 +348,19 @@ export const fetchPlatformData = async (userId, startDate, endDate, siteId, acti
     });
 
     data.topDimensions = {
-        queries: results.topQueries.map(q => ({ ...q, ctr: q.ctr.toFixed(2), position: q.position.toFixed(1) })),
-        pages: results.topPages.map(p => ({ ...p, bounceRate: p.bounceRate.toFixed(2) })),
+        queries: results.topQueries,
+        gscPages: results.topGscPages,
+        pages: results.topPages,
+        pageTitles: results.topPageTitles,
+        landingPages: results.topLandingPages,
         campaigns: results.topCampaigns,
+        adGroups: results.topAdGroups,
+        adsets: results.topAdsets,
         devices: results.topDevices,
-        channels: results.topChannels
+        channels: results.topChannels,
+        sources: results.topSources,
+        countries: results.topCountries,
+        networks: results.topNetworks
     };
 
     // Build Platform Specific Totals
@@ -215,12 +369,16 @@ export const fetchPlatformData = async (userId, startDate, endDate, siteId, acti
         const prev = sourceTotals.previous['ga4'] || {};
         data.ga4 = {
             users: Math.round(curr.users || 0), usersGrowth: getGrowth(curr.users, prev.users),
+            newUsers: Math.round(curr.newUsers || 0), newUsersGrowth: getGrowth(curr.newUsers, prev.newUsers),
             sessions: Math.round(curr.sessions || 0), sessionsGrowth: getGrowth(curr.sessions, prev.sessions),
-            pageViews: Math.round(curr.pageViews || 0),
+            engagedSessions: Math.round(curr.engagedSessions || 0),
+            pageViews: Math.round(curr.pageViews || 0), pageViewsGrowth: getGrowth(curr.pageViews, prev.pageViews),
+            avgSessionDuration: (curr.avgSessionDuration || 0).toFixed(1) + 's',
+            engagementRate: (curr.engagementRate || 0).toFixed(2),
+            bounceRate: (curr.bounceRate || 0).toFixed(2),
             revenue: (curr.revenue || 0).toFixed(2), revenueGrowth: getGrowth(curr.revenue, prev.revenue),
             transactions: curr.transactions || 0,
-            engagementRate: (curr.engagementRate || 0).toFixed(2),
-            bounceRate: (curr.bounceRate || 0).toFixed(2)
+            conversions: curr.conversions || 0
         };
     }
     if (sourceTotals.current['gsc']) {
@@ -229,7 +387,8 @@ export const fetchPlatformData = async (userId, startDate, endDate, siteId, acti
         data.gsc = {
             clicks: curr.clicks || 0, clicksGrowth: getGrowth(curr.clicks, prev.clicks),
             impressions: curr.impressions || 0, impressionsGrowth: getGrowth(curr.impressions, prev.impressions),
-            position: (curr.position || 0).toFixed(1), ctr: (curr.ctr || 0).toFixed(2)
+            position: (curr.position || 0).toFixed(1), 
+            ctr: (curr.ctr || 0).toFixed(2)
         };
     }
     if (sourceTotals.current['google-ads']) {
@@ -237,9 +396,16 @@ export const fetchPlatformData = async (userId, startDate, endDate, siteId, acti
         const prev = sourceTotals.previous['google-ads'] || {};
         data.googleAds = {
             spend: (curr.spend || 0).toFixed(2), spendGrowth: getGrowth(curr.spend, prev.spend),
+            impressions: curr.impressions || 0, impressionsGrowth: getGrowth(curr.impressions, prev.impressions),
             clicks: curr.clicks || 0, clicksGrowth: getGrowth(curr.clicks, prev.clicks),
             conversions: curr.conversions || 0, conversionsGrowth: getGrowth(curr.conversions, prev.conversions),
-            ctr: (curr.ctr || 0).toFixed(2)
+            conversionValue: (curr.conversionValue || 0).toFixed(2),
+            allConversions: curr.allConversions || 0,
+            viewThroughConversions: curr.viewThroughConversions || 0,
+            searchImpressionShare: (curr.searchImpressionShare || 0).toFixed(2) + '%',
+            ctr: (curr.ctr || 0).toFixed(2) + '%',
+            cpc: (curr.cpc || 0).toFixed(2),
+            cpm: (curr.cpm || 0).toFixed(2)
         };
     }
     if (sourceTotals.current['facebook-ads']) {
@@ -247,9 +413,18 @@ export const fetchPlatformData = async (userId, startDate, endDate, siteId, acti
         const prev = sourceTotals.previous['facebook-ads'] || {};
         data.facebookAds = {
             spend: (curr.spend || 0).toFixed(2), spendGrowth: getGrowth(curr.spend, prev.spend),
+            impressions: curr.impressions || 0, impressionsGrowth: getGrowth(curr.impressions, prev.impressions),
+            reach: curr.reach || 0, reachGrowth: getGrowth(curr.reach, prev.reach),
             clicks: curr.clicks || 0, clicksGrowth: getGrowth(curr.clicks, prev.clicks),
             conversions: curr.conversions || 0, conversionsGrowth: getGrowth(curr.conversions, prev.conversions),
-            ctr: (curr.ctr || 0).toFixed(2)
+            purchaseValue: (curr.purchase_value || 0).toFixed(2),
+            landingPageViews: curr.landing_page_views || 0,
+            linkClicks: curr.link_clicks || 0,
+            frequency: (curr.frequency || 0).toFixed(2),
+            engagement: curr.engagement || 0,
+            ctr: (curr.ctr || 0).toFixed(2) + '%',
+            cpc: (curr.cpc || 0).toFixed(2),
+            cpm: (curr.cpm || 0).toFixed(2)
         };
     }
 

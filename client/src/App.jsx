@@ -20,6 +20,7 @@ import GoogleAdsPage from './pages/GoogleAdsPage';
 import FacebookAdsPage from './pages/FacebookAdsPage';
 import SitesPage from './pages/SitesPage';
 import AboutPage from './pages/AboutPage';
+import SupportPage from './pages/SupportPage';
 import { ProtectedRoute, AuthRoute, AdminRoute } from './components/ui/RouteWrappers';
 import { getMe } from './api/authApi';
 import { useAuthStore } from './store/authStore';
@@ -160,6 +161,12 @@ const App = () => {
         <Route path="/settings" element={
           <ProtectedRoute>
             <SettingsPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/dashboard/support" element={
+          <ProtectedRoute>
+            <SupportPage />
           </ProtectedRoute>
         } />
 

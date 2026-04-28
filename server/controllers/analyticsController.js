@@ -856,7 +856,7 @@ export const getGscSummary = async (req, res) => {
                   1. Maintain a high-quality "SEO Coach" persona.
                   2. Use "you" and "your" to refer to the user's data.
                   3. Combine a clear SUMMARY with a friendly STRATEGIC INSIGHT.
-                  4. Strictly follow the word limits. NEVER include word counts or bracketed limits like "(25 words)" in your response.
+                  4. NEVER include word counts, bracketed hints, or text like "(10 words)" in your response. Return ONLY the insight text.
                 `;
                 const aiRes = await callGemini(prompt, [], "Respond ONLY with JSON.");
                 return JSON.parse(aiRes.content.replace(/```json|```/g, '').trim());
