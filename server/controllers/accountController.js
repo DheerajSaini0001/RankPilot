@@ -230,24 +230,48 @@ export const selectAccounts = async (req, res) => {
 
         if (hasChanged('ga4PropertyId', existingAccount?.ga4PropertyId)) {
             if (existingAccount?.ga4PropertyId) cleanupMetrics(req.user._id, existingAccount.ga4PropertyId);
+            // Reset flags for the new integration
+            await UserAccounts.findByIdAndUpdate(account._id, { 
+                ga4HistoricalComplete: false, 
+                ga4SyncProgress: 0,
+                ga4HistoricalChunkIndex: 0
+            });
             if (updates.ga4PropertyId) {
                 addSyncJob('historical-sync', { accountId: account._id, accName: account.siteName, source: 'ga4' }, { priority: 20 }).catch(e => console.error('Queue GA4 Fail:', e));
             }
         }
         if (hasChanged('gscSiteUrl', existingAccount?.gscSiteUrl)) {
             if (existingAccount?.gscSiteUrl) cleanupMetrics(req.user._id, existingAccount.gscSiteUrl);
+            // Reset flags for the new integration
+            await UserAccounts.findByIdAndUpdate(account._id, { 
+                gscHistoricalComplete: false, 
+                gscSyncProgress: 0,
+                gscHistoricalChunkIndex: 0
+            });
             if (updates.gscSiteUrl) {
                 addSyncJob('historical-sync', { accountId: account._id, accName: account.siteName, source: 'gsc' }, { priority: 20 }).catch(e => console.error('Queue GSC Fail:', e));
             }
         }
         if (hasChanged('googleAdsCustomerId', existingAccount?.googleAdsCustomerId)) {
             if (existingAccount?.googleAdsCustomerId) cleanupMetrics(req.user._id, existingAccount.googleAdsCustomerId);
+            // Reset flags for the new integration
+            await UserAccounts.findByIdAndUpdate(account._id, { 
+                googleAdsHistoricalComplete: false, 
+                googleAdsSyncProgress: 0,
+                googleAdsHistoricalChunkIndex: 0
+            });
             if (updates.googleAdsCustomerId) {
                 addSyncJob('historical-sync', { accountId: account._id, accName: account.siteName, source: 'google-ads' }, { priority: 20 }).catch(e => console.error('Queue Google Ads Fail:', e));
             }
         }
         if (hasChanged('facebookAdAccountId', existingAccount?.facebookAdAccountId)) {
             if (existingAccount?.facebookAdAccountId) cleanupMetrics(req.user._id, existingAccount.facebookAdAccountId);
+            // Reset flags for the new integration
+            await UserAccounts.findByIdAndUpdate(account._id, { 
+                facebookAdsHistoricalComplete: false, 
+                facebookAdsSyncProgress: 0,
+                facebookAdsHistoricalChunkIndex: 0
+            });
             if (updates.facebookAdAccountId) {
                 addSyncJob('historical-sync', { accountId: account._id, accName: account.siteName, source: 'facebook-ads' }, { priority: 20 }).catch(e => console.error('Queue Facebook Ads Fail:', e));
             }
