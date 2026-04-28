@@ -9,6 +9,7 @@ import FacebookAdsMetric from '../models/FacebookAdsMetric.js';
 import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
 import WeeklyInsight from '../models/WeeklyInsight.js';
+import SuggestedQuestions from '../models/SuggestedQuestions.js';
 import User from '../models/User.js';
 import Notification from '../models/Notification.js';
 import { listProperties } from '../services/ga4Service.js';
@@ -75,8 +76,9 @@ async function performSiteDelete(userId, siteId, account = null) {
         await Conversation.deleteMany({ _id: { $in: convIds } });
     }
 
-    // 3. Delete weekly insights and notifications
+    // 3. Delete weekly insights, suggested questions, and notifications
     await WeeklyInsight.deleteMany({ siteId, userId });
+    await SuggestedQuestions.deleteMany({ siteId, userId });
     await Notification.deleteMany({ siteId, userId });
 
     // 4. Delete all metrics associated with this specific site strictly by siteId

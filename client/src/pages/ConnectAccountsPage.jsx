@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/ui/DashboardLayout';
 import Button from '../components/ui/Button';
@@ -96,7 +97,11 @@ const ConnectAccountsPage = () => {
                             fbAds: active.data.facebookAdAccountId || '',
                             facebookTokenId: active.data.facebookTokenId?._id || active.data.facebookTokenId || '',
                             facebookAdsSyncStatus: active.data.facebookAdsSyncStatus || 'idle',
-                            facebookAdsHistoricalComplete: active.data.facebookAdsHistoricalComplete
+                            facebookAdsHistoricalComplete: active.data.facebookAdsHistoricalComplete,
+                            ga4LastSyncedAt: active.data.ga4LastSyncedAt,
+                            gscLastSyncedAt: active.data.gscLastSyncedAt,
+                            googleAdsLastSyncedAt: active.data.googleAdsLastSyncedAt,
+                            facebookAdsLastSyncedAt: active.data.facebookAdsLastSyncedAt
                         };
                         setInitialValues(vals);
                         if (vals.siteName) setSiteName(vals.siteName);
@@ -231,9 +236,15 @@ const ConnectAccountsPage = () => {
                 activeGoogleAdsCustomerId: updatedAccount.googleAdsCustomerId || '',
                 activeFacebookAdAccountId: updatedAccount.facebookAdAccountId || '',
                 syncMetadata: {
-                    isHistoricalSyncComplete: updatedAccount.isHistoricalSyncComplete || false,
-                    lastDailySyncAt: updatedAccount.lastDailySyncAt || null,
-                    syncStatus: updatedAccount.syncStatus || 'idle'
+                    ga4HistoricalComplete: updatedAccount.ga4HistoricalComplete || false,
+                    gscHistoricalComplete: updatedAccount.gscHistoricalComplete || false,
+                    googleAdsHistoricalComplete: updatedAccount.googleAdsHistoricalComplete || false,
+                    facebookAdsHistoricalComplete: updatedAccount.facebookAdsHistoricalComplete || false,
+                    syncStatus: updatedAccount.syncStatus || 'idle',
+                    ga4LastSyncedAt: updatedAccount.ga4LastSyncedAt || null,
+                    gscLastSyncedAt: updatedAccount.gscLastSyncedAt || null,
+                    googleAdsLastSyncedAt: updatedAccount.googleAdsLastSyncedAt || null,
+                    facebookAdsLastSyncedAt: updatedAccount.facebookAdsLastSyncedAt || null
                 }
             });
 
@@ -349,6 +360,8 @@ const ConnectAccountsPage = () => {
                               </div>
                             </div>
 
+
+
                             {!connectedSources.includes('google') && (
                               <Button
                                 onClick={() => window.location.href = getApiUrl(`/auth/google?token=${encodeURIComponent(token)}`)}
@@ -429,6 +442,15 @@ const ConnectAccountsPage = () => {
                                          {ga4Props.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                        </select>
                                    </div>
+
+                                   {isGa4Connected && initialValues.ga4LastSyncedAt && (
+                                     <div className="pt-1 flex items-center gap-1 opacity-70">
+                                       <svg className="w-2.5 h-2.5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                       </svg>
+                                       <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-tighter">Synced {formatDistanceToNow(new Date(initialValues.ga4LastSyncedAt), { addSuffix: true })}</span>
+                                     </div>
+                                   )}
                                  </div>
 
                                  {/* GSC */}
@@ -486,6 +508,15 @@ const ConnectAccountsPage = () => {
                                          {gscSites.map(s => <option key={s.siteUrl} value={s.siteUrl}>{s.siteUrl}</option>)}
                                        </select>
                                    </div>
+
+                                   {isGscConnected && initialValues.gscLastSyncedAt && (
+                                     <div className="pt-1 flex items-center gap-1 opacity-70">
+                                       <svg className="w-2.5 h-2.5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                       </svg>
+                                       <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-tighter">Synced {formatDistanceToNow(new Date(initialValues.gscLastSyncedAt), { addSuffix: true })}</span>
+                                     </div>
+                                   )}
                                  </div>
 
                                  {/* Google Ads */}
@@ -545,6 +576,15 @@ const ConnectAccountsPage = () => {
                                          </select>
                                       </div>
                                    </div>
+
+                                   {isGAdsConnected && initialValues.googleAdsLastSyncedAt && (
+                                     <div className="pt-1 flex items-center gap-1 opacity-70">
+                                       <svg className="w-2.5 h-2.5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                       </svg>
+                                       <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-tighter">Synced {formatDistanceToNow(new Date(initialValues.googleAdsLastSyncedAt), { addSuffix: true })}</span>
+                                     </div>
+                                   )}
                                  </div>
                               </div>
                             </div>
@@ -657,6 +697,15 @@ const ConnectAccountsPage = () => {
                                    </select>
                                 </div>
                               </div>
+
+                              {isFbAdsConnected && initialValues.facebookAdsLastSyncedAt && (
+                                <div className="pt-2 flex items-center gap-1 opacity-70">
+                                  <svg className="w-2.5 h-2.5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-tighter">Synced {formatDistanceToNow(new Date(initialValues.facebookAdsLastSyncedAt), { addSuffix: true })}</span>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -668,9 +717,9 @@ const ConnectAccountsPage = () => {
                           </p>
                           <div className="flex items-center gap-3 w-full sm:w-auto">
                             <Button
-                              variant="secondary"
-                              onClick={() => navigate('/sites')}
-                              className="flex-1 sm:flex-none px-6 py-2.5 text-sm"
+                                variant="secondary"
+                                onClick={() => navigate('/sites')}
+                                className="flex-1 sm:flex-none px-6 py-2.5 text-sm"
                             >
                               Cancel
                             </Button>

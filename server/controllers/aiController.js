@@ -4,6 +4,7 @@ import { createNotification } from '../utils/notification.js';
 import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
 import WeeklyInsight from '../models/WeeklyInsight.js';
+import SuggestedQuestions from '../models/SuggestedQuestions.js';
 import UserAccounts from '../models/UserAccounts.js';
 import Ga4Metric from '../models/Ga4Metric.js';
 import GscMetric from '../models/GscMetric.js';
@@ -428,7 +429,7 @@ export const deleteConversation = async (req, res) => {
 
 export const getWeeklyInsight = async (req, res) => {
     const { siteId } = req.query;
-    const query = siteId ? { userId: req.user._id, siteId, expiresAt: { $gt: new Date() } } : { userId: req.user._id, expiresAt: { $gt: new Date() } };
+    const query = siteId ? { userId: req.user._id, siteId } : { userId: req.user._id };
     const insight = await WeeklyInsight.findOne(query);
     if (insight) return res.status(200).json(insight);
 
@@ -478,16 +479,12 @@ export const generateWeeklyInsightInternal = async (userId, siteId) => {
             .replace(/(\r?\n)*.*response is advisory only.*/gi, '')
             .trim();
 
-        // Discovered sources (optional logic if you want to track which sources AI used)
-        // For simplicity, we just save the general result
-        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
         const insight = await WeeklyInsight.findOneAndUpdate(
             { userId: userId, siteId: siteId || null },
-            { content: finalContent, expiresAt },
+            { content: finalContent },
             { upsert: true, returnDocument: 'after' }
         );
 
-        // Notify user
         await createNotification(userId, {
             type: 'info',
             title: 'Weekly AI Insight Ready',
@@ -580,12 +577,13 @@ export const generateSuggestedQuestionsInternal = async (userId, siteId) => {
         }
 
         // Save to DB
-        await UserAccounts.findOneAndUpdate(
-            { _id: siteId, userId },
+        await SuggestedQuestions.findOneAndUpdate(
+            { siteId, userId },
             { 
-                suggestedQuestions: questions, 
-                suggestedQuestionsUpdatedAt: new Date() 
-            }
+                questions: questions, 
+                createdAt: new Date() 
+            },
+            { upsert: true }
         );
 
         return questions;
@@ -600,16 +598,10 @@ export const getSuggestedQuestions = async (req, res) => {
     const userId = req.user._id;
 
     try {
-        const userAcc = await UserAccounts.findOne({ _id: siteId, userId });
+        const cached = await SuggestedQuestions.findOne({ siteId, userId });
         
-        if (userAcc && userAcc.suggestedQuestions && userAcc.suggestedQuestions.length > 0) {
-            // Check if updated in the last 24 hours
-            const yesterday = new Date();
-            yesterday.setHours(yesterday.getHours() - 24);
-            
-            if (userAcc.suggestedQuestionsUpdatedAt && userAcc.suggestedQuestionsUpdatedAt > yesterday) {
-                return res.status(200).json({ questions: userAcc.suggestedQuestions });
-            }
+        if (cached && cached.questions && cached.questions.length > 0) {
+            return res.status(200).json({ questions: cached.questions });
         }
 
         // Generate and save (if not found or stale)

@@ -57,7 +57,7 @@ export const getDashboardSummary = async (req, res) => {
         };
 
         const acc = await UserAccounts.findOne({ _id: siteId, userId })
-            .select('siteName lastDailySyncAt syncStatus isHistoricalSyncComplete ga4PropertyId gscSiteUrl googleAdsCustomerId facebookAdAccountId');
+            .select('siteName syncStatus ga4HistoricalComplete gscHistoricalComplete googleAdsHistoricalComplete facebookAdsHistoricalComplete ga4PropertyId gscSiteUrl googleAdsCustomerId facebookAdAccountId ga4LastSyncedAt gscLastSyncedAt googleAdsLastSyncedAt facebookAdsLastSyncedAt');
 
         const start = new Date(startDate);
         const end = new Date(endDate);
@@ -304,9 +304,15 @@ export const getDashboardSummary = async (req, res) => {
         const result = {
             userName: req.user?.displayName || 'User',
             siteName: acc?.siteName || 'Select Website',
-            lastDailySyncAt: acc?.lastDailySyncAt,
+            ga4LastSyncedAt: acc?.ga4LastSyncedAt,
+            gscLastSyncedAt: acc?.gscLastSyncedAt,
+            googleAdsLastSyncedAt: acc?.googleAdsLastSyncedAt,
+            facebookAdsLastSyncedAt: acc?.facebookAdsLastSyncedAt,
             syncStatus: acc?.syncStatus || 'idle',
-            isHistoricalSyncComplete: acc?.isHistoricalSyncComplete || false,
+            ga4HistoricalComplete: acc?.ga4HistoricalComplete || false,
+            gscHistoricalComplete: acc?.gscHistoricalComplete || false,
+            googleAdsHistoricalComplete: acc?.googleAdsHistoricalComplete || false,
+            facebookAdsHistoricalComplete: acc?.facebookAdsHistoricalComplete || false,
 
             ga4: {
                 ...ga,
@@ -385,13 +391,13 @@ export const getGa4Summary = async (req, res) => {
     try {
         let syncMetadata = null;
         if (siteId) {
-            const acc = await UserAccounts.findOne({ _id: siteId, userId }).select('siteName lastDailySyncAt syncStatus isHistoricalSyncComplete');
+            const acc = await UserAccounts.findOne({ _id: siteId, userId }).select('siteName ga4LastSyncedAt syncStatus ga4HistoricalComplete');
             if (acc) {
                 syncMetadata = {
                     siteName: acc.siteName,
-                    lastDailySyncAt: acc.lastDailySyncAt,
+                    lastSyncedAt: acc.ga4LastSyncedAt,
                     syncStatus: acc.syncStatus,
-                    isHistoricalSyncComplete: acc.isHistoricalSyncComplete
+                    ga4HistoricalComplete: acc.ga4HistoricalComplete
                 };
             }
         }
@@ -611,12 +617,12 @@ export const getGscSummary = async (req, res) => {
     try {
         let syncMetadata = null;
         if (siteId) {
-            const acc = await UserAccounts.findOne({ _id: siteId, userId }).select('lastDailySyncAt syncStatus isHistoricalSyncComplete');
+            const acc = await UserAccounts.findOne({ _id: siteId, userId }).select('gscLastSyncedAt syncStatus gscHistoricalComplete');
             if (acc) {
                 syncMetadata = {
-                    lastDailySyncAt: acc.lastDailySyncAt,
+                    lastSyncedAt: acc.gscLastSyncedAt,
                     syncStatus: acc.syncStatus,
-                    isHistoricalSyncComplete: acc.isHistoricalSyncComplete
+                    gscHistoricalComplete: acc.gscHistoricalComplete
                 };
             }
         }
@@ -836,12 +842,12 @@ export const getGoogleAdsSummary = async (req, res) => {
         // Fetch account metadata if siteId is provided
         let syncMetadata = null;
         if (siteId) {
-            const acc = await UserAccounts.findOne({ _id: siteId, userId }).select('lastDailySyncAt syncStatus isHistoricalSyncComplete');
+            const acc = await UserAccounts.findOne({ _id: siteId, userId }).select('googleAdsLastSyncedAt syncStatus googleAdsHistoricalComplete');
             if (acc) {
                 syncMetadata = {
-                    lastDailySyncAt: acc.lastDailySyncAt,
+                    lastSyncedAt: acc.googleAdsLastSyncedAt,
                     syncStatus: acc.syncStatus,
-                    isHistoricalSyncComplete: acc.isHistoricalSyncComplete
+                    googleAdsHistoricalComplete: acc.googleAdsHistoricalComplete
                 };
             }
         }
@@ -993,12 +999,12 @@ export const getFacebookAdsSummary = async (req, res) => {
         // Fetch account metadata if siteId is provided
         let syncMetadata = null;
         if (siteId) {
-            const acc = await UserAccounts.findOne({ _id: siteId, userId }).select('lastDailySyncAt syncStatus isHistoricalSyncComplete');
+            const acc = await UserAccounts.findOne({ _id: siteId, userId }).select('facebookAdsLastSyncedAt syncStatus facebookAdsHistoricalComplete');
             if (acc) {
                 syncMetadata = {
-                    lastDailySyncAt: acc.lastDailySyncAt,
+                    lastSyncedAt: acc.facebookAdsLastSyncedAt,
                     syncStatus: acc.syncStatus,
-                    isHistoricalSyncComplete: acc.isHistoricalSyncComplete
+                    facebookAdsHistoricalComplete: acc.facebookAdsHistoricalComplete
                 };
             }
         }
@@ -1161,7 +1167,15 @@ export const syncAccountData = async (req, res) => {
 
         // Check if sync was done very recently (e.g. within 30 minutes) to prevent abuse
         const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000);
-        if (acc.lastDailySyncAt && acc.lastDailySyncAt > thirtyMinsAgo && acc.syncStatus !== 'error') {
+        // Use the most recent platform sync as the check
+        const latestSync = Math.max(
+            new Date(acc.gscLastSyncedAt || 0),
+            new Date(acc.ga4LastSyncedAt || 0),
+            new Date(acc.googleAdsLastSyncedAt || 0),
+            new Date(acc.facebookAdsLastSyncedAt || 0)
+        );
+
+        if (latestSync > thirtyMinsAgo.getTime() && acc.syncStatus !== 'error') {
             return res.status(200).json({
                 success: true,
                 message: 'Data is already up to date (synced within last 30 minutes)',
@@ -1189,11 +1203,14 @@ export const syncAccountData = async (req, res) => {
 
         await Promise.all(syncTasks);
 
-        // Update status back to idle
-        await UserAccounts.findByIdAndUpdate(siteId, {
-            syncStatus: 'idle',
-            lastDailySyncAt: new Date()
-        });
+        // Update status back to idle and refresh platform timestamps
+        const updateFields = { syncStatus: 'idle' };
+        if (acc.gscSiteUrl) updateFields.gscLastSyncedAt = new Date();
+        if (acc.ga4PropertyId) updateFields.ga4LastSyncedAt = new Date();
+        if (acc.googleAdsCustomerId) updateFields.googleAdsLastSyncedAt = new Date();
+        if (acc.facebookAdAccountId) updateFields.facebookAdsLastSyncedAt = new Date();
+
+        await UserAccounts.findByIdAndUpdate(siteId, updateFields);
 
         // Clear cache for this user since data has changed
         clearUserCache(userId);

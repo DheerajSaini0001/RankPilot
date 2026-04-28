@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { formatDistanceToNow } from 'date-fns';
 
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/ui/DashboardLayout';
@@ -156,8 +157,8 @@ const Ga4Page = () => {
             if (data.syncMetadata) {
                 setAccounts({
                     syncStatus: data.syncMetadata.syncStatus,
-                    lastDailySyncAt: data.syncMetadata.lastDailySyncAt,
-                    isHistoricalSyncComplete: data.syncMetadata.isHistoricalSyncComplete
+                    ga4LastSyncedAt: data.syncMetadata.lastSyncedAt,
+                    ga4HistoricalComplete: data.syncMetadata.ga4HistoricalComplete
                 });
             }
         } catch (err) {
@@ -182,8 +183,8 @@ const Ga4Page = () => {
             const data = res.data || {};
             setAccounts({
                 syncMetadata: {
-                    isHistoricalSyncComplete: data.isHistoricalSyncComplete || false,
-                    lastDailySyncAt: data.lastDailySyncAt || null,
+                    ga4HistoricalComplete: data.ga4HistoricalComplete || false,
+                    ga4LastSyncedAt: data.ga4LastSyncedAt || null,
                     syncStatus: data.syncStatus || 'idle'
                 }
             });
@@ -197,8 +198,8 @@ const Ga4Page = () => {
             const data = res.data || {};
             setAccounts({
                 syncMetadata: {
-                    isHistoricalSyncComplete: data.isHistoricalSyncComplete || false,
-                    lastDailySyncAt: data.lastDailySyncAt || null,
+                    ga4HistoricalComplete: data.ga4HistoricalComplete || false,
+                    ga4LastSyncedAt: data.ga4LastSyncedAt || null,
                     syncStatus: data.syncStatus || 'error'
                 }
             });
@@ -431,7 +432,7 @@ const Ga4Page = () => {
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <div className="flex items-center gap-1.5 text-[9px] text-neutral-400 font-bold uppercase tracking-widest">
-                                            Synced: <span className="text-neutral-700 dark:text-neutral-300 tabular-nums font-black">{syncMetadata?.lastDailySyncAt ? new Date(syncMetadata.lastDailySyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}</span>
+                                            Synced: <span className="text-neutral-700 dark:text-neutral-300 tabular-nums font-black">{syncMetadata?.ga4LastSyncedAt ? formatDistanceToNow(new Date(syncMetadata.ga4LastSyncedAt), { addSuffix: true }) : 'Never'}</span>
                                             <button onClick={handleManualRefresh} className="hover:text-brand-500 transition-all active:rotate-180 ml-1">
                                                 <ArrowPathIcon className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
                                             </button>

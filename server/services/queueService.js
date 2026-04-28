@@ -64,7 +64,19 @@ export const initWorker = () => {
             }
 
             if (targetAccId) {
-                const updateData = { lastDailySyncAt: new Date() };
+                const updateData = {};
+                
+                const platformMap = {
+                    'daily-sync-gsc': 'gscLastSyncedAt',
+                    'daily-sync-ga4': 'ga4LastSyncedAt',
+                    'daily-sync-google-ads': 'googleAdsLastSyncedAt',
+                    'daily-sync-facebook-ads': 'facebookAdsLastSyncedAt'
+                };
+
+                if (platformMap[job.name]) {
+                    updateData[platformMap[job.name]] = new Date();
+                }
+
                 if (job.name !== 'historical-sync') {
                     updateData.syncStatus = 'idle';
                 }

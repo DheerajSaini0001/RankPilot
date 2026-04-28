@@ -72,8 +72,14 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
                         if (data.syncStatus !== 'syncing') {
                             setAccounts({
                                 syncMetadata: {
-                                    isHistoricalSyncComplete: data.isHistoricalSyncComplete || false,
-                                    lastDailySyncAt: data.lastDailySyncAt || null,
+                                    ga4HistoricalComplete: data.ga4HistoricalComplete || false,
+                                    gscHistoricalComplete: data.gscHistoricalComplete || false,
+                                    googleAdsHistoricalComplete: data.googleAdsHistoricalComplete || false,
+                                    facebookAdsHistoricalComplete: data.facebookAdsHistoricalComplete || false,
+                                    ga4LastSyncedAt: data.ga4LastSyncedAt || null,
+                                    gscLastSyncedAt: data.gscLastSyncedAt || null,
+                                    googleAdsLastSyncedAt: data.googleAdsLastSyncedAt || null,
+                                    facebookAdsLastSyncedAt: data.facebookAdsLastSyncedAt || null,
                                     syncStatus: data.syncStatus || 'idle'
                                 }
                             });
@@ -122,8 +128,14 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
                         activeFacebookAdAccountId: data.facebookAdAccountId || '',
                         connectedSources: connected,
                         syncMetadata: {
-                            isHistoricalSyncComplete: data.isHistoricalSyncComplete || false,
-                            lastDailySyncAt: data.lastDailySyncAt || null,
+                            ga4HistoricalComplete: data.ga4HistoricalComplete || false,
+                            gscHistoricalComplete: data.gscHistoricalComplete || false,
+                            googleAdsHistoricalComplete: data.googleAdsHistoricalComplete || false,
+                            facebookAdsHistoricalComplete: data.facebookAdsHistoricalComplete || false,
+                            ga4LastSyncedAt: data.ga4LastSyncedAt || null,
+                            gscLastSyncedAt: data.gscLastSyncedAt || null,
+                            googleAdsLastSyncedAt: data.googleAdsLastSyncedAt || null,
+                            facebookAdsLastSyncedAt: data.facebookAdsLastSyncedAt || null,
                             syncStatus: data.syncStatus || 'idle'
                         }
                     });

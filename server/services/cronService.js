@@ -38,29 +38,24 @@ export const initCronJobs = () => {
     }, { timezone: "Asia/Kolkata" });
     
     // 🔵 SECTION 2: PLATFORM DATA SYNCHRONIZATION
-    
-    // Full System Sync - Every night at 2 AM
-    cron.schedule('0 2 * * *', async () => {
-        await syncDailyForAllUsers();
-    }, { timezone: "Asia/Kolkata" });
 
-    // Facebook Ads Sync every 30 minutes
-    cron.schedule('*/30 * * * *', async () => {
+    // Facebook Ads Sync every 6 hours (9AM, 3PM, 9PM)
+    cron.schedule('0 9,15,21 * * *', async () => {
         await syncAllFacebookAds();
     }, { timezone: "Asia/Kolkata" });
     
-    // Google Ads Sync every hour
-    cron.schedule('0 * * * *', async () => {
+    // Google Ads Sync every 6 hours (8AM, 2PM, 8PM)
+    cron.schedule('0 8,14,20 * * *', async () => {
         await syncAllGoogleAds();
     }, { timezone: "Asia/Kolkata" });
     
-    // GA4 Sync every 4 hours
-    cron.schedule('0 */4 * * *', async () => {
+    // GA4 Sync every 3 AM
+    cron.schedule('0 3 * * *', async () => {
         await syncAllGa4();
     }, { timezone: "Asia/Kolkata" });
     
-    // GSC Sync every 12 hours
-    cron.schedule('0 2,14 * * *', async () => {
+    // GSC Sync every 4:30 AM
+    cron.schedule('30 4 * * *', async () => {
         await syncAllGsc();
     }, { timezone: "Asia/Kolkata" });
     

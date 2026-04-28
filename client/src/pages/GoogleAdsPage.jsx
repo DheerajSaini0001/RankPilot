@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { formatDistanceToNow } from 'date-fns';
 import AiSectionChat from '../components/ai/AiSectionChat';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/ui/DashboardLayout';
@@ -83,8 +84,8 @@ const GoogleAdsPage = () => {
         setAccounts({
           syncMetadata: {
             syncStatus: data.syncMetadata.syncStatus,
-            lastDailySyncAt: data.syncMetadata.lastDailySyncAt,
-            isHistoricalSyncComplete: data.syncMetadata.isHistoricalSyncComplete
+            googleAdsLastSyncedAt: data.syncMetadata.lastSyncedAt,
+            googleAdsHistoricalComplete: data.syncMetadata.googleAdsHistoricalComplete
           }
         });
       }
@@ -115,8 +116,8 @@ const GoogleAdsPage = () => {
       const data = res.data || {};
       setAccounts({
         syncMetadata: {
-          isHistoricalSyncComplete: data.isHistoricalSyncComplete || false,
-          lastDailySyncAt: data.lastDailySyncAt || null,
+          googleAdsHistoricalComplete: data.googleAdsHistoricalComplete || false,
+          googleAdsLastSyncedAt: data.googleAdsLastSyncedAt || null,
           syncStatus: data.syncStatus || 'idle'
         }
       });
@@ -130,8 +131,8 @@ const GoogleAdsPage = () => {
       const data = res.data || {};
       setAccounts({
         syncMetadata: {
-          isHistoricalSyncComplete: data.isHistoricalSyncComplete || false,
-          lastDailySyncAt: data.lastDailySyncAt || null,
+          googleAdsHistoricalComplete: data.googleAdsHistoricalComplete || false,
+          googleAdsLastSyncedAt: data.googleAdsLastSyncedAt || null,
           syncStatus: data.syncStatus || 'error'
         }
       });
@@ -324,7 +325,7 @@ const GoogleAdsPage = () => {
               <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 ml-1">Campaign and Search Ad metrics</p>
               <div className="flex items-center gap-2 mt-2 ml-1 text-[11px] text-neutral-400 font-bold">
                 <span className="uppercase text-[10px] tracking-tight opacity-60">Synced:</span>
-                <span className="text-neutral-700 dark:text-neutral-300 font-black tabular-nums">{syncMetadata?.lastDailySyncAt ? new Date(syncMetadata.lastDailySyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}</span>
+                <span className="text-neutral-700 dark:text-neutral-300 font-black tabular-nums">{syncMetadata?.googleAdsLastSyncedAt ? formatDistanceToNow(new Date(syncMetadata.googleAdsLastSyncedAt), { addSuffix: true }) : 'Never'}</span>
                 <button onClick={handleManualRefresh} className="p-1 hover:text-brand-500 transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg active:rotate-180 duration-500">
                   <ArrowPathIcon className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
                 </button>

@@ -153,7 +153,7 @@ export const syncHistoricalData = async (accountId, source) => {
             [progressField]: 100,
             [completeField]: true,
             [indexField]: 0,
-            lastDailySyncAt: new Date()
+            [`${prefix}LastSyncedAt`]: new Date()
         };
 
         const updatedAcc = await UserAccounts.findByIdAndUpdate(accountId, { $set: updateFields }, { returnDocument: 'after' });
@@ -236,8 +236,7 @@ async function updateGlobalSyncStatus(acc) {
     const isAllHistoricalDone = isGa4Done && isGscDone && isGAdsDone && isFbDone;
 
     await UserAccounts.findByIdAndUpdate(acc._id, { 
-        syncStatus: finalStatus,
-        isHistoricalSyncComplete: isAllHistoricalDone
+        syncStatus: finalStatus
     });
 }
 

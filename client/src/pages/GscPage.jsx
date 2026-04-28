@@ -1,4 +1,5 @@
     import React, { useState, useEffect, useCallback } from 'react';
+import { formatDistanceToNow } from 'date-fns';
     import { useNavigate } from 'react-router-dom';
     import DashboardLayout from '../components/ui/DashboardLayout';
     import KpiCard from '../components/dashboard/KpiCard';
@@ -148,8 +149,8 @@
                 if (data.syncMetadata) {
                     setAccounts({
                         syncStatus: data.syncMetadata.syncStatus,
-                        lastDailySyncAt: data.syncMetadata.lastDailySyncAt,
-                        isHistoricalSyncComplete: data.syncMetadata.isHistoricalSyncComplete
+                        gscLastSyncedAt: data.syncMetadata.lastSyncedAt,
+                        gscHistoricalComplete: data.syncMetadata.gscHistoricalComplete
                     });
                 }
                 
@@ -208,8 +209,8 @@
                 const data = res.data || {};
                 setAccounts({
                     syncMetadata: {
-                        isHistoricalSyncComplete: data.isHistoricalSyncComplete || false,
-                        lastDailySyncAt: data.lastDailySyncAt || null,
+                        gscHistoricalComplete: data.gscHistoricalComplete || false,
+                        gscLastSyncedAt: data.gscLastSyncedAt || null,
                         syncStatus: data.syncStatus || 'idle'
                     }
                 });
@@ -223,8 +224,8 @@
                 const data = res.data || {};
                 setAccounts({
                     syncMetadata: {
-                        isHistoricalSyncComplete: data.isHistoricalSyncComplete || false,
-                        lastDailySyncAt: data.lastDailySyncAt || null,
+                        gscHistoricalComplete: data.gscHistoricalComplete || false,
+                        gscLastSyncedAt: data.gscLastSyncedAt || null,
                         syncStatus: data.syncStatus || 'error'
                     }
                 });
@@ -424,7 +425,7 @@
                                         </div>
                                         <div className="flex flex-wrap items-center gap-3">
                                             <div className="flex items-center gap-1.5 text-[9px] text-neutral-400 font-bold uppercase tracking-widest whitespace-nowrap">
-                                                Synced: <span className="text-neutral-700 dark:text-neutral-300 tabular-nums font-black">{syncMetadata?.lastDailySyncAt ? new Date(syncMetadata.lastDailySyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}</span>
+                                                Synced: <span className="text-neutral-700 dark:text-neutral-300 tabular-nums font-black">{syncMetadata?.gscLastSyncedAt ? formatDistanceToNow(new Date(syncMetadata.gscLastSyncedAt), { addSuffix: true }) : 'Never'}</span>
                                                 <button onClick={handleManualRefresh} className="hover:text-brand-500 transition-all active:rotate-180 ml-1">
                                                     <ArrowPathIcon className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
                                                 </button>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { formatDistanceToNow } from 'date-fns';
 import AiSectionChat from '../components/ai/AiSectionChat';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/ui/DashboardLayout';
@@ -82,8 +83,8 @@ const FacebookAdsPage = () => {
                 setAccounts({
                     syncMetadata: {
                         syncStatus: data.syncMetadata.syncStatus,
-                        lastDailySyncAt: data.syncMetadata.lastDailySyncAt,
-                        isHistoricalSyncComplete: data.syncMetadata.isHistoricalSyncComplete
+                        facebookAdsLastSyncedAt: data.syncMetadata.lastSyncedAt,
+                        facebookAdsHistoricalComplete: data.syncMetadata.facebookAdsHistoricalComplete
                     }
                 });
             }
@@ -114,8 +115,8 @@ const FacebookAdsPage = () => {
             const data = res.data || {};
             setAccounts({
                 syncMetadata: {
-                    isHistoricalSyncComplete: data.isHistoricalSyncComplete || false,
-                    lastDailySyncAt: data.lastDailySyncAt || null,
+                    facebookAdsHistoricalComplete: data.facebookAdsHistoricalComplete || false,
+                    facebookAdsLastSyncedAt: data.facebookAdsLastSyncedAt || null,
                     syncStatus: data.syncStatus || 'idle'
                 }
             });
@@ -129,8 +130,8 @@ const FacebookAdsPage = () => {
             const data = res.data || {};
             setAccounts({
                 syncMetadata: {
-                    isHistoricalSyncComplete: data.isHistoricalSyncComplete || false,
-                    lastDailySyncAt: data.lastDailySyncAt || null,
+                    facebookAdsHistoricalComplete: data.facebookAdsHistoricalComplete || false,
+                    facebookAdsLastSyncedAt: data.facebookAdsLastSyncedAt || null,
                     syncStatus: data.syncStatus || 'error'
                 }
             });
@@ -311,7 +312,7 @@ const FacebookAdsPage = () => {
                             <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 ml-1">Social media advertising metrics</p>
                             <div className="flex items-center gap-2 mt-2 ml-1 text-[11px] text-neutral-400 font-bold">
                                 <span className="uppercase text-[10px] tracking-tight opacity-60">Synced:</span>
-                                <span className="text-neutral-700 dark:text-neutral-300 font-black tabular-nums">{syncMetadata?.lastDailySyncAt ? new Date(syncMetadata.lastDailySyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}</span>
+                                <span className="text-neutral-700 dark:text-neutral-300 font-black tabular-nums">{syncMetadata?.facebookAdsLastSyncedAt ? formatDistanceToNow(new Date(syncMetadata.facebookAdsLastSyncedAt), { addSuffix: true }) : 'Never'}</span>
                                 <button onClick={handleManualRefresh} className="p-1 hover:text-brand-500 transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg active:rotate-180 duration-500">
                                     <ArrowPathIcon className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
                                 </button>

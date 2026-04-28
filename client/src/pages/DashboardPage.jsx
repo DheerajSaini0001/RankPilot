@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { formatDistanceToNow } from 'date-fns';
 
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/ui/DashboardLayout';
@@ -165,8 +166,15 @@ const DashboardPage = () => {
       if (data.syncMetadata) {
         setAccounts({
           syncMetadata: {
-            syncStatus: data.syncMetadata.syncStatus,
-            lastDailySyncAt: data.syncMetadata.lastDailySyncAt
+            syncStatus: data.syncStatus,
+            ga4LastSyncedAt: data.ga4LastSyncedAt,
+            gscLastSyncedAt: data.gscLastSyncedAt,
+            googleAdsLastSyncedAt: data.googleAdsLastSyncedAt,
+            facebookAdsLastSyncedAt: data.facebookAdsLastSyncedAt,
+            ga4HistoricalComplete: data.ga4HistoricalComplete || false,
+            gscHistoricalComplete: data.gscHistoricalComplete || false,
+            googleAdsHistoricalComplete: data.googleAdsHistoricalComplete || false,
+            facebookAdsHistoricalComplete: data.facebookAdsHistoricalComplete || false
           }
         });
       }
@@ -193,8 +201,14 @@ const DashboardPage = () => {
       const resData = res.data || {};
       setAccounts({
         syncMetadata: {
-          isHistoricalSyncComplete: resData.isHistoricalSyncComplete || false,
-          lastDailySyncAt: resData.lastDailySyncAt || null,
+          ga4LastSyncedAt: resData.ga4LastSyncedAt || null,
+          gscLastSyncedAt: resData.gscLastSyncedAt || null,
+          googleAdsLastSyncedAt: resData.googleAdsLastSyncedAt || null,
+          facebookAdsLastSyncedAt: resData.facebookAdsLastSyncedAt || null,
+          ga4HistoricalComplete: resData.ga4HistoricalComplete || false,
+          gscHistoricalComplete: resData.gscHistoricalComplete || false,
+          googleAdsHistoricalComplete: resData.googleAdsHistoricalComplete || false,
+          facebookAdsHistoricalComplete: resData.facebookAdsHistoricalComplete || false,
           syncStatus: resData.syncStatus || 'idle'
         }
       });
@@ -205,8 +219,14 @@ const DashboardPage = () => {
       const resData = res.data || {};
       setAccounts({
         syncMetadata: {
-          isHistoricalSyncComplete: resData.isHistoricalSyncComplete || false,
-          lastDailySyncAt: resData.lastDailySyncAt || null,
+          ga4LastSyncedAt: resData.ga4LastSyncedAt || null,
+          gscLastSyncedAt: resData.gscLastSyncedAt || null,
+          googleAdsLastSyncedAt: resData.googleAdsLastSyncedAt || null,
+          facebookAdsLastSyncedAt: resData.facebookAdsLastSyncedAt || null,
+          ga4HistoricalComplete: resData.ga4HistoricalComplete || false,
+          gscHistoricalComplete: resData.gscHistoricalComplete || false,
+          googleAdsHistoricalComplete: resData.googleAdsHistoricalComplete || false,
+          facebookAdsHistoricalComplete: resData.facebookAdsHistoricalComplete || false,
           syncStatus: resData.syncStatus || 'error'
         }
       });
@@ -486,7 +506,17 @@ const DashboardPage = () => {
                           <div className="flex items-center gap-2 border-l border-neutral-200 dark:border-neutral-800 pl-3">
                             <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Synced:</span>
                             <span className="text-[9px] font-black text-neutral-600 dark:text-neutral-300 uppercase">
-                              {syncMetadata?.lastDailySyncAt ? new Date(syncMetadata.lastDailySyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}
+                              {(() => {
+                                const dates = [
+                                  syncMetadata?.ga4LastSyncedAt,
+                                  syncMetadata?.gscLastSyncedAt,
+                                  syncMetadata?.googleAdsLastSyncedAt,
+                                  syncMetadata?.facebookAdsLastSyncedAt
+                                ].filter(Boolean).map(d => new Date(d));
+                                if (dates.length === 0) return 'Never';
+                                const latest = new Date(Math.max(...dates));
+                                return formatDistanceToNow(latest, { addSuffix: true });
+                              })()}
                             </span>
                             <button
                               onClick={handleManualRefresh}
