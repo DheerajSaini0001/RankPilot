@@ -87,6 +87,13 @@ export const fetchPlatformData = async (userId, startDate, endDate, siteId, acti
     const prevEndStr = prevEnd.toISOString().split('T')[0];
     data.comparisonRange = { startDate: prevStartStr, endDate: prevEndStr };
 
+    const getGrowth = (curr, prev) => {
+        if (!prev || prev === 0) return curr > 0 ? "100.0" : "0.0";
+        return (((curr - prev) / prev) * 100).toFixed(1);
+    };
+
+    const deviceFilter = device ? { 'metadata.dimensions.device': device.toLowerCase() } : {};
+
     const sourceConfigs = [
         { 
             key: 'ga4', 
@@ -135,8 +142,6 @@ export const fetchPlatformData = async (userId, startDate, endDate, siteId, acti
         topCountries: [],
         topNetworks: []
     };
-
-    const deviceFilter = device ? { 'metadata.dimensions.device': device.toLowerCase() } : {};
 
     const aggTasks = sourceConfigs.map(async (config) => {
         try {
@@ -410,11 +415,6 @@ export const fetchPlatformData = async (userId, startDate, endDate, siteId, acti
         sourceTotals[t.period][t.source] = t.sums;
         sourceEntryCount[t.period][t.source] = t.counts;
     });
-
-    const getGrowth = (curr, prev) => {
-        if (!prev || prev === 0) return curr > 0 ? "100.0" : "0.0";
-        return (((curr - prev) / prev) * 100).toFixed(1);
-    };
 
     const allDates = [...new Set(results.dailyBreakdown.map(d => d.date))].sort();
     data.dailyBreakdown = {};
