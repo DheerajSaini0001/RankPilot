@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { formatDistanceToNow, format } from 'date-fns';
 import toast from 'react-hot-toast';
 import DashboardLayout from '../components/ui/DashboardLayout';
 import { useAccountsStore } from '../store/accountsStore';
@@ -316,7 +317,7 @@ const AIChatPage = () => {
         setInsightLoading(true);
         try {
             const res = await getWeeklyInsight(activeSiteId);
-            if (res.data) setWeeklyInsight(res.data.content);
+            if (res.data) setWeeklyInsight(res.data);
         } catch (err) {
             console.error(err);
             setWeeklyInsight(null);
@@ -329,7 +330,7 @@ const AIChatPage = () => {
         setInsightLoading(true);
         try {
             const res = await refreshWeeklyInsight(activeSiteId);
-            setWeeklyInsight(res.data.content);
+            setWeeklyInsight(res.data);
         } catch (err) {
             console.error(err);
             toast.error(err.response?.data?.message || "Failed to refresh insights.");
@@ -342,7 +343,18 @@ const AIChatPage = () => {
         setSuggestionsLoading(true);
         try {
             const res = await getSuggestedQuestions(activeSiteId);
-            setSuggestions(res.data.questions);
+            const questions = res.data?.questions || [];
+            if (questions.length > 0) {
+                setSuggestions(questions);
+            } else {
+                // Use fallbacks if empty
+                setSuggestions([
+                    "Find keywords with high impressions but low CTR.",
+                    "Identify GA4 conversion leaks in my funnel.",
+                    "Which Google Ads campaigns have highest ROI?",
+                    "Compare ROAS across Meta Ads audiences."
+                ]);
+            }
         } catch (err) {
             console.error(err);
             setSuggestions([
@@ -672,6 +684,14 @@ const AIChatPage = () => {
                                         <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Weekly Report</span>
                                         <span className="text-neutral-300 dark:text-neutral-700">·</span>
                                         <span className="text-[10px] font-bold text-brand-600 dark:text-brand-400">AI Generated</span>
+                                        {weeklyInsight?.updatedAt && (
+                                            <>
+                                                <span className="text-neutral-300 dark:text-neutral-700">·</span>
+                                                <span className="text-[10px] font-bold text-neutral-400">
+                                                    Generated {format(new Date(weeklyInsight.updatedAt), 'MMM d, yyyy p')}
+                                                </span>
+                                            </>
+                                        )}
                                     </div>
                                     <div className="bg-white dark:bg-[#1a1a1a] border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-8 sm:p-12 shadow-2xl relative overflow-hidden group">
                                         <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 blur-[120px] pointer-events-none group-hover:bg-brand-500/10 transition-all duration-1000" />
@@ -680,7 +700,7 @@ const AIChatPage = () => {
                                                 remarkPlugins={[remarkGfm]}
                                                 components={MarkdownComponents}
                                             >
-                                                {weeklyInsight}
+                                                {typeof weeklyInsight === 'string' ? weeklyInsight : (weeklyInsight?.content || '')}
                                             </ReactMarkdown>
                                         </div>
                                     </div>
@@ -715,9 +735,9 @@ const AIChatPage = () => {
                 <div className="flex-1 min-h-0 flex flex-col overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                     {messages.length === 0 ? (
                         /* 5. EMPTY STATE — centered, compact */
-                        <div className="flex-1 flex flex-col items-center py-10 sm:py-20 px-4 sm:px-10 my-auto w-full">
+                        <div className="flex-1 flex flex-col items-center py-6 sm:py-12 px-4 sm:px-10 my-auto w-full">
                             {/* AI Icon with glow */}
-                            <div className="relative mb-8 shrink-0">
+                            <div className="relative mb-4 shrink-0">
                                 <div className="relative z-10 transition-transform hover:scale-105 duration-300">
                                     <Logo className="w-16 h-16 sm:w-20 sm:h-20" iconOnly />
                                 </div>
@@ -728,7 +748,7 @@ const AIChatPage = () => {
                             <h1 className="text-xl sm:text-3xl font-black text-neutral-900 dark:text-white tracking-tight mb-2 text-center shrink-0">
                                 {getTimeGreeting()}, {user?.name?.split(' ')[0] || 'Explorer'}
                             </h1>
-                            <p className="text-[13px] sm:text-sm text-neutral-500 dark:text-neutral-400 font-medium mb-6 sm:mb-8 text-center max-w-xs sm:max-w-sm leading-relaxed shrink-0">
+                            <p className="text-[13px] sm:text-sm text-neutral-500 dark:text-neutral-400 font-medium mb-4 sm:mb-6 text-center max-w-xs sm:max-w-sm leading-relaxed shrink-0">
                                 Ask anything about your marketing data. I have access to all your connected platforms.
                             </p>
 
@@ -736,7 +756,7 @@ const AIChatPage = () => {
                             <div className="w-full max-w-2xl mx-auto">
                                 {/* Loading skeleton */}
                                 {suggestionsLoading && (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-6">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-4">
                                         {[1, 2, 3, 4].map(i => (
                                             <div key={i} className="h-[72px] bg-neutral-100 dark:bg-neutral-800 rounded-2xl animate-pulse" />
                                         ))}
@@ -745,7 +765,7 @@ const AIChatPage = () => {
 
                                 {/* Suggestion cards */}
                                 {!suggestionsLoading && suggestions.length > 0 && (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-6">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-4">
                                         {suggestions.slice(0, 4).map((q, i) => (
                                             <button key={i} onClick={() => setQuery(q)}
                                                 className="px-4 py-3.5 sm:px-5 sm:py-4 bg-neutral-50 dark:bg-neutral-800/50 hover:bg-brand-50 dark:hover:bg-brand-900/20 border border-neutral-200 dark:border-neutral-700 hover:border-brand-300 dark:hover:border-brand-700 rounded-2xl text-[11px] sm:text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-brand-600 dark:hover:text-brand-400 transition-all text-left leading-relaxed active:scale-[0.98] shadow-sm">
@@ -758,14 +778,30 @@ const AIChatPage = () => {
                                 {/* Quick action pills */}
                                 <div className="flex flex-wrap justify-center gap-2 mb-8">
                                     {[
-                                        { label: 'Search Console', icon: GlobeAltIcon, prompt: 'Analyze my Google Search Console performance and identify top-ranking keywords.' },
-                                        { label: 'GA4 Analytics', icon: ChartBarIcon, prompt: 'Deep dive into my GA4 data to understand user behavior and conversions.' },
-                                        { label: 'Google Ads', icon: CursorArrowRaysIcon, prompt: 'Evaluate my Google Ads campaign efficiency including CTR, CPC, and ROAS.' },
-                                        { label: 'Facebook Ads', icon: ArrowTrendingUpIcon, prompt: 'Review my Meta Ads reach and engagement metrics.' },
+                                        { 
+                                            label: 'Search Console', 
+                                            prompt: 'Analyze my Google Search Console performance and identify top-ranking keywords.',
+                                            logo: <img src="https://www.gstatic.com/images/branding/product/2x/search_console_64dp.png" alt="GSC" className="w-3.5 h-3.5 object-contain" />
+                                        },
+                                        { 
+                                            label: 'GA4 Analytics', 
+                                            prompt: 'Deep dive into my GA4 data to understand user behavior and conversions.',
+                                            logo: <img src="https://www.vectorlogo.zone/logos/google_analytics/google_analytics-icon.svg" alt="GA4" className="w-3.5 h-3.5 object-contain" />
+                                        },
+                                        { 
+                                            label: 'Google Ads', 
+                                            prompt: 'Evaluate my Google Ads campaign efficiency including CTR, CPC, and ROAS.',
+                                            logo: <img src="https://www.vectorlogo.zone/logos/google_ads/google_ads-icon.svg" alt="Google Ads" className="w-3.5 h-3.5 object-contain" />
+                                        },
+                                        { 
+                                            label: 'Facebook Ads', 
+                                            prompt: 'Review my Meta Ads reach and engagement metrics.',
+                                            logo: <img src="https://www.vectorlogo.zone/logos/facebook/facebook-icon.svg" alt="Meta Ads" className="w-3.5 h-3.5 object-contain" />
+                                        },
                                     ].map((item, i) => (
                                         <button key={i} onClick={() => setQuery(item.prompt)}
                                             className="flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-[10px] sm:text-[11px] font-bold text-neutral-500 dark:text-neutral-400 hover:border-brand-400 dark:hover:border-brand-600 hover:text-brand-600 dark:hover:text-brand-400 transition-all active:scale-95 group shadow-sm">
-                                            <item.icon className="w-3.5 h-3.5 group-hover:text-brand-500 transition-colors" strokeWidth={2.5} />
+                                            {item.logo}
                                             {item.label}
                                         </button>
                                     ))}

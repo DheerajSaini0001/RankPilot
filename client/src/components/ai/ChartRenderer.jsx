@@ -42,8 +42,12 @@ const ChartRenderer = ({ type, data }) => {
   let labels = null;
   let datasets = null;
 
-  // Handle "Recharts style" where data is a list of objects and series defines the keys
-  if (Array.isArray(data?.data)) {
+  // PRIORITY 1: Top-level Strict Format (labels & datasets)
+  if (!labels && data?.labels) labels = data.labels;
+  if (!datasets && data?.datasets) datasets = data.datasets;
+
+  // PRIORITY 2: Recharts style (array of objects in data.data)
+  if (!labels && Array.isArray(data?.data)) {
     labels = data.data.map(item => item[xAxisKey] || item.name || item.date || item.label);
     
     if (data.series) {
@@ -56,12 +60,30 @@ const ChartRenderer = ({ type, data }) => {
                 stroke: s.color || s.stroke || s.borderColor
             };
         });
+    } else if (data.data.length > 0) {
+        const first = data.data[0];
+        const numericKeys = Object.keys(first).filter(k => k !== xAxisKey && typeof first[k] === 'number');
+        if (numericKeys.length > 0) {
+            datasets = numericKeys.map(key => ({
+                label: key.charAt(0).toUpperCase() + key.slice(1),
+                data: data.data.map(item => item[key] ?? 0)
+            }));
+        }
     }
   }
 
-  // Fallback to Deep Search if not found via structured lookup
-  if (!datasets) datasets = deepFind(data, ['datasets', 'dataset', 'values']);
+  // PRIORITY 3: Fallbacks & Deep Search
+  if (!labels && data?.options?.xaxis?.categories) labels = data.options.xaxis.categories;
   if (!labels) labels = deepFind(data, ['labels', 'label', 'x_axis', 'categories', 'names']);
+  if (!datasets) datasets = deepFind(data, ['datasets', 'dataset', 'values', 'data']);
+
+  // Handle case where datasets is just an array of numbers
+  if (Array.isArray(datasets) && datasets.length > 0 && typeof datasets[0] === 'number') {
+    datasets = [{
+      label: data.title || "Performance",
+      data: datasets
+    }];
+  }
 
   if (!labels || !datasets || !Array.isArray(labels) || !Array.isArray(datasets)) {
     return (
@@ -81,6 +103,7 @@ const ChartRenderer = ({ type, data }) => {
   const chartData = actualData.labels.map((label, index) => {
     const entry = { name: label };
     actualData.datasets.forEach(dataset => {
+      // Handle both { data: [...] } and direct array
       const dataArray = Array.isArray(dataset) ? dataset : (dataset.data || dataset.values || []);
       const dsLabel = dataset.label || dataset.name || "Value";
       entry[dsLabel] = dataArray[index] !== undefined ? dataArray[index] : 0;

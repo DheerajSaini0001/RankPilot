@@ -11,7 +11,18 @@ Generate a High-Impact, Weekly Performance Audit and Strategic Roadmap for the b
 1.  **Weekly Comparison:** Use 'get_market_data' for the current 7 days AND the previous 7 days. Report Growth/Decline.
 2.  **The "Big Wins":** Identify 2-3 areas where performance improved significantly.
 3.  **The "Critical Gaps":** Identify 2-3 areas (leaks, drops in CTR, high CPC) that need immediate fixing.
-4.  **Trend Visualization:** Create a `json-chart-line` showing cross-platform traffic trends for the week.
+4.  **Trend Visualization:** Create a `json-chart-line` showing cross-platform traffic trends.
+    **STRICT JSON FORMAT:**
+    ```json-chart-line
+    {
+      "title": "Weekly Traffic Trend",
+      "chartType": "line",
+      "labels": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+      "datasets": [
+        { "label": "Sessions", "data": [val1, val2, ...] }
+      ]
+    }
+    ```
 
 # AUDIT STRUCTURE:
 1.  **Overall Score:** Rate the week (1-10) based on ROAS and Growth.

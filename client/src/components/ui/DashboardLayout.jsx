@@ -121,6 +121,10 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
                     if (data.googleAdsCustomerId) connected.push('google-ads');
                     if (data.facebookAdAccountId) connected.push('facebook-ads');
 
+                    // Broad categories for Settings page
+                    if (data.ga4TokenId || data.gscTokenId || data.googleAdsTokenId) connected.push('google');
+                    if (data.facebookTokenId) connected.push('facebook');
+
                     setAccounts({
                         activeGscSite: data.gscSiteUrl || '',
                         activeGa4PropertyId: data.ga4PropertyId || '',
