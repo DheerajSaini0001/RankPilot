@@ -518,6 +518,19 @@ export const generateSuggestedQuestionsInternal = async (userId, siteId) => {
         const nowLocal = new Date(Date.now() - tzOffset);
         const todayStr = nowLocal.toISOString().split('T')[0];
 
+        // Fetch Connection Status
+        const acc = await UserAccounts.findOne({ _id: siteId, userId })
+            .select('ga4PropertyId gscSiteUrl googleAdsCustomerId facebookAdAccountId');
+        
+        const conn = {
+            ga4: !!acc?.ga4PropertyId,
+            gsc: !!acc?.gscSiteUrl,
+            googleAds: !!acc?.googleAdsCustomerId,
+            facebookAds: !!acc?.facebookAdAccountId
+        };
+
+        const connectionContext = `\n\n[CONNECTION STATUS]:\n- Google Analytics (GA4): ${conn.ga4 ? 'CONNECTED' : 'NOT CONNECTED'}\n- Google Search Console (GSC): ${conn.gsc ? 'CONNECTED' : 'NOT CONNECTED'}\n- Google Ads: ${conn.googleAds ? 'CONNECTED' : 'NOT CONNECTED'}\n- Meta Ads (Facebook): ${conn.facebookAds ? 'CONNECTED' : 'NOT CONNECTED'}\n\nCRITICAL: ONLY generate questions for platforms marked as 'CONNECTED'. If no platforms are connected, suggest general marketing strategy questions.`;
+
         // Load Prompts
         let systemIns = "";
         let suggestPrompt = "";
@@ -531,7 +544,7 @@ export const generateSuggestedQuestionsInternal = async (userId, siteId) => {
 
         const dateContext = `\n\n[REAL-TIME CONTEXT]: Today's date is ${todayStr}. suggestedQuestions must be a JSON array of 4 strings. Analyze the last 30 days of data and return ONLY the JSON array. Each question MUST be under 15 words and a single sentence.`;
 
-        const chat = await startAgenticChat([], aiTools, systemIns + dateContext);
+        const chat = await startAgenticChat([], aiTools, systemIns + dateContext + connectionContext);
         
         let result = await chat.sendMessage(suggestPrompt);
         let response = result.response;
@@ -551,22 +564,30 @@ export const generateSuggestedQuestionsInternal = async (userId, siteId) => {
         }
 
         let questions = [];
-        const fallbacks = [
-            "Find keywords with high impressions but low CTR.",
-            "Identify GA4 conversion leaks in my funnel.",
-            "Which Google Ads campaigns have highest ROI?",
-            "Compare ROAS across Meta Ads audiences."
-        ];
+        const fallbacks = [];
+        if (conn.gsc) fallbacks.push("Find keywords with high impressions but low CTR.");
+        if (conn.ga4) fallbacks.push("Identify GA4 conversion leaks in my funnel.");
+        if (conn.googleAds) fallbacks.push("Which Google Ads campaigns have highest ROI?");
+        if (conn.facebookAds) fallbacks.push("Compare ROAS across Meta Ads audiences.");
+        
+        // Final fallback if nothing connected or too few
+        if (fallbacks.length < 4) {
+            fallbacks.push("What are the best marketing practices for my industry?");
+            fallbacks.push("How can I improve my website's overall conversion rate?");
+            fallbacks.push("Suggest 3 content ideas to drive more organic traffic.");
+            fallbacks.push("What metrics should I focus on for brand awareness?");
+        }
 
         try {
             const content = response.text();
             const jsonMatch = content.match(/\[[\s\S]*\]/);
             const jsonStr = jsonMatch ? jsonMatch[0] : content;
-            questions = JSON.parse(jsonStr);
+            const parsed = JSON.parse(jsonStr);
+            questions = Array.isArray(parsed) ? parsed : (parsed.questions || []);
             if (!Array.isArray(questions)) questions = [];
         } catch (e) {
             console.error("AI Suggestions Parse Error:", e);
-            questions = fallbacks;
+            questions = fallbacks.slice(0, 4);
         }
 
         // Ensure exactly 4 questions
