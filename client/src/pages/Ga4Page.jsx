@@ -1101,7 +1101,7 @@ const Ga4Page = () => {
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Device Mix Breakdown */}
-                    <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-[2.5rem] p-8 shadow-sm group flex flex-col">
+                    <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-[2.5rem] p-8 shadow-sm group flex flex-col h-full">
                         <div className="mb-6 flex justify-between items-center">
                             <div>
                                 <h3 className="text-lg font-black text-neutral-900 dark:text-white">Device Breakdown</h3>
@@ -1173,20 +1173,21 @@ const Ga4Page = () => {
                                         <span className="text-xs font-black text-neutral-900 dark:text-white">{formatNumber(d.value)} ({((d.value / overview.sessions) * 100).toFixed(0)}%)</span>
                                     </div>
                                 ))}
-                            </div>
+                            </div> 
+                            </div> {/* md:flex-row inner content ends */}
+                        </div> {/* flex-1 content wrapper ends */}
+                        <div className="mt-auto">
+                            <SectionAiSummary 
+                                insight={intelligence?.devices} 
+                                loading={loading} 
+                                sectionTitle="AI SUMMARY"
+                                contextPrompt={`Device breakdown: ${breakdowns.devices.map(d => `${d.name}: ${d.value} sessions`).join(', ')}. Contrast mobile vs desktop behavior.`}
+                            />
                         </div>
-                        <SectionAiSummary 
-                            insight={intelligence?.devices} 
-                            loading={loading} 
-                            sectionTitle="AI SUMMARY"
-                            contextPrompt={`Device breakdown: ${breakdowns.devices.map(d => `${d.name}: ${d.value} sessions`).join(', ')}. Contrast mobile vs desktop behavior.`}
-                        />
-                    </div>
-
-                    </div>
+                    </div> {/* Device Breakdown card ends */}
 
                     {/* Geography Breakdown */}
-                    <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-[2.5rem] p-8 shadow-sm group flex flex-col">
+                    <div className="bg-white dark:bg-dark-card border border-neutral-200/60 dark:border-neutral-700/60 rounded-[2.5rem] p-8 shadow-sm group flex flex-col h-full">
                         <div className="mb-6 flex justify-between items-center">
                             <div>
                                 <h3 className="text-lg font-black text-neutral-900 dark:text-white">Top Locations</h3>
@@ -1225,15 +1226,17 @@ const Ga4Page = () => {
                                     </div>
                                 );
                             })}
+                        </div> {/* flex-1 content wrapper ends */}
+                        <div className="mt-auto">
+                            <SectionAiSummary 
+                                insight={intelligence?.geo} 
+                                loading={loading} 
+                                sectionTitle="AI SUMMARY"
+                                contextPrompt={`Top locations: ${breakdowns.locations.slice(0, 5).map(l => `${l.name}: ${l.value} sessions`).join(', ')}. Any geographical expansion opportunities?`}
+                            />
                         </div>
-                        <SectionAiSummary 
-                            insight={intelligence?.geo} 
-                            loading={loading} 
-                            sectionTitle="AI SUMMARY"
-                            contextPrompt={`Top locations: ${breakdowns.locations.slice(0, 5).map(l => `${l.name}: ${l.value} sessions`).join(', ')}. Any geographical expansion opportunities?`}
-                        />
-                    </div>
-                </div>
+                    </div> {/* Geography Breakdown card ends */}
+                </div> {/* grid ends */}
 
                 {/* ADD 6 — Period Comparison Table */}
                 <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 shadow-sm">
