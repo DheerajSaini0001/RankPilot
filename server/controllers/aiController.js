@@ -191,6 +191,19 @@ export const fetchPlatformData = async (userId, startDate, endDate, siteId, acti
                 { $sort: { clicks: -1 } }, { $limit: 10 }
             ]);
             results.topGscPages = gscPages.map(i => ({ name: i._id, clicks: i.clicks, impressions: i.impressions }));
+
+            const countries = await GscMetric.aggregate([
+                { $match: { 'metadata.platformAccountId': config.id, date: { $gte: currentStart, $lte: currentEnd } } },
+                { $group: { _id: "$metadata.dimensions.country", value: { $sum: "$metrics.clicks" } } },
+                { $sort: { value: -1 } }, { $limit: 10 }
+            ]);
+            results.topCountries.push(...countries.map(i => ({ name: i._id, value: i.value, source: 'gsc' })));
+
+            const dev = await config.model.aggregate([
+                { $match: { 'metadata.platformAccountId': config.id, date: { $gte: currentStart, $lte: currentEnd } } },
+                { $group: { _id: "$metadata.dimensions.device", value: { $sum: "$metrics.clicks" } } }
+            ]);
+            results.topDevices.push(...dev.map(i => ({ name: i._id, value: i.value, source: 'gsc' })));
         }
 
         if (config.key === 'ga4') {
@@ -320,6 +333,10 @@ export const fetchPlatformData = async (userId, startDate, endDate, siteId, acti
                 { $group: { _id: "$metadata.dimensions.device", value: { $sum: config.key === 'ga4' ? "$metrics.sessions" : "$metrics.spend" } } }
             ]);
             results.topDevices.push(...dev.map(i => ({ name: i._id, value: i.value, source: config.key })));
+        }
+
+        if (config.key === 'ga4' || config.key === 'gsc') {
+            // Already handled country in source-specific blocks for ga4/gsc
         }
     });
 
