@@ -312,36 +312,45 @@ const GlobalAiChat = () => {
     return (
         <>
             {/* Floating Bubble */}
-            <div className="fixed bottom-6 right-6 z-[99999]">
+            <div className="fixed bottom-6 right-6 z-[99999] group">
+                {/* Tooltip */}
+                {!isOpen && (
+                    <div className="absolute bottom-full right-0 mb-4 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none translate-y-2 group-hover:translate-y-0">
+                        <div className="relative bg-neutral-900 text-white text-[11px] font-black px-4 py-2 rounded-xl whitespace-nowrap shadow-2xl uppercase tracking-widest border border-white/10">
+                            ✨ Ask AI about your data
+                            <div className="absolute -bottom-1 right-8 w-2 h-2 bg-neutral-900 rotate-45 border-r border-b border-white/10"></div>
+                        </div>
+                    </div>
+                )}
+
                 <button
                     onClick={() => setIsOpen(!isOpen)}
-                    className={`relative w-16 h-16 rounded-full flex items-center justify-center transition-all duration-500 hover:scale-110 active:scale-90 group ${isOpen
-                            ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rotate-[360deg]'
-                            : 'bg-white dark:bg-neutral-800 shadow-[0_20px_50px_rgba(59,130,246,0.25)]'
-                        }`}
+                    className={`relative flex items-center gap-2.5 px-6 py-4 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 shadow-xl overflow-hidden ${
+                        isOpen 
+                        ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900' 
+                        : 'bg-brand-600 text-white shadow-brand-500/40'
+                    }`}
                 >
-                    {/* Animated Gradient Border */}
+                    {/* Shine/Shimmer Effect */}
                     {!isOpen && (
-                        <div className="absolute -inset-[2px] rounded-full bg-gradient-to-tr from-brand-600 via-blue-500 to-cyan-400 opacity-20 group-hover:opacity-100 transition-opacity duration-500 -z-10 animate-pulse-slow"></div>
+                        <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none"></div>
                     )}
 
-                    {/* Glass Overlay */}
-                    <div className="absolute inset-0 rounded-full border border-neutral-100 dark:border-neutral-700 pointer-events-none"></div>
-
                     {isOpen ? (
-                        <XMarkIcon className="w-8 h-8 relative z-10" />
+                        <>
+                            <XMarkIcon className="w-5 h-5 relative z-10" strokeWidth={2.5} />
+                            <span className="text-sm font-black tracking-wide relative z-10">Close</span>
+                        </>
                     ) : (
-                        <div className="relative z-10 w-11 h-11 flex items-center justify-center">
-                            <img
-                                src="/favicon.png"
-                                alt="AI"
-                                className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110"
-                            />
-                            {/* AI Badge */}
-                            <div className="absolute -bottom-1 -right-1 bg-brand-600 rounded-full p-1 border-2 border-white dark:border-neutral-800 shadow-md transform group-hover:translate-x-1 group-hover:translate-y-1 transition-transform">
-                                <SparklesIcon className="w-2.5 h-2.5 text-white fill-white" />
+                        <>
+                            <SparklesIcon className="w-5 h-5 animate-pulse relative z-10" strokeWidth={2.5} />
+                            <span className="text-sm font-black tracking-wide relative z-10">Ask AI</span>
+                            {/* Live Dot */}
+                            <div className="relative flex h-2 w-2 ml-1 relative z-10">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
                             </div>
-                        </div>
+                        </>
                     )}
                 </button>
             </div>
@@ -506,6 +515,13 @@ const GlobalAiChat = () => {
                 @keyframes fadeIn {
                     from { opacity: 0; }
                     to { opacity: 1; }
+                }
+                @keyframes shimmer {
+                    from { transform: translateX(-100%); }
+                    to { transform: translateX(100%); }
+                }
+                .animate-shimmer {
+                    animation: shimmer 2s infinite ease-in-out;
                 }
                 .animate-bounce-subtle {
                     animation: bounceSubtle 3s infinite ease-in-out;

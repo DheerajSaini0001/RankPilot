@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/ui/DashboardLayout';
 import { 
@@ -7,22 +7,26 @@ import {
     PencilSquareIcon,
     GlobeAltIcon,
     CheckCircleIcon,
-    ChartBarIcon
+    ChartBarIcon,
+    ExclamationTriangleIcon,
+    ArrowRightIcon,
+    XMarkIcon
 } from '@heroicons/react/24/outline';
 import { useAccountsStore } from '../store/accountsStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { deleteSite, listSites } from '../api/accountApi';
 import toast from 'react-hot-toast';
 
-const ConnectionStatus = ({ connected, label }) => (
-  <span className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full border ${
+/* ─── Highly Readable Integration Badge ─── */
+const ToolBadge = ({ connected, label }) => (
+  <div className={`inline-flex items-center gap-1.5 text-[10px] font-black px-2.5 py-1.5 rounded-lg border transition-all ${
     connected
-      ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'
-      : 'bg-neutral-100 text-neutral-400 border-neutral-200 dark:bg-neutral-800 dark:text-neutral-600 dark:border-neutral-700'
+      ? 'bg-green-600 text-white border-green-600 shadow-sm'
+      : 'bg-white text-neutral-400 border-neutral-200'
   }`}>
-    <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-green-500' : 'bg-neutral-300 dark:bg-neutral-600'}`}/>
+    <span className="text-[12px]">{connected ? '✓' : '✗'}</span>
     {label}
-  </span>
+  </div>
 );
 
 const SitesPage = () => {
@@ -49,7 +53,6 @@ const SitesPage = () => {
             await deleteSite(id);
             toast.success(`Site "${name}" deleted`);
             
-            // Add to persistent notifications
             const { addNotification } = useNotificationStore.getState();
             addNotification({
                 type: 'info',
@@ -57,7 +60,6 @@ const SitesPage = () => {
                 message: `Website "${name}" and its associated data were removed from your dashboard.`,
             });
             
-            // If we deleted the active site, reset it
             if (activeSiteId === id) {
                 const remaining = userSites.filter(s => s._id !== id);
                 setAccounts({ 
@@ -83,174 +85,162 @@ const SitesPage = () => {
 
     return (
         <DashboardLayout>
-            <div className="flex flex-col space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-black text-neutral-900 dark:text-white tracking-tight">Connected Websites</h1>
-                        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 font-medium">Manage multiple properties and their integration status</p>
+            <div className="space-y-6 pb-20 px-6 pt-6">
+                
+                {/* ─── PAGE HEADER ─── */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="space-y-0.5">
+                        <h1 className="text-2xl font-black text-neutral-900 tracking-tight">My Sites</h1>
+                        <p className="text-neutral-500 font-bold text-sm max-w-2xl leading-relaxed">
+                            Manage analytics and ad performance for your properties.
+                        </p>
                     </div>
                     <button
                         onClick={() => navigate('/connect-accounts?new=true')}
-                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-black rounded-xl transition-all shadow-md shadow-brand-500/20 hover:-translate-y-0.5 active:scale-95"
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-black rounded-xl transition-all shadow-lg shadow-brand-600/20 active:scale-95 whitespace-nowrap"
                     >
-                        <PlusIcon className="w-4 h-4" strokeWidth={3}/>
+                        <PlusIcon className="w-5 h-5" strokeWidth={3} />
                         Add Website
                     </button>
                 </div>
 
+                {/* ─── LOADING STATE ─── */}
                 {loading && userSites.length === 0 && (
-                    <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl overflow-hidden shadow-sm animate-pulse">
-                        <div className="h-12 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-100 dark:border-neutral-800"/>
-                        {[1,2,3,4].map(i => (
-                        <div key={i} className="flex items-center gap-4 px-6 py-5 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
-                            <div className="w-10 h-10 rounded-xl bg-neutral-200 dark:bg-neutral-700 flex-shrink-0"/>
-                            <div className="flex-1 space-y-2">
-                            <div className="h-3.5 w-32 bg-neutral-200 dark:bg-neutral-700 rounded-full"/>
-                            <div className="h-2.5 w-48 bg-neutral-100 dark:bg-neutral-800 rounded-full"/>
+                    <div className="space-y-4">
+                        {[1, 2, 3].map(i => (
+                            <div key={i} className="bg-white border border-neutral-200 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-6 animate-pulse">
+                                <div className="w-14 h-14 bg-neutral-100 rounded-2xl shrink-0" />
+                                <div className="flex-1 space-y-3 w-full">
+                                    <div className="h-4 w-48 bg-neutral-100 rounded-full" />
+                                    <div className="h-3 w-32 bg-neutral-50 rounded-full" />
+                                </div>
+                                <div className="flex gap-2 w-full md:w-auto">
+                                    {[1, 2, 3, 4].map(j => <div key={j} className="h-8 w-16 bg-neutral-100 rounded-lg" />)}
+                                </div>
+                                <div className="flex gap-2 w-full md:w-auto">
+                                    <div className="h-10 w-24 bg-neutral-100 rounded-xl" />
+                                    <div className="h-10 w-10 bg-neutral-100 rounded-xl" />
+                                </div>
                             </div>
-                            <div className="flex gap-2">
-                            <div className="h-6 w-10 bg-neutral-200 dark:bg-neutral-700 rounded-full"/>
-                            <div className="h-6 w-10 bg-neutral-200 dark:bg-neutral-700 rounded-full"/>
-                            <div className="h-6 w-10 bg-neutral-200 dark:bg-neutral-700 rounded-full"/>
-                            <div className="h-6 w-10 bg-neutral-200 dark:bg-neutral-700 rounded-full"/>
-                            </div>
-                            <div className="h-6 w-16 bg-neutral-200 dark:bg-neutral-700 rounded-full"/>
-                            <div className="flex gap-1">
-                            <div className="w-8 h-8 bg-neutral-200 dark:bg-neutral-700 rounded-lg"/>
-                            <div className="w-8 h-8 bg-neutral-200 dark:bg-neutral-700 rounded-lg"/>
-                            <div className="w-8 h-8 bg-neutral-200 dark:bg-neutral-700 rounded-lg"/>
-                            </div>
-                        </div>
                         ))}
                     </div>
                 )}
 
+                {/* ─── EMPTY STATE ─── */}
                 {userSites.length === 0 && !loading && (
-                    <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-16 flex flex-col items-center text-center shadow-sm">
-                        <div className="w-16 h-16 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mb-5 border border-neutral-200 dark:border-neutral-700">
-                        <GlobeAltIcon className="w-8 h-8 text-neutral-400"/>
+                    <div className="bg-white border border-neutral-200 rounded-[2.5rem] p-16 flex flex-col items-center text-center shadow-sm">
+                        <div className="w-24 h-24 rounded-3xl bg-neutral-50 flex items-center justify-center mb-8 border border-neutral-100">
+                            <GlobeAltIcon className="w-12 h-12 text-neutral-400" />
                         </div>
-                        <h2 className="text-lg font-black text-neutral-900 dark:text-white mb-2">No websites connected yet</h2>
-                        <p className="text-sm text-neutral-500 dark:text-neutral-400 max-w-xs mb-6 leading-relaxed">Connect your first website to start tracking analytics and getting AI-powered insights.</p>
-                        <button
-                        onClick={() => navigate('/connect-accounts?new=true')}
-                        className="inline-flex items-center gap-2 px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-black rounded-xl transition-all shadow-md shadow-brand-500/20 hover:-translate-y-0.5 active:scale-95"
-                        >
-                        <PlusIcon className="w-4 h-4" strokeWidth={3}/>
-                        Get Started
-                        </button>
+                        <h2 className="text-3xl font-black text-neutral-900 mb-4 tracking-tight">Add your first website to get started</h2>
+                        <p className="text-neutral-500 font-bold text-lg max-w-lg mb-10 leading-relaxed">
+                            Connect a website to start tracking Google Analytics, Search Console, and Ad performance all in one place.
+                        </p>
+                        <div className="space-y-4">
+                            <button
+                                onClick={() => navigate('/connect-accounts?new=true')}
+                                className="inline-flex items-center gap-3 px-10 py-5 bg-brand-600 hover:bg-brand-700 text-white text-lg font-black rounded-2xl transition-all shadow-2xl shadow-brand-600/30 active:scale-95"
+                            >
+                                <PlusIcon className="w-6 h-6" strokeWidth={3} />
+                                Connect Your First Website
+                            </button>
+                            <p className="text-sm font-bold text-neutral-400 tracking-wide uppercase">Takes less than 2 minutes to set up</p>
+                        </div>
                     </div>
                 )}
 
+                {/* ─── SITES LIST ─── */}
                 {userSites.length > 0 && (
-                    <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-sm overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <div className="min-w-[700px]">
-                                {/* Table header */}
-                                <div className="grid grid-cols-[2fr_2fr_1fr_auto] gap-0 bg-neutral-50 dark:bg-neutral-800/50 border-b border-neutral-200 dark:border-neutral-700">
-                        {['Website', 'Integrations', 'Status', 'Actions'].map(h => (
-                            <div key={h} className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500 last:text-right">{h}</div>
-                        ))}
-                        </div>
-
-                        {/* Table rows */}
-                        <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                    <div className="space-y-3">
                         {userSites.map((site) => {
                             const isActive = activeSiteId === site._id;
+                            const disconnectedCount = [site.ga4PropertyId, site.gscSiteUrl, site.googleAdsCustomerId, site.facebookAdAccountId].filter(val => !val).length;
+                            
                             return (
-                            <div
-                                key={site._id}
-                                className={`grid grid-cols-[2fr_2fr_1fr_auto] gap-0 items-center transition-colors group ${
-                                isActive
-                                    ? 'bg-brand-50/30 dark:bg-brand-900/5'
-                                    : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/30'
-                                }`}
-                            >
-                                {/* Website name */}
-                                <div className="px-5 py-4 flex items-center gap-3">
-                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 border transition-colors ${
-                                    isActive
-                                    ? 'bg-brand-100 dark:bg-brand-900/30 border-brand-200 dark:border-brand-800 text-brand-600 dark:text-brand-400'
-                                    : 'bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-400'
-                                }`}>
-                                    <GlobeAltIcon className="w-4 h-4"/>
-                                </div>
-                                <div className="overflow-hidden">
-                                    <p className="text-sm font-black text-neutral-900 dark:text-white leading-tight truncate">{site.siteName}</p>
-                                    {isActive && (
-                                    <p className="text-[10px] font-bold text-brand-500 dark:text-brand-400 mt-0.5">Currently active</p>
-                                    )}
-                                </div>
-                                </div>
-
-                                {/* Integration badges */}
-                                <div className="px-5 py-4 flex flex-wrap gap-1.5">
-                                <ConnectionStatus connected={!!site.ga4PropertyId}       label="GA4"/>
-                                <ConnectionStatus connected={!!site.gscSiteUrl}          label="GSC"/>
-                                <ConnectionStatus connected={!!site.googleAdsCustomerId}  label="Ads"/>
-                                <ConnectionStatus connected={!!site.facebookAdAccountId}  label="Meta"/>
-                                </div>
-
-                                {/* Status */}
-                                <div className="px-5 py-4">
-                                {isActive ? (
-                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-brand-600 text-white text-[10px] font-black uppercase tracking-wider rounded-full shadow-sm">
-                                    <CheckCircleIcon className="w-3 h-3" strokeWidth={3}/>
-                                    Active
-                                    </span>
-                                ) : (
-                                    <button
-                                    onClick={() => handleSelect(site._id)}
-                                    className="text-[10px] font-black uppercase tracking-wider text-neutral-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors px-2.5 py-1 rounded-lg hover:bg-brand-50 dark:hover:bg-brand-900/20"
-                                    >
-                                    Select
-                                    </button>
-                                )}
-                                </div>
-
-                                {/* Actions */}
-                                <div className="px-5 py-4 flex items-center gap-1 justify-end">
-                                <button
-                                    onClick={() => handleSelect(site._id)}
-                                    title="View Analytics"
-                                    className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all"
+                                <div
+                                    key={site._id}
+                                    onClick={() => !isActive && handleSelect(site._id)}
+                                    className={`relative flex flex-col md:grid md:grid-cols-[1.5fr_1.5fr_auto] gap-4 p-4 rounded-2xl border transition-all group ${
+                                        isActive 
+                                            ? 'bg-brand-50/50 border-brand-200 border-l-4 border-l-brand-600 shadow-sm' 
+                                            : 'bg-white border-neutral-200 hover:border-brand-300 hover:shadow-md cursor-pointer'
+                                    }`}
                                 >
-                                    <ChartBarIcon className="w-4 h-4"/>
-                                </button>
-                                <button
-                                    onClick={() => handleEdit(site._id)}
-                                    title="Edit Connections"
-                                    className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-800 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all"
-                                >
-                                    <PencilSquareIcon className="w-4 h-4"/>
-                                </button>
-                                <button
-                                    onClick={() => handleDelete(site._id, site.siteName)}
-                                    title="Delete Site"
-                                    className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
-                                >
-                                    <TrashIcon className="w-4 h-4"/>
-                                </button>
+                                    {/* COLUMN 1: Identity */}
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${
+                                            isActive 
+                                                ? 'bg-white border-brand-200 text-brand-600 shadow-sm' 
+                                                : 'bg-neutral-50 border-neutral-100 text-neutral-400 group-hover:bg-brand-50 group-hover:text-brand-500'
+                                        }`}>
+                                            <GlobeAltIcon className="w-5 h-5" />
+                                        </div>
+                                        <div className="overflow-hidden space-y-0.5">
+                                            <h3 className="text-base font-black text-neutral-900 truncate tracking-tight">{site.siteName}</h3>
+                                            <div className="flex items-center gap-2">
+                                                {isActive ? (
+                                                    <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Active Now</span>
+                                                ) : (
+                                                    <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest group-hover:text-brand-500 transition-colors">
+                                                        Switch to site
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* COLUMN 2: Connected Tools */}
+                                    <div className="flex flex-col justify-center space-y-2">
+                                        <div className="flex flex-wrap gap-1.5">
+                                            <ToolBadge connected={!!site.ga4PropertyId} label="GA4" />
+                                            <ToolBadge connected={!!site.gscSiteUrl} label="GSC" />
+                                            <ToolBadge connected={!!site.googleAdsCustomerId} label="Ads" />
+                                            <ToolBadge connected={!!site.facebookAdAccountId} label="Meta" />
+                                        </div>
+                                        {disconnectedCount > 0 && (
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); handleEdit(site._id); }}
+                                                className="flex items-center gap-1 text-[10px] font-bold text-amber-600 hover:text-amber-700 transition-colors tracking-wide"
+                                            >
+                                                <ExclamationTriangleIcon className="w-3 h-3" />
+                                                Connect {disconnectedCount} more tools →
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* COLUMN 3: Actions */}
+                                    <div className="flex items-center md:justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                        <button
+                                            onClick={() => handleSelect(site._id)}
+                                            className="p-2 text-neutral-400 hover:text-brand-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-brand-100"
+                                            title="View Analytics"
+                                        >
+                                            <ChartBarIcon className="w-5 h-5" />
+                                        </button>
+                                        <button
+                                            onClick={() => handleEdit(site._id)}
+                                            className="p-2 text-neutral-400 hover:text-neutral-900 hover:bg-white rounded-lg transition-all border border-transparent hover:border-neutral-200"
+                                            title="Edit Connections"
+                                        >
+                                            <PencilSquareIcon className="w-5 h-5" />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(site._id, site.siteName)}
+                                            className="p-2 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all border border-transparent hover:border-red-100"
+                                            title="Delete Site"
+                                        >
+                                            <TrashIcon className="w-5 h-5" />
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
                             );
                         })}
-                        </div>
-                            </div>
-                        </div>
 
-                        {/* Footer */}
-                        <div className="px-5 py-3 bg-neutral-50 dark:bg-neutral-800/30 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
-                        <p className="text-xs text-neutral-400 dark:text-neutral-500 font-medium">
-                            {userSites.length} website{userSites.length !== 1 ? 's' : ''} connected
-                        </p>
-                        <button
-                            onClick={() => navigate('/connect-accounts?new=true')}
-                            className="inline-flex items-center gap-1.5 text-xs font-black text-brand-600 dark:text-brand-400 hover:underline"
-                        >
-                            <PlusIcon className="w-3.5 h-3.5" strokeWidth={3}/>
-                            Add another
-                        </button>
+                        {/* ─── FOOTER ─── */}
+                        <div className="flex flex-col sm:flex-row items-center justify-between pt-8 px-2 border-t border-neutral-100 gap-4">
+                            <p className="text-[11px] font-black text-neutral-400 uppercase tracking-[0.2em]">
+                                Showing {userSites.length} of {userSites.length} website{userSites.length !== 1 ? 's' : ''}
+                            </p>
                         </div>
                     </div>
                 )}
