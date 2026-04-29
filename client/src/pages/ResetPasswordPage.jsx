@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Navbar from '../components/ui/Navbar';
+import Logo from '../components/ui/Logo';
 import { resetPassword } from '../api/authApi';
 import toast from 'react-hot-toast';
 
@@ -73,13 +74,8 @@ const ResetPasswordPage = () => {
             <div className="absolute top-1/4 left-1/4 w-[300px] h-[300px] bg-brand-500/10 dark:bg-brand-600/20 rounded-full blur-[80px] animate-pulse" />
 
             {/* Logo */}
-            <div className="relative z-10 flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/30">
-                    <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                </div>
-                <span className="text-xl font-black text-neutral-900 dark:text-white tracking-tight transition-colors duration-500">RankPilot</span>
+            <div className="relative z-10">
+                <Logo className="w-9 h-9" />
             </div>
 
             {/* Center content */}
@@ -113,12 +109,7 @@ const ResetPasswordPage = () => {
           <div className="w-full max-w-md">
             {/* Mobile logo */}
             <div className="flex items-center gap-2 mb-10 lg:hidden">
-                <div className="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                </div>
-                <span className="text-lg font-black text-neutral-900 dark:text-white">RankPilot</span>
+                <Logo className="w-8 h-8" />
             </div>
 
             <div className="mb-8">

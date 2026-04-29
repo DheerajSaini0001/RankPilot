@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import Logo from './Logo';
 
 const Footer = () => {
   return (
@@ -11,8 +12,7 @@ const Footer = () => {
           {/* Column 1: Brand Section */}
           <div className="flex flex-col space-y-5">
             <NavLink to="/" className="flex items-center gap-2.5">
-              <img src="/favicon.png" alt="RankPilot Logo" className="w-8 h-8" />
-              <span className="text-xl font-black tracking-tight">RankPilot</span>
+              <Logo className="w-8 h-8" />
             </NavLink>
             <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
               AI-Powered Marketing Intelligence for modern SEO professionals.

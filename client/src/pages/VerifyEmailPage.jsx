@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { verifyEmail } from '../api/authApi';
 import Navbar from '../components/ui/Navbar';
+import Logo from '../components/ui/Logo';
 
 const VerifyEmailPage = () => {
   const [searchParams] = useSearchParams();
@@ -23,93 +24,88 @@ const VerifyEmailPage = () => {
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-slate-950 flex flex-col transition-colors duration-500">
       <Navbar />
-      <div className="flex-1 flex items-center justify-center p-6 relative overflow-hidden">
-        {/* Background gradients */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-brand-500/8 dark:bg-brand-500/5 rounded-full blur-[120px]" />
-          <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-blue-500/6 dark:bg-blue-500/4 rounded-full blur-[100px]" />
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* Left Panel — branding side */}
+        <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-between p-12 transition-colors duration-500">
+            <div className="absolute inset-0 bg-gradient-to-br from-brand-50 via-neutral-100 to-neutral-200 dark:from-brand-900 dark:via-slate-900 dark:to-slate-950 transition-colors duration-500" />
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.02)_1px,transparent_1px)] dark:bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:48px_48px] transition-colors duration-500" />
+            <div className="absolute top-1/4 left-1/3 w-[350px] h-[350px] bg-brand-500/10 dark:bg-brand-600/20 rounded-full blur-[90px] animate-pulse" />
+
+            {/* Logo */}
+            <div className="relative z-10">
+                <Logo className="w-9 h-9" />
+            </div>
+
+            {/* Center content */}
+            <div className="relative z-10">
+                <div className="text-4xl font-black text-neutral-900 dark:text-white tracking-tight leading-tight mb-4 transition-colors duration-500">
+                    Welcome to the<br />
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-600 to-blue-600 dark:from-brand-400 dark:to-blue-400">
+                        inner circle.
+                    </span>
+                </div>
+                <p className="text-neutral-500 dark:text-slate-400 font-medium text-sm leading-relaxed max-w-xs transition-colors duration-500">
+                    Verifying your email is the final step to unlocking AI-powered marketing intelligence. We take your security seriously.
+                </p>
+            </div>
+
+            {/* Bottom info */}
+            <div className="relative z-10 p-6 rounded-3xl bg-white/40 dark:bg-white/5 border border-neutral-200 dark:border-white/10 backdrop-blur-sm transition-all duration-500">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-brand-500/10 flex items-center justify-center">
+                        <svg className="w-6 h-6 text-brand-600 dark:text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p className="text-sm font-black text-neutral-900 dark:text-white">Account Verified</p>
+                        <p className="text-xs font-semibold text-neutral-500 dark:text-slate-500">Your data is now AES-256 encrypted.</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        {/* Content */}
-        <div className="w-full max-w-md relative z-10">
-          {/* Logo */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2.5 mb-1">
-              <div className="w-10 h-10 bg-brand-600 rounded-2xl flex items-center justify-center shadow-lg shadow-brand-500/30">
-                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <span className="text-2xl font-black tracking-tight text-neutral-900 dark:text-white">RankPilot</span>
+        {/* Right Panel — status */}
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-white dark:bg-slate-950 transition-colors duration-500">
+          <div className="w-full max-w-md">
+            {/* Mobile logo */}
+            <div className="flex items-center gap-2 mb-10 lg:hidden text-center justify-center">
+                <Logo className="w-8 h-8" />
             </div>
-          </div>
 
-          {/* Card Container */}
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-8 shadow-xl shadow-neutral-900/5 dark:shadow-none text-center">
             {/* Loading State */}
             {status === 'loading' && (
-              <div className="flex flex-col items-center">
-                {/* Spinner */}
-                <div className="relative w-16 h-16 mb-6">
-                  <div className="absolute inset-0 rounded-full border-4 border-neutral-100 dark:border-neutral-800" />
-                  <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-brand-600 animate-spin" />
+              <div className="text-center animate-in fade-in zoom-in-95 duration-500">
+                <div className="relative inline-block mb-8">
+                  <div className="w-20 h-20 bg-brand-50 dark:bg-brand-900/20 rounded-3xl flex items-center justify-center">
+                    <div className="w-10 h-10 border-4 border-brand-200 dark:border-brand-800 border-t-brand-600 rounded-full animate-spin" />
+                  </div>
                 </div>
-                <h2 className="text-xl font-black text-neutral-900 dark:text-white mb-2 tracking-tight">Verifying your email</h2>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium">This will only take a moment...</p>
-
-                {/* Animated dots */}
-                <div className="flex items-center gap-1.5 mt-5">
-                  {[0, 1, 2].map(i => (
-                    <div
-                      key={i}
-                      className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-bounce"
-                      style={{ animationDelay: `${i * 0.15}s` }}
-                    />
-                  ))}
-                </div>
+                <h2 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight mb-2">Verifying email</h2>
+                <p className="text-sm text-neutral-500 dark:text-slate-400 font-medium">Just a moment while we secure your account...</p>
               </div>
             )}
 
             {/* Success State */}
             {status === 'success' && (
-              <div className="flex flex-col items-center">
-                {/* Success icon */}
-                <div className="relative mb-6">
-                  <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center">
-                    <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="relative inline-block mb-8">
+                  <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-3xl flex items-center justify-center">
+                    <svg className="w-10 h-10 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
-                  {/* Pulse ring */}
-                  <div className="absolute inset-0 rounded-2xl border-2 border-green-400 dark:border-green-600 animate-ping opacity-20" />
+                  <div className="absolute inset-0 rounded-3xl border-2 border-green-400 dark:border-green-600 animate-ping opacity-20" />
                 </div>
 
-                <h2 className="text-2xl font-black text-neutral-900 dark:text-white mb-2 tracking-tight">Email Verified!</h2>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium mb-8 leading-relaxed max-w-xs">
-                  Your account is now active. You can log in and start using RankPilot.
+                <h2 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight mb-3">Email Verified!</h2>
+                <p className="text-sm text-neutral-500 dark:text-slate-400 font-medium mb-8 leading-relaxed max-w-xs mx-auto">
+                  Your account is now active. You're ready to start finding hidden opportunities in your marketing data.
                 </p>
-
-                {/* Success checkpoints */}
-                <div className="w-full bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-800/50 rounded-xl p-4 mb-6 text-left space-y-2">
-                  {[
-                    'Email address confirmed',
-                    'Account activated successfully',
-                    'Ready to connect your analytics',
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-center gap-2.5">
-                      <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
-                        <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <span className="text-xs font-semibold text-green-700 dark:text-green-400">{item}</span>
-                    </div>
-                  ))}
-                </div>
 
                 <Link
                   to="/login"
-                  className="w-full inline-flex justify-center items-center gap-2 py-3 px-6 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-black transition-all shadow-lg shadow-brand-500/25 hover:-translate-y-0.5 active:scale-95"
+                  className="w-full inline-flex justify-center items-center gap-2 py-4 px-6 rounded-2xl bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-sm font-black transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-black/10 dark:shadow-none"
                 >
                   Go to Login
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -121,56 +117,46 @@ const VerifyEmailPage = () => {
 
             {/* Error State */}
             {status === 'error' && (
-              <div className="flex flex-col items-center">
-                {/* Error icon */}
-                <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center mb-6">
-                  <svg className="w-8 h-8 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              <div className="text-center animate-in fade-in zoom-in-95 duration-500">
+                <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/30 rounded-3xl flex items-center justify-center mx-auto mb-8">
+                  <svg className="w-10 h-10 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
                   </svg>
                 </div>
 
-                <h2 className="text-2xl font-black text-neutral-900 dark:text-white mb-2 tracking-tight">
-                  {errorReason === 'no-token' ? 'No Verification Token' : 'Link Already Used'}
+                <h2 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight mb-3">
+                  {errorReason === 'no-token' ? 'No Link Found' : 'Invalid Link'}
                 </h2>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium mb-6 leading-relaxed max-w-xs">
+                <p className="text-sm text-neutral-500 dark:text-slate-400 font-medium mb-8 leading-relaxed max-w-xs mx-auto">
                   {errorReason === 'no-token'
-                    ? 'This page requires a verification link from your email. If you already verified your account, just log in.'
-                    : 'This verification link has already been used or has expired. If your account is already verified, you can log in directly.'
+                    ? 'This page requires a verification link. Please check your email for the link sent by RankPilot.'
+                    : 'This verification link has already been used or has expired. Please try logging in or creating a new account.'
                   }
                 </p>
 
-                {/* Info box */}
-                <div className="w-full bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/50 rounded-xl p-4 mb-6 text-left">
-                  <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-start gap-2">
-                    <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {errorReason === 'no-token'
-                      ? 'Check your inbox for the verification email from RankPilot.'
-                      : 'Each verification link can only be used once for security reasons.'
-                    }
-                  </p>
-                </div>
-
-                <div className="w-full space-y-3">
+                <div className="space-y-4">
                   <Link
                     to="/login"
-                    className="w-full inline-flex justify-center items-center gap-2 py-3 px-6 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-black transition-all shadow-lg shadow-brand-500/25 hover:-translate-y-0.5 active:scale-95"
+                    className="w-full inline-flex justify-center items-center gap-2 py-4 px-6 rounded-2xl bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-sm font-black transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-black/10 dark:shadow-none"
                   >
                     Go to Login
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                    </svg>
                   </Link>
                   <Link
                     to="/register"
-                    className="w-full inline-flex justify-center items-center gap-2 py-2.5 px-6 rounded-xl border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 text-sm font-semibold hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all"
+                    className="w-full inline-flex justify-center items-center py-4 px-6 rounded-2xl border-2 border-neutral-100 dark:border-white/5 text-neutral-600 dark:text-slate-400 text-sm font-black transition-all hover:bg-neutral-50 dark:hover:bg-white/5"
                   >
-                    ← Create New Account
+                    Create New Account
                   </Link>
                 </div>
               </div>
             )}
+
+            {/* Footer badges */}
+            <div className="mt-12 pt-8 border-t border-neutral-100 dark:border-white/5 flex items-center justify-center gap-6 opacity-40">
+                {['🔒 Secure', '⚡ Fast', '🛠️ Reliable'].map((item, i) => (
+                    <span key={i} className="text-[10px] font-bold text-neutral-500 dark:text-slate-400 uppercase tracking-widest">{item}</span>
+                ))}
+            </div>
           </div>
         </div>
       </div>
