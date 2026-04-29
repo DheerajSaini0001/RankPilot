@@ -26,6 +26,7 @@ import { useNotificationStore } from '../../store/notificationStore';
 import { useThemeStore } from '../../store/themeStore';
 import { listSites, getActiveAccounts } from '../../api/accountApi';
 import Logo from './Logo';
+import SearchableSelect from './SearchableSelect';
 
 
 const DashboardLayout = ({ children, noScroll = false, title }) => {
@@ -315,33 +316,20 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
 
                 {/* Site Switcher */}
                 <div className="px-3 py-3 border-b border-neutral-100 dark:border-neutral-800">
-                    <div className="relative">
-                        <div className="flex items-center justify-between px-3 py-2.5 bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl cursor-pointer hover:border-brand-400 dark:hover:border-brand-600 transition-all">
-                            <div className="flex items-center gap-2 min-w-0">
-                                <div className="w-5 h-5 rounded-lg bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center flex-shrink-0">
-                                    <GlobeAltIcon className="w-3 h-3 text-brand-600 dark:text-brand-400" />
-                                </div>
-                                <span className="text-xs font-black text-neutral-800 dark:text-neutral-100 truncate">
-                                    {userSites.find(s => s._id === activeSiteId)?.siteName || 'Select Website'}
-                                </span>
-                            </div>
-                            <ChevronDownIcon className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" strokeWidth={3} />
-                        </div>
-                        <select
+                        <SearchableSelect
                             value={activeSiteId || ''}
-                            onChange={handleSiteChange}
-                            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
-                        >
-                            {userSites.length === 0 ? (
-                                <option value="">No websites added</option>
-                            ) : (
-                                userSites.map(site => (
-                                    <option key={site._id} value={site._id}>{site.siteName}</option>
-                                ))
-                            )}
-                            <option value="new">+ Add Website</option>
-                        </select>
-                    </div>
+                            onChange={(e) => {
+                                const id = e.target.value;
+                                setAccounts({ activeSiteId: id });
+                            }}
+                            options={userSites.map(site => ({ label: site.siteName, value: site._id }))}
+                            placeholder="Select Website"
+                            searchPlaceholder="Search websites..."
+                            footerAction={{
+                                label: "+ Add Website",
+                                onClick: () => navigate('/connect-accounts?new=true')
+                            }}
+                        />
                 </div>
 
                 <nav className="flex-1 px-3 space-y-1 overflow-y-auto relative z-10 scrollbar-hide py-3">
