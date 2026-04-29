@@ -11,6 +11,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useThemeStore } from '../store/themeStore';
 import Logo from '../components/ui/Logo';
+import Footer from '../components/ui/Footer';
 
 
 const LandingPage = () => {
@@ -302,51 +303,7 @@ const LandingPage = () => {
                 </div>
             </section>
 
-            {/* 7. FOOTER — clean */}
-            <footer className="bg-neutral-50 dark:bg-slate-950 border-t border-neutral-100 dark:border-white/5 py-16 transition-colors">
-                <div className="max-w-7xl mx-auto px-6">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-14">
-
-                        <div className="col-span-2 md:col-span-1">
-                            <div className="flex items-center gap-2 mb-4">
-                                <Logo className="w-7 h-7" textClassName="text-base text-neutral-900 dark:text-white" />
-                            </div>
-                            <p className="text-neutral-400 dark:text-slate-500 text-xs font-medium leading-relaxed max-w-[200px]">
-                                AI-powered analytics for the next generation of marketing teams.
-                            </p>
-                        </div>
-
-                        {/* Product */}
-                        <div>
-                            <h5 className="text-xs font-black text-neutral-900 dark:text-white uppercase tracking-widest mb-4">Product</h5>
-                            <ul className="space-y-3">
-                                {['Features','Pricing','Integrations'].map(l => (
-                                    <li key={l}><a href="#" className="text-xs font-semibold text-neutral-400 dark:text-slate-500 hover:text-brand-600 dark:hover:text-white transition-colors">{l}</a></li>
-                                ))}
-                            </ul>
-                        </div>
-
-                        {/* Company */}
-                        <div>
-                            <h5 className="text-xs font-black text-neutral-900 dark:text-white uppercase tracking-widest mb-4">Company</h5>
-                            <ul className="space-y-3">
-                                <li><NavLink to="/about"   className="text-xs font-semibold text-neutral-400 dark:text-slate-500 hover:text-brand-600 dark:hover:text-white transition-colors">About</NavLink></li>
-                                <li><a href="#" className="text-xs font-semibold text-neutral-400 dark:text-slate-500 hover:text-brand-600 dark:hover:text-white transition-colors">Privacy</a></li>
-                                <li><a href="#" className="text-xs font-semibold text-neutral-400 dark:text-slate-500 hover:text-brand-600 dark:hover:text-white transition-colors">Terms</a></li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
-                        <p className="text-xs font-medium text-slate-600">© {new Date().getFullYear()} RankPilot AI. All rights reserved.</p>
-                        <div className="flex items-center gap-6">
-                            {['Twitter','LinkedIn','GitHub'].map(s => (
-                                <a key={s} href="#" className="text-xs font-semibold text-slate-600 hover:text-white transition-colors">{s}</a>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </footer>
+            <Footer />
         </div>
     );
 };

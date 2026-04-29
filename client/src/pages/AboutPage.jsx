@@ -14,6 +14,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useThemeStore } from '../store/themeStore';
 import Logo from '../components/ui/Logo';
+import Footer from '../components/ui/Footer';
 
 
 const AboutPage = () => {
@@ -358,31 +359,7 @@ const AboutPage = () => {
                 </div>
             </section>
 
-            {/* 8. FOOTER — consistent with LandingPage */}
-            <footer className="bg-slate-950 border-t border-white/5 py-12">
-                <div className="max-w-7xl mx-auto px-6">
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-
-                        {/* Logo */}
-                        <Logo className="w-7 h-7" textClassName="text-sm text-white" />
-
-                        {/* Links */}
-                        <div className="flex flex-wrap items-center justify-center gap-6">
-                            {['Privacy Policy','Terms of Service','Support','Home'].map(l => (
-                                <a key={l} href="#"
-                                    className="text-xs font-semibold text-slate-500 hover:text-white transition-colors">
-                                    {l}
-                                </a>
-                            ))}
-                        </div>
-
-                        {/* Copyright */}
-                        <p className="text-[10px] font-medium text-slate-600">
-                            © {new Date().getFullYear()} RankPilot AI
-                        </p>
-                    </div>
-                </div>
-            </footer>
+            <Footer />
 
             <style>{`
                 @keyframes float1 {

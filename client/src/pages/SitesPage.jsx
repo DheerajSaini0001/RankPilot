@@ -85,7 +85,7 @@ const SitesPage = () => {
 
     return (
         <DashboardLayout>
-            <div className="space-y-6 pb-20 px-6 pt-6">
+            <div className="space-y-6 pb-20 px-6 pt-2">
                 
                 {/* ─── PAGE HEADER ─── */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

@@ -170,10 +170,10 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
 
     const getNotifIcon = (type) => {
         const icons = {
-            success: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-600 dark:text-green-400', emoji: '✅' },
-            info: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-600 dark:text-blue-400', emoji: 'ℹ️' },
-            warning: { bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-600 dark:text-amber-400', emoji: '⚠️' },
-            error: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-600 dark:text-red-400', emoji: '❌' },
+            success: { bg: 'bg-emerald-50 dark:bg-emerald-950/30', icon: "https://img.icons8.com/fluency/96/checked.png" },
+            info: { bg: 'bg-blue-50 dark:bg-blue-950/30', icon: "https://img.icons8.com/fluency/96/info.png" },
+            warning: { bg: 'bg-amber-50 dark:bg-amber-950/30', icon: "https://img.icons8.com/fluency/96/warning-shield.png" },
+            error: { bg: 'bg-red-50 dark:bg-red-950/30', icon: "https://img.icons8.com/fluency/96/cancel.png" },
         };
         return icons[type] || icons.info;
     };
@@ -190,15 +190,15 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
     };
 
     const getSourceLabel = (source) => {
-        const labels = {
-            'ga4': '📊 GA4',
-            'gsc': '🔍 GSC',
-            'google-ads': '📢 Google Ads',
-            'facebook-ads': '📘 Facebook Ads',
-            'ai': '🤖 AI',
-            'system': '⚙️ System',
+        const sources = {
+            'ga4': { label: 'GA4', icon: 'https://www.gstatic.com/images/branding/product/2x/google_analytics_64dp.png' },
+            'gsc': { label: 'GSC', icon: 'https://www.gstatic.com/images/branding/product/2x/search_console_64dp.png' },
+            'google-ads': { label: 'Google Ads', icon: 'https://www.vectorlogo.zone/logos/google_ads/google_ads-icon.svg' },
+            'facebook-ads': { label: 'Facebook Ads', icon: 'https://www.vectorlogo.zone/logos/facebook/facebook-icon.svg' },
+            'ai': { label: 'AI Assistant', icon: 'https://img.icons8.com/fluency/96/sparkling.png' },
+            'system': { label: 'System', icon: 'https://img.icons8.com/fluency/96/services.png' },
         };
-        return labels[source] || null;
+        return sources[source] || null;
     };
 
     const handleLogout = () => {
@@ -225,43 +225,43 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
         { 
             label: 'Dashboard', 
             path: '/dashboard', 
-            icon: () => <ChartPieIcon className="w-5 h-5 text-blue-500 drop-shadow-[0_0_3px_rgba(59,130,246,0.3)]" strokeWidth={2.5} /> 
+            icon: () => <ChartPieIcon className="w-5 h-5 text-blue-500" strokeWidth={2.5} /> 
         },
         { 
             label: 'My Sites', 
             path: '/dashboard/sites', 
-            icon: () => <GlobeAltIcon className="w-5 h-5 text-emerald-500 drop-shadow-[0_0_3px_rgba(16,185,129,0.3)]" strokeWidth={2.5} /> 
+            icon: () => <GlobeAltIcon className="w-5 h-5 text-emerald-500" strokeWidth={2.5} /> 
         },
         { 
             label: 'AI Assistant', 
             path: '/dashboard/ai-chat', 
-            icon: () => <SparklesIcon className="w-5 h-5 text-amber-500 drop-shadow-[0_0_3px_rgba(245,158,11,0.3)]" strokeWidth={2.5} /> 
+            icon: () => <SparklesIcon className="w-5 h-5 text-amber-500" strokeWidth={2.5} /> 
         },
-        { 
-            label: 'Google Search Console', 
-            path: '/dashboard/gsc', 
-            icon: () => <img src="https://www.gstatic.com/images/branding/product/2x/search_console_64dp.png" className="w-4 h-4 object-contain" alt="GSC" />, 
+        {
+            label: 'Google Search Console',
+            path: '/dashboard/gsc',
+            icon: () => <img src="https://www.gstatic.com/images/branding/product/2x/search_console_64dp.png" className="w-4 h-4 object-contain" alt="GSC" />,
             isSubItem: true,
             sourceKey: 'gsc'
         },
-        { 
-            label: 'Google Analytics 4', 
-            path: '/dashboard/ga4', 
-            icon: () => <img src="https://www.gstatic.com/images/branding/product/2x/google_analytics_64dp.png" className="w-4 h-4 object-contain" alt="GA4" />, 
+        {
+            label: 'Google Analytics 4',
+            path: '/dashboard/ga4',
+            icon: () => <img src="https://www.gstatic.com/images/branding/product/2x/google_analytics_64dp.png" className="w-4 h-4 object-contain" alt="GA4" />,
             isSubItem: true,
             sourceKey: 'ga4'
         },
-        { 
-            label: 'Google Ads', 
-            path: '/dashboard/google-ads', 
-            icon: () => <img src="https://www.vectorlogo.zone/logos/google_ads/google_ads-icon.svg" className="w-4 h-4 object-contain" alt="Ads" />, 
+        {
+            label: 'Google Ads',
+            path: '/dashboard/google-ads',
+            icon: () => <img src="https://www.vectorlogo.zone/logos/google_ads/google_ads-icon.svg" className="w-4 h-4 object-contain" alt="Ads" />,
             isSubItem: true,
             sourceKey: 'google-ads'
         },
-        { 
-            label: 'Facebook Ads', 
-            path: '/dashboard/facebook-ads', 
-            icon: () => <img src="https://www.vectorlogo.zone/logos/facebook/facebook-icon.svg" className="w-4 h-4 object-contain" alt="FB" />, 
+        {
+            label: 'Facebook Ads',
+            path: '/dashboard/facebook-ads',
+            icon: () => <img src="https://www.vectorlogo.zone/logos/facebook/facebook-icon.svg" className="w-4 h-4 object-contain" alt="FB" />,
             isSubItem: true,
             sourceKey: 'facebook-ads'
         },
@@ -316,20 +316,20 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
 
                 {/* Site Switcher */}
                 <div className="px-3 py-3 border-b border-neutral-100 dark:border-neutral-800">
-                        <SearchableSelect
-                            value={activeSiteId || ''}
-                            onChange={(e) => {
-                                const id = e.target.value;
-                                setAccounts({ activeSiteId: id });
-                            }}
-                            options={userSites.map(site => ({ label: site.siteName, value: site._id }))}
-                            placeholder="Select Website"
-                            searchPlaceholder="Search websites..."
-                            footerAction={{
-                                label: "+ Add Website",
-                                onClick: () => navigate('/connect-accounts?new=true')
-                            }}
-                        />
+                    <SearchableSelect
+                        value={activeSiteId || ''}
+                        onChange={(e) => {
+                            const id = e.target.value;
+                            setAccounts({ activeSiteId: id });
+                        }}
+                        options={userSites.map(site => ({ label: site.siteName, value: site._id }))}
+                        placeholder="Select Website"
+                        searchPlaceholder="Search websites..."
+                        footerAction={{
+                            label: "+ Add Website",
+                            onClick: () => navigate('/connect-accounts?new=true')
+                        }}
+                    />
                 </div>
 
                 <nav className="flex-1 px-3 space-y-1 overflow-y-auto relative z-10 scrollbar-hide py-3">
@@ -350,7 +350,7 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
                                 }
                             `}
                         >
-                                {typeof item.icon === 'function' ? <item.icon /> : <item.icon className="w-4 h-4" strokeWidth={2.5} />}
+                            {typeof item.icon === 'function' ? <item.icon /> : <item.icon className="w-4 h-4" strokeWidth={2.5} />}
                             <span className="flex-1">{item.label}</span>
                         </NavLink>
                     ))}
@@ -373,9 +373,9 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
                                 }
                             `}
                         >
-                                {typeof item.icon === 'function' ? <item.icon /> : <item.icon className="w-3.5 h-3.5" strokeWidth={2.5} />}
+                            {typeof item.icon === 'function' ? <item.icon /> : <item.icon className="w-3.5 h-3.5" strokeWidth={2.5} />}
                             <span className="flex-1">{item.label}</span>
-                            
+
                             {/* Status Indicator */}
                             {item.sourceKey && (
                                 <div className={`w-1.5 h-1.5 rounded-full ${connectedSources.includes(item.sourceKey) ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]' : 'bg-neutral-300'}`} />
@@ -426,7 +426,7 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
                             <img src="https://img.icons8.com/fluency/48/settings.png" className="w-4 h-4 object-contain group-hover:scale-110 transition-transform" alt="Settings" />
                             <span>Settings</span>
                         </NavLink>
-                        
+
                         <NavLink
                             to="/dashboard/support"
                             onClick={() => setIsSidebarOpen(false)}
@@ -586,52 +586,62 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
                             {isNotifOpen && (
                                 <>
                                     <div className="fixed inset-0 z-40" onClick={() => setIsNotifOpen(false)} />
-                                    <div className="fixed inset-x-4 top-[64px] sm:absolute sm:top-full sm:right-0 sm:left-auto sm:mt-4 sm:mb-10 sm:w-96 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 transition-all">
-                                        <div className="px-4 py-3.5 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between bg-neutral-50/50 dark:bg-neutral-800/30">
-                                            <div className="flex items-center gap-2.5">
-                                                <h4 className="text-xs font-black uppercase tracking-widest text-neutral-900 dark:text-white">Notifications</h4>
-                                                {unreadCount > 0 && (
-                                                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400">
-                                                        {unreadCount} new
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                {unreadCount > 0 && (
-                                                    <button onClick={markAllRead} className="text-[10px] font-black text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 px-2 py-1 rounded-lg hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all">Mark all read</button>
-                                                )}
-                                                {notifications.length > 0 && (
-                                                    <button onClick={clearAll} className="text-[10px] font-black text-neutral-400 hover:text-red-500 px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all">Clear all</button>
-                                                )}
-                                            </div>
+                                    <div className="fixed inset-x-4 top-[64px] sm:absolute sm:top-full sm:right-0 sm:left-auto sm:mt-2 sm:w-[380px] bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                                        <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between bg-white dark:bg-neutral-900">
+                                            <h4 className="text-[10px] font-black uppercase tracking-[0.15em] text-neutral-900 dark:text-white">Notifications</h4>
+                                            {notifications.length > 0 && (
+                                                <button onClick={clearAll} className="text-[10px] font-bold text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors">Clear all</button>
+                                            )}
                                         </div>
-                                        <div className="max-h-[60vh] sm:max-h-[480px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+
+                                        <div className="max-h-[60vh] sm:max-h-[480px] overflow-y-auto scrollbar-hide">
                                             {notifications.length === 0 ? (
                                                 <div className="flex flex-col items-center justify-center py-12 text-center px-6">
-                                                    <div className="w-12 h-12 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mb-3">
-                                                        <BellIcon className="w-6 h-6 text-neutral-400" />
+                                                    <div className="w-14 h-14 rounded-2xl bg-neutral-50 dark:bg-neutral-800 flex items-center justify-center mb-4 border border-neutral-100 dark:border-neutral-700">
+                                                        <BellIcon className="w-7 h-7 text-neutral-300" />
                                                     </div>
-                                                    <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400">No notifications yet</p>
-                                                    <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-1">You're all caught up!</p>
+                                                    <p className="text-sm font-black text-neutral-900 dark:text-white">All caught up!</p>
+                                                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">No new notifications at the moment.</p>
                                                 </div>
                                             ) : (
                                                 <div className="divide-y divide-neutral-50 dark:divide-neutral-800/50">
                                                     {notifications.map((notif) => {
                                                         const icon = getNotifIcon(notif.type);
                                                         return (
-                                                            <div key={notif.id} className={`group relative px-4 py-3.5 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-all cursor-pointer ${!notif.isRead ? 'bg-brand-50/30 dark:bg-brand-500/5' : ''}`} onClick={() => { markAsRead(notif.id); if (notif.actionPath) { navigate(notif.actionPath); setIsNotifOpen(false); } }}>
-                                                                {!notif.isRead && <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-brand-500 rounded-r-full" />}
-                                                                <div className="flex items-start gap-3">
-                                                                    <div className={`w-8 h-8 rounded-xl ${icon.bg} flex items-center justify-center flex-shrink-0 text-sm`}>{icon.emoji}</div>
+                                                            <div 
+                                                                key={notif.id} 
+                                                                className={`group relative px-4 py-4 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-all cursor-pointer ${!notif.isRead ? 'bg-blue-50/20 dark:bg-brand-500/5' : ''}`}
+                                                                onClick={() => { markAsRead(notif.id); if (notif.actionPath) { navigate(notif.actionPath); setIsNotifOpen(false); } }}
+                                                            >
+                                                                <div className="flex items-start gap-3.5">
+                                                                    <div className={`w-9 h-9 rounded-full ${icon.bg} flex items-center justify-center flex-shrink-0 shadow-sm border border-white dark:border-neutral-800 p-1.5`}>
+                                                                        <img src={icon.icon} className="w-full h-full object-contain" alt="Notif" />
+                                                                    </div>
                                                                     <div className="flex-1 min-w-0">
-                                                                        <div className="flex items-start justify-between gap-2">
-                                                                            <p className={`text-xs font-black leading-tight ${!notif.isRead ? 'text-neutral-900 dark:text-white' : 'text-neutral-600 dark:text-neutral-400'}`}>{notif.title}</p>
-                                                                            <button onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }} className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 text-neutral-400 transition-all flex-shrink-0"><XMarkIcon className="w-3 h-3" /></button>
+                                                                        <div className="flex items-start justify-between gap-3">
+                                                                            <p className={`text-[12px] font-black leading-tight ${!notif.isRead ? 'text-neutral-900 dark:text-white' : 'text-neutral-700 dark:text-neutral-300'}`}>{notif.title}</p>
+                                                                            <button onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }} className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-neutral-300 hover:text-red-500 transition-all flex-shrink-0"><XMarkIcon className="w-3 h-3" /></button>
                                                                         </div>
-                                                                        <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 leading-relaxed line-clamp-2">{notif.message}</p>
-                                                                        <div className="flex items-center justify-between mt-1.5 gap-2">
-                                                                            <div className="flex items-center gap-1.5"><span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500">{getTimeAgo(notif.timestamp)}</span>{getSourceLabel(notif.source) && <><span className="text-neutral-300 dark:text-neutral-700">·</span><span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500">{getSourceLabel(notif.source)}</span></>}</div>
-                                                                            {notif.actionLabel && <span className="text-[10px] font-black text-brand-600 dark:text-brand-400 hover:underline">{notif.actionLabel} →</span>}
+                                                                        <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed font-medium line-clamp-2">{notif.message}</p>
+                                                                        
+                                                                        <div className="flex items-center justify-between mt-2.5 gap-2">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500">{getTimeAgo(notif.timestamp)}</span>
+                                                                                {getSourceLabel(notif.source) && (
+                                                                                    <>
+                                                                                        <span className="text-neutral-300 dark:text-neutral-700">·</span>
+                                                                                        <span className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 flex items-center gap-1.5">
+                                                                                            <img src={getSourceLabel(notif.source).icon} className="w-3 h-3 object-contain" alt="src" />
+                                                                                            {getSourceLabel(notif.source).label}
+                                                                                        </span>
+                                                                                    </>
+                                                                                )}
+                                                                            </div>
+                                                                            {notif.actionLabel && (
+                                                                                <span className="text-[10px] font-black text-brand-600 dark:text-brand-400 hover:text-brand-700">
+                                                                                    {notif.actionLabel} →
+                                                                                </span>
+                                                                            )}
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -642,9 +652,9 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
                                             )}
                                         </div>
                                         {notifications.length > 0 && (
-                                            <div className="px-4 py-3 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/30 flex items-center justify-between">
-                                                <p className="text-[10px] font-bold text-neutral-400">{notifications.length} total · {unreadCount} unread</p>
-                                                <button onClick={clearRead} className="text-[10px] font-black text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors">Clear read</button>
+                                            <div className="px-4 py-3 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/30 dark:bg-neutral-800/20 flex items-center justify-between">
+                                                <p className="text-[10px] font-black uppercase tracking-wider text-neutral-400">{notifications.length} total · {unreadCount} unread</p>
+                                                <button onClick={clearRead} className="text-[10px] font-black uppercase tracking-wider text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors">Clear read</button>
                                             </div>
                                         )}
                                     </div>
@@ -669,8 +679,10 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
                                     )}
                                     <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-semantic-success rounded-full border-2 border-white dark:border-dark-bg"></div>
                                 </div>
-                                <div className="hidden sm:block text-left">
-                                    <p className="text-xs font-black text-neutral-900 dark:text-white leading-none">{user?.name?.split(' ')[0] || 'User'}</p>
+                                <div className="hidden sm:flex flex-col items-start min-w-0 max-w-[120px]">
+                                    <span className="text-sm font-black text-neutral-900 dark:text-white leading-none truncate w-full">
+                                        {user?.name || 'User'}
+                                    </span>
                                 </div>
                                 <ChevronDownIcon className="w-3.5 h-3.5 text-neutral-400 group-hover:text-neutral-600 transition-colors" strokeWidth={3} />
                             </button>
@@ -678,54 +690,69 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
                             {isUserMenuOpen && (
                                 <>
                                     <div className="fixed inset-0 z-40" onClick={() => setIsUserMenuOpen(false)}></div>
-                                    <div className="fixed inset-x-4 top-[64px] sm:absolute sm:top-auto sm:inset-auto sm:right-0 sm:mt-3 sm:w-48 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700/60 rounded-xl shadow-xl py-1 z-50 overflow-hidden transform opacity-100 scale-100 transition-all origin-top-right">
-                                        <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800/60 bg-neutral-50/50 dark:bg-dark-surface/50">
-                                            <p className="text-sm font-bold text-neutral-900 dark:text-white truncate">{user?.name || 'User'}</p>
-                                            <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400 truncate tracking-wide">{user?.email}</p>
+                                    <div className="fixed inset-x-4 top-[64px] sm:absolute sm:top-full sm:right-0 sm:left-auto sm:mt-2 sm:w-64 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                                        {/* User Header */}
+                                        <div className="px-5 py-4 border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/30">
+                                            <p className="text-sm font-black text-neutral-900 dark:text-white truncate">{user?.name || 'User'}</p>
+                                            <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 truncate mt-0.5">{user?.email}</p>
                                         </div>
-                                        <div className="py-1">
+
+                                        {/* Menu Items */}
+                                        <div className="p-1.5">
                                             <button
                                                 onClick={() => { setIsUserMenuOpen(false); navigate('/connect-accounts'); }}
-                                                className="w-full text-left px-4 py-2.5 text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors flex items-center"
+                                                className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white transition-all group"
                                             >
-                                                <Cog6ToothIcon className="w-4 h-4 mr-2.5 text-neutral-400" />
-                                                Integrations
+                                                <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center border border-blue-100 dark:border-blue-800 group-hover:border-blue-500 transition-all">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-4 h-4 text-blue-600" strokeWidth={2.5}>
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+                                                    </svg>
+                                                </div>
+                                                Connect Platforms
                                             </button>
+
                                             <button
                                                 onClick={() => { setIsUserMenuOpen(false); navigate('/settings'); }}
-                                                className="w-full text-left px-4 py-2.5 text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors flex items-center"
+                                                className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white transition-all group"
                                             >
-                                                <WrenchIcon className="w-4 h-4 mr-2.5 text-neutral-400" />
-                                                Settings
+                                                <div className="w-7 h-7 rounded-lg bg-neutral-50 dark:bg-neutral-800 flex items-center justify-center border border-neutral-200 dark:border-neutral-700 group-hover:border-neutral-400 transition-all">
+                                                    <Cog6ToothIcon className="w-4 h-4 text-neutral-500 group-hover:text-neutral-700 dark:group-hover:text-neutral-300" strokeWidth={2.5} />
+                                                </div>
+                                                Account Settings
                                             </button>
-                                            <button
-                                                onClick={() => toggleDark()}
-                                                className="w-full text-left px-4 py-2.5 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-all flex items-center justify-between group/theme"
-                                            >
-                                                <div className="flex items-center gap-2.5">
-                                                    <div className="relative flex items-center justify-center">
+
+                                            <div className="px-3.5 py-2.5 flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center border transition-all ${isDark ? 'bg-indigo-950/40 border-indigo-900/50' : 'bg-amber-50 border-amber-100'}`}>
                                                         {isDark ? (
-                                                            <MoonIcon className="w-5 h-5 text-brand-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.4)]" strokeWidth={2.5} />
+                                                            <MoonIcon className="w-4 h-4 text-indigo-400" strokeWidth={2.5} />
                                                         ) : (
-                                                            <SunIcon className="w-5.5 h-5.5 text-amber-500 drop-shadow-[0_0_10px_rgba(251,191,36,0.6)]" strokeWidth={2.5} />
+                                                            <SunIcon className="w-4 h-4 text-amber-500" strokeWidth={2.5} />
                                                         )}
                                                     </div>
-                                                    <span className="text-sm font-black text-neutral-900 dark:text-white tracking-tight whitespace-nowrap">
-                                                        {!isDark ? 'Light Mode' : 'Dark Mode'}
+                                                    <span className="text-sm font-bold text-neutral-600 dark:text-neutral-300">
+                                                        {isDark ? 'Dark Mode' : 'Light Mode'}
                                                     </span>
                                                 </div>
-                                                <div className={`
-                                                    w-9 h-5 rounded-full p-1 transition-all duration-300 flex items-center
-                                                    ${!isDark ? 'bg-amber-900/40' : 'bg-neutral-200 dark:bg-neutral-800'}
-                                                `}>
-                                                    <div className={`
-                                                        w-3 h-3 rounded-full transition-transform duration-300 shadow-lg
-                                                        ${!isDark ? 'translate-x-4 bg-amber-400' : 'translate-x-0 bg-neutral-400 dark:bg-neutral-600'}
-                                                    `} />
-                                                </div>
-                                            </button>
+                                                <button 
+                                                    onClick={() => toggleDark()}
+                                                    className={`
+                                                        relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none
+                                                        ${isDark ? 'bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.4)]' : 'bg-neutral-200'}
+                                                    `}
+                                                >
+                                                    <span
+                                                        className={`
+                                                            inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-300
+                                                            ${isDark ? 'translate-x-6' : 'translate-x-1'}
+                                                        `}
+                                                    />
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div className="py-1 border-t border-neutral-100 dark:border-neutral-800/60 bg-neutral-50/50 dark:bg-dark-surface/50">
+
+                                        {/* Logout Section */}
+                                        <div className="p-1.5 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/30">
                                             <button
                                                 onClick={() => {
                                                     setIsUserMenuOpen(false);
@@ -733,10 +760,12 @@ const DashboardLayout = ({ children, noScroll = false, title }) => {
                                                         handleLogout();
                                                     }
                                                 }}
-                                                className="w-full text-left px-4 py-2.5 text-sm font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors flex items-center"
+                                                className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-black text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all group"
                                             >
-                                                <ArrowRightOnRectangleIcon className="w-4 h-4 mr-2.5 text-red-500" strokeWidth={2} />
-                                                Log out
+                                                <div className="w-7 h-7 rounded-lg bg-red-50 dark:bg-red-900/40 flex items-center justify-center border border-red-100 dark:border-red-800 group-hover:bg-red-500 group-hover:border-red-500 transition-all">
+                                                    <ArrowRightOnRectangleIcon className="w-4 h-4 text-red-500 group-hover:text-white" strokeWidth={2.5} />
+                                                </div>
+                                                Sign Out
                                             </button>
                                         </div>
                                     </div>
