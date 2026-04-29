@@ -456,11 +456,6 @@ const DashboardPage = () => {
                     Guide
                   </button>
                 </div>
-
-                <div className="mt-8 flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 rounded-full border border-emerald-500/20">
-                  <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></div>
-                  <span className="text-[8px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest leading-none">Engine Ready</span>
-                </div>
               </div>
             </div>
           ) : (
@@ -486,9 +481,6 @@ const DashboardPage = () => {
                           <p className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-600 dark:text-brand-400 shrink-0">Overview</p>
                           <div className="flex flex-wrap items-center gap-3">
                             <h2 className="text-lg lg:text-2xl font-black text-neutral-900 dark:text-white tracking-tight leading-none">{overviewData.siteName || activeSite?.siteName || 'RankPilot'}</h2>
-                            <div className="px-1.5 py-0.5 rounded-full text-[6px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                              Active
-                            </div>
                           </div>
                           <p className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-sm mt-1 line-clamp-2">
                             {overviewData.intelligence?.websiteSummary || `Monitoring ${overviewData.siteName || activeSite?.siteName} performance across your marketing channels.`}

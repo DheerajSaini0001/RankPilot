@@ -22,14 +22,15 @@ import { useAiChatStore } from '../../store/aiChatStore';
 
 /* ─── Markdown Component Overrides (Compact for Sidebar/Bubble) ─── */
 const MD = {
-    p: ({ children }) => <p className="leading-relaxed text-[13px] text-neutral-700 dark:text-neutral-300 mb-2 last:mb-0 break-words [word-break:break-word]">{children}</p>,
-    strong: ({ children }) => <strong className="font-bold text-neutral-900 dark:text-white break-words [word-break:break-word]">{children}</strong>,
-    ul: ({ children }) => <ul className="space-y-1 mb-2 pl-4 list-disc marker:text-brand-500">{children}</ul>,
-    ol: ({ children }) => <ol className="space-y-1 mb-2 pl-4 list-decimal marker:text-brand-500">{children}</ol>,
-    li: ({ children }) => <li className="text-[13px] text-neutral-700 dark:text-neutral-300 break-words [word-break:break-word]">{children}</li>,
-    h1: ({ children }) => <h1 className="text-sm font-black text-neutral-900 dark:text-white mb-1">{children}</h1>,
-    h2: ({ children }) => <h2 className="text-sm font-bold text-neutral-900 dark:text-white mb-1">{children}</h2>,
-    h3: ({ children }) => <h3 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 mb-1">{children}</h3>,
+    p: ({ children }) => <p className="leading-relaxed text-[13px] text-neutral-700 dark:text-neutral-200 mb-2 last:mb-0 break-words [word-break:break-word]">{children}</p>,
+    strong: ({ children }) => <strong className="font-extrabold text-neutral-900 dark:text-white break-words [word-break:break-word]">{children}</strong>,
+    ul: ({ children }) => <ul className="space-y-2 mb-3 pl-4 list-disc marker:text-brand-500 marker:font-black">{children}</ul>,
+    ol: ({ children }) => <ol className="space-y-2 mb-3 pl-4 list-decimal marker:text-brand-500 marker:font-black">{children}</ol>,
+    li: ({ children }) => <li className="text-[13px] text-neutral-700 dark:text-neutral-200 break-words [word-break:break-word] pl-1">{children}</li>,
+    h1: ({ children }) => <h1 className="text-sm font-black text-neutral-900 dark:text-white mb-2 uppercase tracking-tight">{children}</h1>,
+    h2: ({ children }) => <h2 className="text-sm font-black text-neutral-900 dark:text-white mb-2 tracking-tight">{children}</h2>,
+    h3: ({ children }) => <h3 className="text-xs font-black text-neutral-800 dark:text-neutral-50 mb-1.5">{children}</h3>,
+    a: ({ children, href }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400 font-bold underline decoration-brand-500/30 underline-offset-2 hover:decoration-brand-500 transition-all">{children}</a>,
     code: ({ inline, className, children, ...props }) => {
         const match = /language-json-chart-(\w+)/.exec(className || '');
         const isJson = /language-json/.test(className || '');
@@ -107,7 +108,7 @@ const TypingIndicator = () => {
                     />
                 ))}
             </div>
-            <span className="text-[10px] font-black text-brand-600/60 dark:text-brand-400/60 uppercase tracking-[0.15em] animate-pulse">
+            <span className="text-[10px] font-black text-brand-600/80 dark:text-brand-400 uppercase tracking-[0.15em] animate-pulse">
                 {phrase}
             </span>
         </div>
@@ -392,7 +393,7 @@ const GlobalAiChat = () => {
                     </div>
 
                     {/* Messages Area */}
-                    <div className="flex-1 flex flex-col overflow-y-auto px-4 py-5 space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] bg-neutral-50/30 dark:bg-neutral-900/10">
+                    <div className="flex-1 flex flex-col overflow-y-auto px-4 py-5 space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] bg-neutral-50/30 dark:bg-dark-bg/40">
                         {messages.length === 0 && (
                             <div className="flex flex-col items-center pt-2 pb-6 text-center min-h-min">
                                 <div className="shrink-0 w-16 h-16 rounded-3xl bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200/50 dark:border-neutral-700/50 flex items-center justify-center mb-4 rotate-3 group-hover:rotate-0 transition-transform">
@@ -416,7 +417,7 @@ const GlobalAiChat = () => {
                                             <button
                                                 key={i}
                                                 onClick={() => sendMessage(q)}
-                                                className="px-4 py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-[11px] font-bold text-neutral-500 hover:text-brand-600 hover:border-brand-500 transition-all text-left shadow-sm active:scale-95"
+                                                className="px-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/50 rounded-2xl text-[11px] font-bold text-neutral-500 dark:text-neutral-400 hover:text-brand-600 dark:hover:text-brand-400 hover:border-brand-500 transition-all text-left shadow-sm active:scale-95"
                                             >
                                                 {q}
                                             </button>
@@ -447,7 +448,7 @@ const GlobalAiChat = () => {
                                     </div>
                                     <div className={`max-w-[85%] ${msg.role === 'user' ? 'bg-brand-600 text-white rounded-2xl rounded-tr-sm shadow-lg shadow-brand-500/20 px-4 py-3' : 'bg-transparent'}`}>
                                         {msg.isLoading ? (
-                                            <div className="bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700/50 px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm">
+                                            <div className="bg-white dark:bg-neutral-800/80 border border-neutral-100 dark:border-neutral-700/50 px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm backdrop-blur-sm">
                                                 <TypingIndicator />
                                             </div>
                                         ) : msg.isError ? (
@@ -463,7 +464,7 @@ const GlobalAiChat = () => {
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div className="bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700/50 px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm text-neutral-800 dark:text-neutral-100 text-[13px] leading-relaxed font-medium">
+                                            <div className="bg-white dark:bg-dark-card/60 border border-neutral-100 dark:border-neutral-700/40 px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm text-neutral-800 dark:text-neutral-100 text-[13px] leading-relaxed font-medium backdrop-blur-xl">
                                                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD}>
                                                     {msg.content}
                                                 </ReactMarkdown>
@@ -487,7 +488,7 @@ const GlobalAiChat = () => {
                                 onKeyDown={handleKeyDown}
                                 disabled={loading}
                                 placeholder="Type a message..."
-                                className="flex-1 bg-transparent border-none outline-none text-sm text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 resize-none max-h-32 min-h-[22px] py-2 leading-normal font-medium"
+                                className="flex-1 bg-transparent border-none outline-none text-sm text-neutral-800 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 resize-none max-h-32 min-h-[22px] py-2 leading-normal font-medium"
                             />
                             <button
                                 onClick={() => sendMessage()}

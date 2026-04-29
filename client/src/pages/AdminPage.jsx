@@ -117,7 +117,7 @@ const AdminPage = () => {
 
     return (
         <DashboardLayout>
-            <div className="w-full max-w-5xl mx-auto space-y-8 pb-12">
+            <div className="w-full max-w-[1600px] mx-auto space-y-8 pb-12">
                 <div className="mb-8">
                     <h1 className="text-3xl font-black tracking-tight text-neutral-900 dark:text-white flex items-center gap-3">
                         <svg className="w-8 h-8 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">

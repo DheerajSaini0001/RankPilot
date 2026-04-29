@@ -22,7 +22,7 @@ const ToolBadge = ({ connected, label }) => (
   <div className={`inline-flex items-center gap-1.5 text-[10px] font-black px-2.5 py-1.5 rounded-lg border transition-all ${
     connected
       ? 'bg-green-600 text-white border-green-600 shadow-sm'
-      : 'bg-white text-neutral-400 border-neutral-200'
+      : 'bg-white dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 border-neutral-200 dark:border-neutral-700'
   }`}>
     <span className="text-[12px]">{connected ? '✓' : '✗'}</span>
     {label}
@@ -88,38 +88,40 @@ const SitesPage = () => {
             <div className="space-y-6 pb-20 px-6 pt-2">
                 
                 {/* ─── PAGE HEADER ─── */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="space-y-0.5">
-                        <h1 className="text-2xl font-black text-neutral-900 tracking-tight">My Sites</h1>
-                        <p className="text-neutral-500 font-bold text-sm max-w-2xl leading-relaxed">
-                            Manage analytics and ad performance for your properties.
-                        </p>
+                {userSites.length > 0 && (
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="space-y-0.5">
+                            <h1 className="text-2xl font-black text-neutral-900 dark:text-white tracking-tight">My Sites</h1>
+                            <p className="text-neutral-500 dark:text-neutral-400 font-bold text-sm max-w-2xl leading-relaxed">
+                                Manage analytics and ad performance for your properties.
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => navigate('/connect-accounts?new=true')}
+                            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-black rounded-xl transition-all shadow-lg shadow-brand-600/20 active:scale-95 whitespace-nowrap"
+                        >
+                            <PlusIcon className="w-5 h-5" strokeWidth={3} />
+                            Add Website
+                        </button>
                     </div>
-                    <button
-                        onClick={() => navigate('/connect-accounts?new=true')}
-                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-black rounded-xl transition-all shadow-lg shadow-brand-600/20 active:scale-95 whitespace-nowrap"
-                    >
-                        <PlusIcon className="w-5 h-5" strokeWidth={3} />
-                        Add Website
-                    </button>
-                </div>
+                )}
 
                 {/* ─── LOADING STATE ─── */}
                 {loading && userSites.length === 0 && (
                     <div className="space-y-4">
                         {[1, 2, 3].map(i => (
-                            <div key={i} className="bg-white border border-neutral-200 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-6 animate-pulse">
-                                <div className="w-14 h-14 bg-neutral-100 rounded-2xl shrink-0" />
+                            <div key={i} className="bg-white dark:bg-dark-surface border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-6 animate-pulse">
+                                <div className="w-14 h-14 bg-neutral-100 dark:bg-neutral-800 rounded-2xl shrink-0" />
                                 <div className="flex-1 space-y-3 w-full">
-                                    <div className="h-4 w-48 bg-neutral-100 rounded-full" />
-                                    <div className="h-3 w-32 bg-neutral-50 rounded-full" />
+                                    <div className="h-4 w-48 bg-neutral-100 dark:bg-neutral-800 rounded-full" />
+                                    <div className="h-3 w-32 bg-neutral-50 dark:bg-neutral-900/50 rounded-full" />
                                 </div>
                                 <div className="flex gap-2 w-full md:w-auto">
-                                    {[1, 2, 3, 4].map(j => <div key={j} className="h-8 w-16 bg-neutral-100 rounded-lg" />)}
+                                    {[1, 2, 3, 4].map(j => <div key={j} className="h-8 w-16 bg-neutral-100 dark:bg-neutral-800 rounded-lg" />)}
                                 </div>
                                 <div className="flex gap-2 w-full md:w-auto">
-                                    <div className="h-10 w-24 bg-neutral-100 rounded-xl" />
-                                    <div className="h-10 w-10 bg-neutral-100 rounded-xl" />
+                                    <div className="h-10 w-24 bg-neutral-100 dark:bg-neutral-800 rounded-xl" />
+                                    <div className="h-10 w-10 bg-neutral-100 dark:bg-neutral-800 rounded-xl" />
                                 </div>
                             </div>
                         ))}
@@ -128,23 +130,30 @@ const SitesPage = () => {
 
                 {/* ─── EMPTY STATE ─── */}
                 {userSites.length === 0 && !loading && (
-                    <div className="bg-white border border-neutral-200 rounded-[2.5rem] p-16 flex flex-col items-center text-center shadow-sm">
-                        <div className="w-24 h-24 rounded-3xl bg-neutral-50 flex items-center justify-center mb-8 border border-neutral-100">
-                            <GlobeAltIcon className="w-12 h-12 text-neutral-400" />
-                        </div>
-                        <h2 className="text-3xl font-black text-neutral-900 mb-4 tracking-tight">Add your first website to get started</h2>
-                        <p className="text-neutral-500 font-bold text-lg max-w-lg mb-10 leading-relaxed">
-                            Connect a website to start tracking Google Analytics, Search Console, and Ad performance all in one place.
-                        </p>
-                        <div className="space-y-4">
-                            <button
-                                onClick={() => navigate('/connect-accounts?new=true')}
-                                className="inline-flex items-center gap-3 px-10 py-5 bg-brand-600 hover:bg-brand-700 text-white text-lg font-black rounded-2xl transition-all shadow-2xl shadow-brand-600/30 active:scale-95"
-                            >
-                                <PlusIcon className="w-6 h-6" strokeWidth={3} />
-                                Connect Your First Website
-                            </button>
-                            <p className="text-sm font-bold text-neutral-400 tracking-wide uppercase">Takes less than 2 minutes to set up</p>
+                    <div className="bg-white dark:bg-dark-surface border border-neutral-200 dark:border-neutral-800 rounded-[3rem] py-12 sm:py-16 md:py-20 px-8 sm:px-12 flex flex-col items-center text-center shadow-sm w-full relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 rounded-full blur-[100px] -mr-32 -mt-32"></div>
+                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent-500/5 rounded-full blur-[100px] -ml-32 -mb-32"></div>
+                        
+                        <div className="relative z-10 flex flex-col items-center">
+                            <div className="w-24 h-24 rounded-[2rem] bg-neutral-50 dark:bg-neutral-800 flex items-center justify-center mb-10 border border-neutral-100 dark:border-neutral-700 shadow-inner">
+                                <GlobeAltIcon className="w-12 h-12 text-neutral-400 dark:text-neutral-500" />
+                            </div>
+                            <h2 className="text-3xl md:text-4xl font-black text-neutral-900 dark:text-white mb-5 tracking-tight leading-tight">
+                                Add your first website <br className="hidden sm:block" /> to get started
+                            </h2>
+                            <p className="text-neutral-500 dark:text-neutral-400 font-bold text-lg max-w-xl mb-12 leading-relaxed">
+                                Connect a website to start tracking Google Analytics, Search Console, and Ad performance all in one place.
+                            </p>
+                            <div className="space-y-6">
+                                <button
+                                    onClick={() => navigate('/connect-accounts?new=true')}
+                                    className="inline-flex items-center gap-4 px-12 py-5 bg-brand-600 hover:bg-brand-700 text-white text-lg font-black rounded-2xl transition-all shadow-2xl shadow-brand-600/30 hover:-translate-y-1 active:scale-95"
+                                >
+                                    <PlusIcon className="w-6 h-6" strokeWidth={3} />
+                                    Connect Your First Website
+                                </button>
+                                <p className="text-xs font-black text-neutral-400 dark:text-neutral-500 tracking-[0.2em] uppercase">Takes less than 2 minutes to set up</p>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -162,26 +171,26 @@ const SitesPage = () => {
                                     onClick={() => !isActive && handleSelect(site._id)}
                                     className={`relative flex flex-col md:grid md:grid-cols-[1.5fr_1.5fr_auto] gap-4 p-4 rounded-2xl border transition-all group ${
                                         isActive 
-                                            ? 'bg-brand-50/50 border-brand-200 border-l-4 border-l-brand-600 shadow-sm' 
-                                            : 'bg-white border-neutral-200 hover:border-brand-300 hover:shadow-md cursor-pointer'
+                                            ? 'bg-brand-50/50 dark:bg-brand-500/10 border-brand-200 dark:border-brand-500/30 border-l-4 border-l-brand-600 shadow-sm' 
+                                            : 'bg-white dark:bg-dark-surface border-neutral-200 dark:border-neutral-800 hover:border-brand-300 dark:hover:border-brand-500/50 hover:shadow-md cursor-pointer'
                                     }`}
                                 >
                                     {/* COLUMN 1: Identity */}
                                     <div className="flex items-center gap-4">
                                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${
                                             isActive 
-                                                ? 'bg-white border-brand-200 text-brand-600 shadow-sm' 
-                                                : 'bg-neutral-50 border-neutral-100 text-neutral-400 group-hover:bg-brand-50 group-hover:text-brand-500'
+                                                ? 'bg-white dark:bg-neutral-800 border-brand-200 dark:border-brand-500/30 text-brand-600 dark:text-brand-400 shadow-sm' 
+                                                : 'bg-neutral-50 dark:bg-neutral-800/50 border-neutral-100 dark:border-neutral-700 text-neutral-400 dark:text-neutral-500 group-hover:bg-brand-50 dark:group-hover:bg-brand-500/10 group-hover:text-brand-500 dark:group-hover:text-brand-400'
                                         }`}>
                                             <GlobeAltIcon className="w-5 h-5" />
                                         </div>
                                         <div className="overflow-hidden space-y-0.5">
-                                            <h3 className="text-base font-black text-neutral-900 truncate tracking-tight">{site.siteName}</h3>
+                                            <h3 className="text-base font-black text-neutral-900 dark:text-white truncate tracking-tight">{site.siteName}</h3>
                                             <div className="flex items-center gap-2">
                                                 {isActive ? (
-                                                    <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Active Now</span>
+                                                    <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Active Now</span>
                                                 ) : (
-                                                    <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest group-hover:text-brand-500 transition-colors">
+                                                    <span className="text-[9px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest group-hover:text-brand-500 dark:group-hover:text-brand-400 transition-colors">
                                                         Switch to site
                                                     </span>
                                                 )}
@@ -212,21 +221,21 @@ const SitesPage = () => {
                                     <div className="flex items-center md:justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                                         <button
                                             onClick={() => handleSelect(site._id)}
-                                            className="p-2 text-neutral-400 hover:text-brand-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-brand-100"
+                                            className="p-2 text-neutral-400 dark:text-neutral-500 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-white dark:hover:bg-neutral-800 rounded-lg transition-all border border-transparent hover:border-brand-100 dark:hover:border-brand-500/20"
                                             title="View Analytics"
                                         >
                                             <ChartBarIcon className="w-5 h-5" />
                                         </button>
                                         <button
                                             onClick={() => handleEdit(site._id)}
-                                            className="p-2 text-neutral-400 hover:text-neutral-900 hover:bg-white rounded-lg transition-all border border-transparent hover:border-neutral-200"
+                                            className="p-2 text-neutral-400 dark:text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-white dark:hover:bg-neutral-800 rounded-lg transition-all border border-transparent hover:border-neutral-200 dark:hover:border-neutral-700"
                                             title="Edit Connections"
                                         >
                                             <PencilSquareIcon className="w-5 h-5" />
                                         </button>
                                         <button
                                             onClick={() => handleDelete(site._id, site.siteName)}
-                                            className="p-2 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all border border-transparent hover:border-red-100"
+                                            className="p-2 text-neutral-400 dark:text-neutral-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all border border-transparent hover:border-red-100 dark:hover:border-red-800/30"
                                             title="Delete Site"
                                         >
                                             <TrashIcon className="w-5 h-5" />
@@ -237,8 +246,8 @@ const SitesPage = () => {
                         })}
 
                         {/* ─── FOOTER ─── */}
-                        <div className="flex flex-col sm:flex-row items-center justify-between pt-8 px-2 border-t border-neutral-100 gap-4">
-                            <p className="text-[11px] font-black text-neutral-400 uppercase tracking-[0.2em]">
+                        <div className="flex flex-col sm:flex-row items-center justify-between pt-8 px-2 border-t border-neutral-100 dark:border-neutral-800 gap-4">
+                            <p className="text-[11px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.2em]">
                                 Showing {userSites.length} of {userSites.length} website{userSites.length !== 1 ? 's' : ''}
                             </p>
                         </div>

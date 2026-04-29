@@ -105,7 +105,7 @@ const MarkdownComponents = {
     li: ({ children, ordered }) => {
         if (ordered) {
             return (
-                <li className="list-item text-[15.5px] leading-relaxed text-neutral-700 dark:text-neutral-100/90 mb-2 !ml-0 font-medium break-words [word-break:break-word]">
+                <li className="list-item text-[15.5px] leading-relaxed text-neutral-700 dark:text-neutral-100 mb-2 !ml-0 font-medium break-words [word-break:break-word]">
                     {children}
                 </li>
             );
@@ -117,14 +117,14 @@ const MarkdownComponents = {
             </li>
         );
     },
-    p: ({ children }) => <p className="mb-6 leading-relaxed text-[15.5px] text-neutral-800 dark:text-neutral-200 font-medium break-words [word-break:break-word]">{children}</p>,
+    p: ({ children }) => <p className="mb-6 leading-relaxed text-[15.5px] text-neutral-800 dark:text-neutral-100 font-medium break-words [word-break:break-word]">{children}</p>,
     h1: ({ children }) => <h1 className="text-3xl font-black !m-0 !mb-8 tracking-tight text-neutral-900 dark:text-white border-b-4 border-brand-500/10 pb-4">{children}</h1>,
-    h2: ({ children }) => <h2 className="text-xl font-extrabold !m-0 !mb-5 mt-10 tracking-tight text-neutral-800 dark:text-neutral-100 flex items-center gap-3">
+    h2: ({ children }) => <h2 className="text-xl font-extrabold !m-0 !mb-5 mt-10 tracking-tight text-neutral-800 dark:text-white flex items-center gap-3">
         <span className="w-1.5 h-6 bg-brand-500 rounded-full" />
         {children}
     </h2>,
-    h3: ({ children }) => <h3 className="text-lg font-bold !m-0 !mb-4 mt-8 text-neutral-800 dark:text-neutral-100 border-l-4 border-neutral-200 dark:border-neutral-700 pl-4">{children}</h3>,
-    strong: ({ children }) => <strong className="font-bold text-neutral-900 dark:text-white bg-brand-500/5 px-1 rounded break-words [word-break:break-word]">{children}</strong>,
+    h3: ({ children }) => <h3 className="text-lg font-bold !m-0 !mb-4 mt-8 text-neutral-800 dark:text-white border-l-4 border-neutral-200 dark:border-neutral-700 pl-4">{children}</h3>,
+    strong: ({ children }) => <strong className="font-bold text-neutral-900 dark:text-white bg-brand-500/10 px-1 rounded break-words [word-break:break-word]">{children}</strong>,
     table: ({ children }) => (
         <div className="my-10 w-full overflow-x-auto border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-xl">
             <table className="w-full text-left border-collapse min-w-[600px]">
@@ -163,7 +163,7 @@ const TypingIndicator = () => {
                     />
                 ))}
             </div>
-            <span className="text-[10px] font-black text-brand-600/60 dark:text-brand-400/60 uppercase tracking-[0.15em] animate-pulse">
+            <span className="text-[10px] font-black text-brand-600/80 dark:text-brand-400 uppercase tracking-[0.15em] animate-pulse">
                 {phrase}
             </span>
         </div>
@@ -184,7 +184,7 @@ const ChatMessage = React.memo(({ msg, userName, userAvatar }) => {
                             userName?.charAt(0)?.toUpperCase() || 'U'
                         )}
                     </div>
-                    <div className="px-4 py-3 bg-neutral-100 dark:bg-neutral-800 rounded-2xl rounded-br-sm text-sm font-medium text-neutral-900 dark:text-white leading-relaxed max-w-full">
+                    <div className="px-4 py-3 bg-neutral-100 dark:bg-neutral-800 border border-transparent dark:border-neutral-700/50 rounded-2xl rounded-br-sm text-sm font-medium text-neutral-900 dark:text-neutral-100 leading-relaxed max-w-full shadow-sm">
                         {msg.content}
                     </div>
                 </div>
@@ -209,7 +209,7 @@ const ChatMessage = React.memo(({ msg, userName, userAvatar }) => {
                                 </ReactMarkdown>
                         </div>
                     ) : (
-                        <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed text-neutral-800 dark:text-neutral-200 break-words [word-break:break-word] [&_a]:break-all">
+                        <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed text-neutral-800 dark:text-neutral-100 break-words [word-break:break-word] [&_a]:break-all">
                             {msg.content ? (
                                 <ReactMarkdown
                                     remarkPlugins={[remarkGfm]}
@@ -684,7 +684,7 @@ const AIChatPage = () => {
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-4">
                                                 {suggestions.slice(0, 4).map((q, i) => (
                                                     <button key={i} onClick={() => setQuery(q)}
-                                                        className="px-4 py-3.5 sm:px-5 sm:py-4 bg-neutral-50 dark:bg-neutral-800/50 hover:bg-brand-50 dark:hover:bg-brand-900/20 border border-neutral-200 dark:border-neutral-700 hover:border-brand-300 dark:hover:border-brand-700 rounded-2xl text-[11px] sm:text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-brand-600 dark:hover:text-brand-400 transition-all text-left leading-relaxed active:scale-[0.98] shadow-sm">
+                                                        className="px-4 py-3.5 sm:px-5 sm:py-4 bg-neutral-50 dark:bg-neutral-800/50 hover:bg-brand-50 dark:hover:bg-brand-900/10 border border-neutral-200 dark:border-neutral-700/50 hover:border-brand-300 dark:hover:border-brand-600 rounded-2xl text-[11px] sm:text-xs font-semibold text-neutral-600 dark:text-neutral-300 hover:text-brand-600 dark:hover:text-brand-400 transition-all text-left leading-relaxed active:scale-[0.98] shadow-sm">
                                                         {q}
                                                     </button>
                                                 ))}
@@ -716,7 +716,7 @@ const AIChatPage = () => {
                                                 },
                                             ].map((item, i) => (
                                                 <button key={i} onClick={() => setQuery(item.prompt)}
-                                                    className="flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-[10px] sm:text-[11px] font-bold text-neutral-500 dark:text-neutral-400 hover:border-brand-400 dark:hover:border-brand-600 hover:text-brand-600 dark:hover:text-brand-400 transition-all active:scale-95 group shadow-sm">
+                                                    className="flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/50 rounded-xl text-[10px] sm:text-[11px] font-bold text-neutral-500 dark:text-neutral-400 hover:border-brand-400 dark:hover:border-brand-500 hover:text-brand-600 dark:hover:text-brand-300 transition-all active:scale-95 group shadow-sm">
                                                     {item.logo}
                                                     {item.label}
                                                 </button>
@@ -848,9 +848,9 @@ const AIChatPage = () => {
                                                 </>
                                             )}
                                         </div>
-                                        <div className="bg-white dark:bg-[#1a1a1a] border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-8 sm:p-12 shadow-2xl relative overflow-hidden group">
+                                        <div className="bg-white dark:bg-dark-card/60 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-8 sm:p-12 shadow-2xl relative overflow-hidden group">
                                             <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 blur-[120px] pointer-events-none group-hover:bg-brand-500/10 transition-all duration-1000" />
-                                            <div className="prose prose-md dark:prose-invert max-w-none prose-headings:tracking-tighter prose-p:text-neutral-700 dark:prose-p:text-neutral-300">
+                                            <div className="prose prose-md dark:prose-invert max-w-none prose-headings:tracking-tighter prose-p:text-neutral-700 dark:prose-p:text-neutral-100">
                                                 <ReactMarkdown 
                                                     remarkPlugins={[remarkGfm]}
                                                     components={MarkdownComponents}

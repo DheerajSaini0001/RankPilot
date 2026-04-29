@@ -55,7 +55,7 @@ const SearchableSelect = ({
                     w-full text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 
                     bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white py-2 px-3 
                     outline-none flex items-center justify-between cursor-pointer transition-all shadow-sm
-                    ${disabled ? 'opacity-70 cursor-not-allowed bg-neutral-50' : 'hover:border-brand-500'}
+                    ${disabled ? 'opacity-70 cursor-not-allowed bg-neutral-50 dark:bg-neutral-900/50' : 'hover:border-brand-500'}
                     ${isOpen ? 'ring-2 ring-brand-500 border-transparent' : ''}
                 `}
             >

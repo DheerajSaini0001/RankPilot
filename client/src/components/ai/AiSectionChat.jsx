@@ -16,14 +16,14 @@ import { getApiUrl } from '../../api';
 
 /* ─── Markdown Component Overrides ─── */
 const MD = {
-    p: ({ children }) => <p className="leading-relaxed text-[13px] text-neutral-700 dark:text-neutral-300 mb-2 last:mb-0">{children}</p>,
-    strong: ({ children }) => <strong className="font-bold text-neutral-900 dark:text-white">{children}</strong>,
-    ul: ({ children }) => <ul className="space-y-1 mb-2 pl-4 list-disc marker:text-brand-500">{children}</ul>,
-    ol: ({ children }) => <ol className="space-y-1 mb-2 pl-4 list-decimal marker:text-brand-500">{children}</ol>,
-    li: ({ children }) => <li className="text-[13px] text-neutral-700 dark:text-neutral-300">{children}</li>,
-    h1: ({ children }) => <h1 className="text-sm font-black text-neutral-900 dark:text-white mb-1">{children}</h1>,
-    h2: ({ children }) => <h2 className="text-sm font-bold text-neutral-900 dark:text-white mb-1">{children}</h2>,
-    h3: ({ children }) => <h3 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 mb-1">{children}</h3>,
+    p: ({ children }) => <p className="leading-relaxed text-[13px] text-neutral-700 dark:text-neutral-100 mb-2 last:mb-0 break-words [word-break:break-word]">{children}</p>,
+    strong: ({ children }) => <strong className="font-extrabold text-neutral-900 dark:text-white break-words [word-break:break-word]">{children}</strong>,
+    ul: ({ children }) => <ul className="space-y-2 mb-3 pl-4 list-disc marker:text-brand-500 marker:font-black">{children}</ul>,
+    ol: ({ children }) => <ol className="space-y-2 mb-3 pl-4 list-decimal marker:text-brand-500 marker:font-black">{children}</ol>,
+    li: ({ children }) => <li className="text-[13px] text-neutral-700 dark:text-neutral-100 break-words [word-break:break-word] pl-1">{children}</li>,
+    h1: ({ children }) => <h1 className="text-sm font-black text-neutral-900 dark:text-white mb-2 uppercase tracking-tight">{children}</h1>,
+    h2: ({ children }) => <h2 className="text-sm font-black text-neutral-900 dark:text-white mb-2 tracking-tight">{children}</h2>,
+    h3: ({ children }) => <h3 className="text-xs font-black text-neutral-800 dark:text-neutral-50 mb-1.5">{children}</h3>,
     code: ({ inline, className, children, ...props }) => {
         const match = /language-json-chart-(\w+)/.exec(className || '');
         const isJson = /language-json/.test(className || '');
@@ -101,7 +101,7 @@ const TypingIndicator = () => {
                     />
                 ))}
             </div>
-            <span className="text-[10px] font-black text-brand-600/60 dark:text-brand-400/60 uppercase tracking-[0.15em] animate-pulse">
+            <span className="text-[10px] font-black text-brand-600/80 dark:text-brand-400 uppercase tracking-[0.15em] animate-pulse">
                 {phrase}
             </span>
         </div>
@@ -414,7 +414,7 @@ const AiSectionChat = ({
                             ? 'bg-brand-600 text-white font-medium rounded-tr-sm shadow-md shadow-brand-500/20'
                             : msg.isError
                             ? 'bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-800/30 rounded-tl-sm'
-                            : 'bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-700/50 rounded-tl-sm'
+                            : 'bg-neutral-50 dark:bg-dark-card/60 border border-neutral-100 dark:border-neutral-700/40 rounded-tl-sm backdrop-blur-xl'
                         }`}>
                             {msg.role === 'assistant' ? (
                             msg.isLoading ? (
@@ -461,7 +461,7 @@ const AiSectionChat = ({
                         onKeyDown={handleKeyDown}
                         disabled={loading}
                         placeholder="Ask a follow-up question..."
-                        className="flex-1 bg-transparent border-none outline-none text-sm text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 resize-none max-h-28 min-h-[22px] py-2 leading-normal font-medium"
+                        className="flex-1 bg-transparent border-none outline-none text-sm text-neutral-800 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 resize-none max-h-28 min-h-[22px] py-2 leading-normal font-medium"
                     />
                     <button
                         onClick={() => sendMessage()}
