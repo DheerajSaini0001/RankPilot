@@ -1,4 +1,3 @@
-import GoogleToken from '../models/GoogleToken.js';
 import FacebookToken from '../models/FacebookToken.js';
 import Ga4Metric from '../models/Ga4Metric.js';
 import GscMetric from '../models/GscMetric.js';
@@ -8,46 +7,6 @@ import UserAccounts from '../models/UserAccounts.js';
 import { createNotification } from '../utils/notification.js';
 import { generateWeeklyInsightInternal, generateSuggestedQuestionsInternal } from '../controllers/aiController.js';
 
-// Checks for Google and Facebook tokens that will expire within the next 3 days.
-export const checkExpiringTokens = async () => {
-    console.log('🔔 [Monitoring] Checking for expiring tokens...');
-    const threeDaysFromNow = new Date();
-    threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
-
-    try {
-        const expiringGoogle = await GoogleToken.find({
-            expiresAt: { $lt: threeDaysFromNow, $gt: new Date() }
-        });
-
-        for (const token of expiringGoogle) {
-            await createNotification(token.userId, {
-                type: 'warning',
-                title: 'Google Token Expiring Soon',
-                message: `Your Google connection for ${token.email} will expire within 3 days. Please reconnect to prevent data gaps.`,
-                source: 'system',
-                actionLabel: 'Reconnect',
-                actionPath: '/connect-accounts'
-            });
-        }
-
-        const expiringFacebook = await FacebookToken.find({
-            expiresAt: { $lt: threeDaysFromNow, $gt: new Date() }
-        });
-
-        for (const token of expiringFacebook) {
-            await createNotification(token.userId, {
-                type: 'warning',
-                title: 'Facebook Token Expiring Soon',
-                message: `Your Meta Business connection will expire within 3 days. Please reconnect to continue syncing Ads data.`,
-                source: 'facebook-ads',
-                actionLabel: 'Reconnect',
-                actionPath: '/connect-accounts'
-            });
-        }
-    } catch (err) {
-        console.error('[Monitoring] Error checking tokens:', err.message);
-    }
-};
 
 // Weekly check for significant performance drops (comparing last 7 days with previous 7 days)
 export const checkPerformanceDrops = async () => {

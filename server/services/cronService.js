@@ -1,7 +1,6 @@
 import cron from 'node-cron';
 import { syncAllGsc, syncAllGa4, syncAllGoogleAds, syncAllFacebookAds, syncDailyForAllUsers } from './syncService.js';
 import { 
-    checkExpiringTokens, 
     checkPerformanceDrops, 
     checkInactiveSources, 
     checkMonthlyGrowth, 
@@ -16,7 +15,6 @@ export const initCronJobs = () => {
 
     // Daily Checks (Tokens, Inactivity, Ad Spikes) - Midnight at 12:00 AM
     cron.schedule('0 0 * * *', async () => {
-        await checkExpiringTokens();
         await checkInactiveSources();
         await checkAdSpendSpikes();
     }, { timezone: "Asia/Kolkata" });

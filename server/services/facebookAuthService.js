@@ -2,6 +2,7 @@ import axios from 'axios';
 import FacebookToken from '../models/FacebookToken.js';
 import configService from './configService.js';
 import { encrypt, decrypt } from '../utils/encrypt.js';
+import { createNotification } from '../utils/notification.js';
 
 export const getValidFacebookToken = async (userId, tokenId = null) => {
     let tokenDoc;
@@ -12,8 +13,35 @@ export const getValidFacebookToken = async (userId, tokenId = null) => {
     }
     if (!tokenDoc) throw new Error('FACEBOOK_AUTH_MISSING');
 
-    if (tokenDoc.expiresAt && tokenDoc.expiresAt.getTime() < Date.now()) {
-        throw new Error('FACEBOOK_AUTH_EXPIRED');
+    // Check if token is nearing expiry (within 3 days) and needs refresh
+    if (tokenDoc.expiresAt && tokenDoc.expiresAt.getTime() < Date.now() + (3 * 24 * 60 * 60 * 1000)) {
+        try {
+            console.log(`[Facebook] Refreshing token for user ${userId}...`);
+            const data = await exchangeLongLivedToken(decrypt(tokenDoc.accessToken));
+            
+            if (data.access_token) {
+                tokenDoc.accessToken = encrypt(data.access_token);
+                if (data.expires_in) {
+                    tokenDoc.expiresAt = new Date(Date.now() + data.expires_in * 1000);
+                }
+                await tokenDoc.save();
+                console.log(`[Facebook] Token refreshed successfully for user ${userId}`);
+            }
+        } catch (err) {
+            console.error('Error refreshing Facebook token', err.message);
+            // If it's already expired or refresh fails, notify the user
+            if (tokenDoc.expiresAt && tokenDoc.expiresAt.getTime() < Date.now()) {
+                await createNotification(userId, {
+                    type: 'error',
+                    title: 'Facebook Connection Expired',
+                    message: `Your Meta Business connection for ${tokenDoc.name || 'Account'} has expired and couldn't be refreshed. Please reconnect.`,
+                    source: 'facebook-ads',
+                    actionLabel: 'Reconnect',
+                    actionPath: '/connect-accounts'
+                });
+                throw new Error('FACEBOOK_AUTH_EXPIRED');
+            }
+        }
     }
 
     return decrypt(tokenDoc.accessToken);

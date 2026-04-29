@@ -2,6 +2,7 @@ import { google } from 'googleapis';
 import GoogleToken from '../models/GoogleToken.js';
 import configService from './configService.js';
 import { encrypt, decrypt } from '../utils/encrypt.js';
+import { createNotification } from '../utils/notification.js';
 
 export const getGoogleClient = async () => {
     const GOOGLE_CLIENT_ID = await configService.get('GOOGLE_CLIENT_ID');
@@ -47,6 +48,14 @@ export const getValidGoogleToken = async (userId, tokenId = null) => {
             await tokenDoc.save();
         } catch (err) {
             console.error('Error refreshing Google token', err);
+            await createNotification(tokenDoc.userId, {
+                type: 'error',
+                title: 'Google Connection Expired',
+                message: `Your Google connection for ${tokenDoc.email} has expired and couldn't be refreshed automatically. Please reconnect to continue syncing data.`,
+                source: 'system',
+                actionLabel: 'Reconnect',
+                actionPath: '/connect-accounts'
+            });
             throw new Error('GOOGLE_AUTH_EXPIRED');
         }
     }
