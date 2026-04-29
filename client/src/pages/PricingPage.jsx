@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { CheckIcon } from '@heroicons/react/24/solid';
-import Logo from '../components/ui/Logo';
+import Navbar from '../components/ui/Navbar';
 import Footer from '../components/ui/Footer';
-import ThemeToggle from '../components/ui/ThemeToggle';
 
 const PricingPage = () => {
   const [billingCycle, setBillingCycle] = useState('monthly');
@@ -61,20 +60,7 @@ const PricingPage = () => {
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-slate-950 font-sans selection:bg-brand-500/30 transition-colors duration-500">
-      <nav className="sticky top-0 z-50 border-b border-neutral-200 dark:border-white/5">
-        <div className="absolute inset-0 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl"/>
-        <div className="relative max-w-full mx-auto px-8 flex items-center justify-between h-16 sm:h-20">
-          <NavLink to="/" className="flex items-center gap-2.5">
-            <Logo className="w-7 h-7 sm:w-8 sm:h-8" />
-          </NavLink>
-          <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <NavLink to="/register" className="hidden sm:block text-sm font-bold text-white bg-brand-600 hover:bg-brand-500 px-5 py-2.5 rounded-xl transition-all">
-              Get Started
-            </NavLink>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       <header className="pt-16 pb-20 bg-white dark:bg-slate-900 border-b border-neutral-200 dark:border-white/5 text-center relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none opacity-30">

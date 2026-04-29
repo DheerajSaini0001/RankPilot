@@ -1,8 +1,7 @@
 import React, { useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import Logo from './Logo';
 import Footer from './Footer';
-import ThemeToggle from './ThemeToggle';
+import Navbar from './Navbar';
 
 const PolicyLayout = ({ title, lastUpdated, children }) => {
   useEffect(() => {
@@ -11,20 +10,7 @@ const PolicyLayout = ({ title, lastUpdated, children }) => {
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-slate-950 font-sans selection:bg-brand-500/30 transition-colors duration-500">
-      <nav className="sticky top-0 z-50 border-b border-neutral-200 dark:border-white/5">
-        <div className="absolute inset-0 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl"/>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16 sm:h-20">
-          <NavLink to="/" className="flex items-center gap-2.5">
-            <Logo className="w-7 h-7 sm:w-8 sm:h-8" />
-          </NavLink>
-          <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <NavLink to="/register" className="hidden sm:block text-sm font-bold text-white bg-brand-600 hover:bg-brand-500 px-5 py-2.5 rounded-xl transition-all">
-              Get Started
-            </NavLink>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       <header className="pt-8 pb-12 bg-white dark:bg-slate-900 border-b border-neutral-200 dark:border-white/5">
         <div className="max-w-full mx-auto px-8">

@@ -13,21 +13,21 @@ const NotFoundPage = () => {
                         <span className="text-5xl font-black tracking-tighter text-neutral-900 dark:text-white">LOST</span>
                     </div>
                 </div>
-                
+
                 <div className="space-y-4 max-w-md mx-auto relative z-10">
                     <h1 className="text-3xl font-black text-neutral-900 dark:text-white leading-tight">This page is off the grid.</h1>
                     <p className="text-neutral-500 dark:text-neutral-400 font-medium">The URL you're looking for doesn't exist or has been relocated to another galaxy.</p>
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4 relative z-10">
-                    <Button 
-                        onClick={() => navigate(-1)} 
+                    <Button
+                        onClick={() => navigate(-1)}
                         variant="secondary"
                         className="w-full sm:w-auto px-10 h-14 text-sm font-black border-2 border-neutral-200 dark:border-neutral-700"
                     >
                         Go Back
                     </Button>
-                    <Button 
+                    <Button
                         onClick={() => navigate('/')}
                         className="w-full sm:w-auto px-10 h-14 text-sm font-black shadow-2xl shadow-brand-500/30"
                     >

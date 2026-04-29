@@ -9,6 +9,8 @@ import { getMe, resendVerification, loginUser } from '../api/authApi';
 import { getApiUrl } from '../api/index';
 import { useThemeStore } from '../store/themeStore';
 
+import Navbar from '../components/ui/Navbar';
+
 const LoginPage = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -66,51 +68,53 @@ const LoginPage = () => {
     const { theme } = useThemeStore();
 
     return (
-        <div className="min-h-screen bg-neutral-50 dark:bg-slate-950 flex transition-colors duration-500">
-            {/* Left Panel — branding side (hidden on mobile) */}
-            <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-between p-12">
-                {/* Background mesh & blobs */}
-                <div className="absolute inset-0 bg-gradient-to-br from-brand-900 via-slate-900 to-slate-950" />
-                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:48px_48px]" />
-                <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[400px] h-[400px] bg-brand-600/20 rounded-full blur-[100px]" />
+        <div className="min-h-screen bg-neutral-50 dark:bg-slate-950 flex flex-col transition-colors duration-500">
+            <Navbar />
+            <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+                {/* Left Panel — branding side (hidden on mobile) */}
+                <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-between p-12 transition-colors duration-500">
+                    {/* Background mesh & blobs — Theme Aware */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-brand-50 via-neutral-100 to-neutral-200 dark:from-brand-900 dark:via-slate-900 dark:to-slate-950 transition-colors duration-500" />
+                    <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.02)_1px,transparent_1px)] dark:bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:48px_48px] transition-colors duration-500" />
+                    <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[400px] h-[400px] bg-brand-500/10 dark:bg-brand-600/20 rounded-full blur-[100px] animate-pulse" />
 
-                {/* Logo */}
-                <div className="relative z-10 flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/30">
-                        <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                    </div>
-                    <span className="text-xl font-black text-white tracking-tight">RankPilot</span>
-                </div>
-
-                {/* Center content */}
-                <div className="relative z-10">
-                    <div className="text-4xl font-black text-white tracking-tight leading-tight mb-4">
-                        Your analytics.<br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-blue-400">
-                            Finally unified.
-                        </span>
-                    </div>
-                    <p className="text-slate-400 font-medium text-sm leading-relaxed max-w-xs">
-                        Connect GA4, Search Console, Google Ads, and Facebook Ads in one place. Ask your AI analyst anything.
-                    </p>
-                </div>
-
-                {/* Bottom stats */}
-                <div className="relative z-10 grid grid-cols-3 gap-4">
-                    {[
-                        { value: '4+', label: 'Integrations' },
-                        { value: '100%', label: 'Encrypted' },
-                        { value: 'AI', label: 'Powered' },
-                    ].map((stat, i) => (
-                        <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
-                            <p className="text-2xl font-black text-white">{stat.value}</p>
-                            <p className="text-xs font-semibold text-slate-500 mt-1">{stat.label}</p>
+                    {/* Logo */}
+                    <div className="relative z-10 flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/30">
+                            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
                         </div>
-                    ))}
+                        <span className="text-xl font-black text-neutral-900 dark:text-white tracking-tight transition-colors duration-500">RankPilot</span>
+                    </div>
+
+                    {/* Center content */}
+                    <div className="relative z-10">
+                        <div className="text-4xl font-black text-neutral-900 dark:text-white tracking-tight leading-tight mb-4 transition-colors duration-500">
+                            Your analytics.<br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-600 to-blue-600 dark:from-brand-400 dark:to-blue-400">
+                                Finally unified.
+                            </span>
+                        </div>
+                        <p className="text-neutral-500 dark:text-slate-400 font-medium text-sm leading-relaxed max-w-xs transition-colors duration-500">
+                            Connect GA4, Search Console, Google Ads, and Facebook Ads in one place. Ask your AI analyst anything.
+                        </p>
+                    </div>
+
+                    {/* Bottom stats */}
+                    <div className="relative z-10 grid grid-cols-3 gap-4">
+                        {[
+                            { value: '4+', label: 'Integrations' },
+                            { value: '100%', label: 'Encrypted' },
+                            { value: 'AI', label: 'Powered' },
+                        ].map((stat, i) => (
+                            <div key={i} className="bg-white/40 dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-2xl p-4 text-center backdrop-blur-sm transition-all duration-500">
+                                <p className="text-2xl font-black text-neutral-900 dark:text-white transition-colors duration-500">{stat.value}</p>
+                                <p className="text-xs font-semibold text-neutral-500 dark:text-slate-500 mt-1 transition-colors duration-500">{stat.label}</p>
+                            </div>
+                        ))}
+                    </div>
                 </div>
-            </div>
 
             {/* Right Panel — form */}
             <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-white dark:bg-slate-950">
@@ -231,6 +235,7 @@ const LoginPage = () => {
                         ))}
                     </div>
                 </div>
+            </div>
             </div>
         </div>
     );

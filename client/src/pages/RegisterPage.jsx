@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, Link } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { registerUser } from '../api/authApi';
 import { useThemeStore } from '../store/themeStore';
 import toast from 'react-hot-toast';
+
+import Navbar from '../components/ui/Navbar';
 
 const RegisterPage = () => {
     const [name, setName] = useState('');
@@ -30,64 +32,65 @@ const RegisterPage = () => {
     const { theme } = useThemeStore();
 
     return (
-        <div className="min-h-screen bg-neutral-50 dark:bg-slate-950 flex transition-colors duration-500">
+        <div className="min-h-screen bg-neutral-50 dark:bg-slate-950 flex flex-col transition-colors duration-500">
+            <Navbar />
+            <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+                {/* Left Panel — branding side (hidden on mobile) */}
+                <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-between p-12 transition-colors duration-500">
+                    {/* Background mesh & blobs — Theme Aware */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-brand-50 via-neutral-100 to-neutral-200 dark:from-brand-900 dark:via-slate-900 dark:to-slate-950 transition-colors duration-500" />
+                    <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.02)_1px,transparent_1px)] dark:bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:48px_48px] transition-colors duration-500" />
+                    <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[400px] h-[400px] bg-brand-500/10 dark:bg-brand-600/20 rounded-full blur-[100px] animate-pulse" />
 
-            {/* Left Panel — branding side (hidden on mobile) */}
-            <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-between p-12">
-                {/* Background mesh & blobs */}
-                <div className="absolute inset-0 bg-gradient-to-br from-brand-900 via-slate-900 to-slate-950" />
-                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:48px_48px]" />
-                <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[400px] h-[400px] bg-brand-600/20 rounded-full blur-[100px]" />
-
-                {/* Logo */}
-                <div className="relative z-10 flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/30">
-                        <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
+                    {/* Logo */}
+                    <div className="relative z-10 flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/30">
+                            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </div>
+                        <span className="text-xl font-black text-neutral-900 dark:text-white tracking-tight transition-colors duration-500">RankPilot</span>
                     </div>
-                    <span className="text-xl font-black text-white tracking-tight">RankPilot</span>
-                </div>
 
-                {/* Center content */}
-                <div className="relative z-10">
-                    <div className="text-4xl font-black text-white tracking-tight leading-tight mb-4">
-                        Start in<br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-blue-400">
-                            under 2 minutes.
-                        </span>
-                    </div>
-                    <p className="text-slate-400 font-medium text-sm leading-relaxed max-w-xs">
-                        Connect your marketing tools and let your AI analyst start finding opportunities instantly.
-                    </p>
+                    {/* Center content */}
+                    <div className="relative z-10">
+                        <div className="text-4xl font-black text-neutral-900 dark:text-white tracking-tight leading-tight mb-4 transition-colors duration-500">
+                            Start in<br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-600 to-blue-600 dark:from-brand-400 dark:to-blue-400">
+                                under 2 minutes.
+                            </span>
+                        </div>
+                        <p className="text-neutral-500 dark:text-slate-400 font-medium text-sm leading-relaxed max-w-xs transition-colors duration-500">
+                            Connect your marketing tools and let your AI analyst start finding opportunities instantly.
+                        </p>
 
-                    {/* Feature checklist */}
-                    <div className="mt-8 space-y-3">
-                        {[
-                            'Connect GA4, GSC, Google Ads, Facebook Ads',
-                            'AI-powered insights in plain English',
-                            'AES-256 encrypted — your data stays private',
-                            'No credit card required',
-                        ].map((item, i) => (
-                            <div key={i} className="flex items-center gap-3">
-                                <div className="w-5 h-5 rounded-full bg-brand-500/20 border border-brand-500/30 flex items-center justify-center flex-shrink-0">
-                                    <svg className="w-3 h-3 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                    </svg>
+                        {/* Feature checklist */}
+                        <div className="mt-8 space-y-3">
+                            {[
+                                'Connect GA4, GSC, Google Ads, Facebook Ads',
+                                'AI-powered insights in plain English',
+                                'AES-256 encrypted — your data stays private',
+                                'No credit card required',
+                            ].map((item, i) => (
+                                <div key={i} className="flex items-center gap-3">
+                                    <div className="w-5 h-5 rounded-full bg-brand-500/20 border border-brand-500/30 flex items-center justify-center flex-shrink-0">
+                                        <svg className="w-3 h-3 text-brand-500 dark:text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </div>
+                                    <span className="text-xs font-semibold text-neutral-600 dark:text-slate-400 transition-colors duration-500">{item}</span>
                                 </div>
-                                <span className="text-xs font-semibold text-slate-400">{item}</span>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Bottom */}
+                    <div className="relative z-10">
+                        <p className="text-xs text-neutral-500 dark:text-slate-600 font-medium transition-colors duration-500">Already have an account?{' '}
+                            <NavLink to="/login" className="text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-black transition-colors">Sign in →</NavLink>
+                        </p>
                     </div>
                 </div>
-
-                {/* Bottom */}
-                <div className="relative z-10">
-                    <p className="text-xs text-slate-600 font-medium">Already have an account?{' '}
-                        <NavLink to="/login" className="text-brand-400 hover:text-brand-300 font-black transition-colors">Sign in →</NavLink>
-                    </p>
-                </div>
-            </div>
 
             {/* Right Panel — form */}
             <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-white dark:bg-slate-950">
@@ -146,11 +149,11 @@ const RegisterPage = () => {
                         </div>
 
                         {/* Terms note */}
-                        <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
+                        <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
                             By creating an account you agree to our{' '}
-                            <a href="#" className="text-slate-400 hover:text-neutral-900 dark:hover:text-white transition-colors underline underline-offset-2">Terms of Service</a>
+                            <Link to="/terms" className="text-slate-400 dark:text-slate-500 hover:text-neutral-900 dark:hover:text-white transition-colors underline underline-offset-2">Terms of Service</Link>
                             {' '}and{' '}
-                            <a href="#" className="text-slate-400 hover:text-neutral-900 dark:hover:text-white transition-colors underline underline-offset-2">Privacy Policy</a>.
+                            <Link to="/privacy" className="text-slate-400 dark:text-slate-500 hover:text-neutral-900 dark:hover:text-white transition-colors underline underline-offset-2">Privacy Policy</Link>.
                         </p>
 
                         <Button
@@ -177,6 +180,7 @@ const RegisterPage = () => {
                         ))}
                     </div>
                 </div>
+            </div>
             </div>
         </div>
     );
