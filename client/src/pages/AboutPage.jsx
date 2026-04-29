@@ -1,97 +1,147 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
-    ChartBarIcon, 
-    CpuChipIcon, 
     ShieldCheckIcon, 
-    EyeIcon,
     SparklesIcon,
     ArrowRightIcon,
-    SunIcon,
-    MoonIcon,
     GlobeAltIcon,
     BeakerIcon
 } from '@heroicons/react/24/outline';
 import { useThemeStore } from '../store/themeStore';
 import Logo from '../components/ui/Logo';
 import Footer from '../components/ui/Footer';
+import ThemeToggle from '../components/ui/ThemeToggle';
 
 
 const AboutPage = () => {
-    const { theme, toggleTheme } = useThemeStore();
+    const { theme } = useThemeStore();
     const isDark = theme === 'dark';
 
-    return (
-        <div className="min-h-screen bg-slate-950 font-sans selection:bg-brand-500/30 selection:text-brand-200 transition-colors duration-500 overflow-x-hidden">
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
-            {/* 1. NAVIGATION — exact same as LandingPage */}
-            <nav className="sticky top-0 z-50 border-b border-white/5">
-                <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl"/>
-                <div className="relative max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
+    return (
+        <div className="min-h-screen bg-neutral-50 dark:bg-slate-950 font-sans selection:bg-brand-500/30 selection:text-brand-200 transition-colors duration-500 overflow-x-hidden">
+
+            {/* 1. NAVIGATION — glassmorphism sticky nav */}
+            <nav className="sticky top-0 z-50 border-b border-neutral-200 dark:border-white/5">
+                <div className="absolute inset-0 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl"/>
+                <div className="relative max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16 sm:h-20">
 
                     {/* Logo */}
                     <NavLink to="/" className="flex items-center gap-2.5">
-                        <Logo className="w-8 h-8" textClassName="text-lg text-white" />
+                        <Logo className="w-7 h-7 sm:w-8 sm:h-8" />
                     </NavLink>
 
-                    {/* Nav links — desktop only */}
+                    {/* Center links - Hidden on mobile */}
                     <div className="hidden md:flex items-center gap-8">
                         {[
-                            { label:'Home',     path:'/'        },
-                            { label:'Features', path:'/#features' },
-                            { label:'About',    path:'/about'   },
+                            { label: 'Features', path: '/#features' },
+                            { label: 'Integrations', path: '/#how-it-works' },
+                            { label: 'Pricing', path: '/#pricing' },
                         ].map(link => (
                             <NavLink key={link.label} to={link.path}
-                                className={({ isActive }) =>
-                                    `text-sm font-semibold transition-colors ${
-                                        isActive
-                                            ? 'text-white'
-                                            : 'text-slate-400 hover:text-white'
-                                    }`
-                                }>
+                                className="text-sm font-semibold text-neutral-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-white transition-colors">
                                 {link.label}
                             </NavLink>
                         ))}
+                        <NavLink to="/about" 
+                            className={({ isActive }) => 
+                                `text-sm font-semibold transition-colors ${isActive ? 'text-brand-600 dark:text-white' : 'text-neutral-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-white'}`
+                            }>
+                            About
+                        </NavLink>
                     </div>
 
-                    {/* Right side */}
-                    <div className="flex items-center gap-2 sm:gap-3">
-                        <button onClick={toggleTheme}
-                            className="p-2 text-slate-400 hover:text-white transition-colors rounded-lg">
-                            {isDark ? <SunIcon className="w-4.5 h-4.5"/> : <MoonIcon className="w-4.5 h-4.5"/>}
+                    {/* CTA buttons and Toggle */}
+                    <div className="flex items-center gap-1 sm:gap-3">
+                        <ThemeToggle />
+                        
+                        <div className="hidden sm:flex items-center gap-3 ml-1 sm:ml-2">
+                            <NavLink to="/login" className="text-sm font-bold text-neutral-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-white transition-colors px-4 py-2">
+                                Log in
+                            </NavLink>
+                            <NavLink to="/register"
+                                className="text-sm font-bold text-white bg-brand-600 hover:bg-brand-500 px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-brand-500/25 hover:-translate-y-0.5 active:scale-95">
+                                Get Started
+                            </NavLink>
+                        </div>
+
+                        {/* Mobile Menu Toggle */}
+                        <button 
+                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                            className="md:hidden p-2 text-neutral-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-white transition-colors"
+                        >
+                            {isMobileMenuOpen ? (
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            ) : (
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+                                </svg>
+                            )}
                         </button>
-                        <NavLink to="/login"
-                            className="text-sm font-bold text-slate-400 hover:text-white transition-colors px-3 py-2 hidden sm:block">
-                            Log in
-                        </NavLink>
-                        <NavLink to="/register"
-                            className="text-sm font-bold text-white bg-brand-600 hover:bg-brand-500 px-4 py-2 rounded-xl transition-all shadow-lg shadow-brand-500/25 hover:-translate-y-0.5 active:scale-95">
-                            Get Started →
-                        </NavLink>
                     </div>
                 </div>
+
+                {/* Mobile Menu Drawer */}
+                {isMobileMenuOpen && (
+                    <div className="md:hidden absolute top-full left-0 right-0 bg-white dark:bg-slate-900 border-b border-neutral-200 dark:border-white/5 animate-in slide-in-from-top duration-300">
+                        <div className="flex flex-col p-6 gap-4">
+                            {[
+                                { label: 'Features', path: '/#features' },
+                                { label: 'Integrations', path: '/#how-it-works' },
+                                { label: 'Pricing', path: '/#pricing' },
+                            ].map(link => (
+                                <NavLink key={link.label} 
+                                    to={link.path}
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className="text-lg font-bold text-neutral-900 dark:text-white border-b border-neutral-100 dark:border-white/5 pb-2">
+                                    {link.label}
+                                </NavLink>
+                            ))}
+                            <NavLink to="/about" 
+                                onClick={() => setIsMobileMenuOpen(false)}
+                                className="text-lg font-bold text-neutral-900 dark:text-white border-b border-neutral-100 dark:border-white/5 pb-2">
+                                About
+                            </NavLink>
+                            <div className="flex flex-col gap-3 pt-2">
+                                <NavLink to="/login" 
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className="flex items-center justify-center w-full py-4 text-neutral-900 dark:text-white font-bold border border-neutral-200 dark:border-white/10 rounded-2xl">
+                                    Log in
+                                </NavLink>
+                                <NavLink to="/register"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className="flex items-center justify-center w-full py-4 bg-brand-600 text-white font-black rounded-2xl shadow-lg shadow-brand-500/25">
+                                    Get Started
+                                </NavLink>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </nav>
 
             {/* 2. HERO SECTION — dramatic full-width */}
-            <section className="relative min-h-[60vh] flex items-center justify-center overflow-hidden bg-slate-950 px-6 py-24">
+            <section className="relative min-h-[50vh] flex items-center justify-center overflow-hidden bg-white dark:bg-slate-950 px-6 pt-12 pb-20">
 
                 {/* Background mesh */}
                 <div className="absolute inset-0 pointer-events-none">
                     <div className="absolute top-1/3 left-1/4 w-[400px] h-[400px] bg-brand-600/15 rounded-full blur-[120px] animate-pulse"/>
                     <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-indigo-600/10 rounded-full blur-[100px] animate-pulse" style={{animationDelay:'1.5s'}}/>
-                    <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:64px_64px]"/>
+                    <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.015)_1px,transparent_1px)] dark:bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:64px_64px]"/>
                 </div>
 
                 <div className="relative z-10 max-w-4xl mx-auto text-center">
 
                     {/* Badge */}
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 mb-8">
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 mb-6">
                         <SparklesIcon className="w-3.5 h-3.5 text-brand-400"/>
                         <span className="text-[10px] font-black text-brand-400 uppercase tracking-widest">Our Mission</span>
                     </div>
 
                     {/* Headline */}
-                    <h1 className="text-5xl sm:text-6xl md:text-7xl font-black text-white tracking-tighter leading-[0.9] mb-6">
+                    <h1 className="text-5xl sm:text-6xl md:text-7xl font-black text-neutral-900 dark:text-white tracking-tighter leading-[0.9] mb-6">
                         Data is complex.<br/>
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 via-blue-400 to-indigo-400">
                             We make it human.
@@ -99,41 +149,23 @@ const AboutPage = () => {
                     </h1>
 
                     {/* Subheadline */}
-                    <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed font-medium">
+                    <p className="text-lg md:text-xl text-neutral-500 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed font-medium">
                         RankPilot was built so marketers spend less time collecting data and more time acting on it.
                         One AI-first platform. Your entire marketing stack. Plain English insights.
                     </p>
                 </div>
             </section>
 
-            {/* 3. STATS STRIP — 4 numbers */}
-            <section className="bg-slate-900 border-y border-white/5 py-12 overflow-hidden">
-                <div className="max-w-5xl mx-auto px-6">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-                        {[
-                            { value:'4+',    label:'Platform Integrations',    sub:'GA4 · GSC · Ads · Meta' },
-                            { value:'100%',  label:'Encrypted by Default',     sub:'AES-256-GCM' },
-                            { value:'<2min', label:'Setup Time',                sub:'No coding required' },
-                            { value:'24/7',  label:'AI Analyst Available',     sub:'Always ready' },
-                        ].map((stat, i) => (
-                            <div key={i} className="flex flex-col items-center">
-                                <div className="text-3xl md:text-4xl font-black text-white mb-1 tabular-nums">{stat.value}</div>
-                                <div className="text-xs font-black text-slate-300 mb-0.5">{stat.label}</div>
-                                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{stat.sub}</div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
 
-            {/* 4. CORE VALUES — 3 cards */}
-            <section className="py-28 bg-slate-950">
+
+            {/* 3. CORE VALUES — 3 cards */}
+            <section className="py-20 bg-neutral-50 dark:bg-slate-950">
                 <div className="max-w-7xl mx-auto px-6">
 
                     {/* Section header */}
                     <div className="text-center mb-16">
                         <p className="text-brand-500 font-bold text-xs tracking-[0.3em] uppercase mb-4">What We Believe</p>
-                        <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight">
+                        <h2 className="text-3xl md:text-4xl font-black text-neutral-900 dark:text-white tracking-tight">
                             Our core principles.
                         </h2>
                     </div>
@@ -169,7 +201,7 @@ const AboutPage = () => {
                             },
                         ].map((v, i) => (
                             <div key={i}
-                                className={`group bg-slate-900 border border-white/8 rounded-3xl p-8 hover:border-white/15 hover:-translate-y-1 transition-all duration-300 hover:shadow-2xl ${v.glow}`}>
+                                className={`group bg-white dark:bg-slate-900 border border-neutral-200 dark:border-white/8 rounded-3xl p-8 hover:border-brand-500/30 dark:hover:border-white/15 hover:-translate-y-1 transition-all duration-300 hover:shadow-2xl ${v.glow}`}>
 
                                 {/* Icon */}
                                 <div className={`w-12 h-12 rounded-2xl ${v.bg} border flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
@@ -181,145 +213,63 @@ const AboutPage = () => {
                                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{v.badge}</span>
                                 </div>
 
-                                <h3 className="text-xl font-black text-white mb-3 tracking-tight">{v.title}</h3>
-                                <p className="text-sm text-slate-400 leading-relaxed font-medium">{v.desc}</p>
+                                <h3 className="text-xl font-black text-neutral-900 dark:text-white mb-3 tracking-tight">{v.title}</h3>
+                                <p className="text-sm text-neutral-500 dark:text-slate-400 leading-relaxed font-medium">{v.desc}</p>
                             </div>
                         ))}
                     </div>
                 </div>
             </section>
 
-            {/* 5. THE STORY — split layout */}
-            <section className="py-28 bg-slate-900 border-y border-white/5 overflow-hidden">
-                <div className="max-w-7xl mx-auto px-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            {/* 4. THE STORY — simplified text focus */}
+            <section className="py-20 bg-white dark:bg-slate-900 border-y border-neutral-200 dark:border-white/5 overflow-hidden">
+                <div className="max-w-4xl mx-auto px-6">
+                    <div className="text-center mb-16">
+                        <p className="text-brand-500 font-bold text-xs tracking-[0.3em] uppercase mb-4">Our Story</p>
+                        <h2 className="text-3xl md:text-5xl font-black text-neutral-900 dark:text-white tracking-tight mb-8 leading-tight">
+                            Why we built RankPilot.
+                        </h2>
+                    </div>
 
-                        {/* Left — text */}
-                        <div>
-                            <p className="text-brand-500 font-bold text-xs tracking-[0.3em] uppercase mb-4">Our Story</p>
-                            <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-8 leading-tight">
-                                Why we built<br/>RankPilot.
-                            </h2>
-                            <div className="space-y-5">
-                                {[
-                                    "Marketing technology has exploded over the last decade. But while we have more data than ever, most of it sits in isolation. GA4 tells you what happened on your site. Search Console tells you how you were found. Ad platforms tell you how much you spent.",
-                                    "Connecting these dots manually takes hours of export, import, and formula debugging. Most teams either give up or hire expensive analysts.",
-                                    "RankPilot was built to bridge this gap. By combining large language models with your live marketing data, we let you ask questions in plain English and get instant, actionable answers — as if you had a dedicated analyst available 24/7.",
-                                ].map((para, i) => (
-                                    <p key={i} className={`text-sm leading-relaxed font-medium ${i === 2 ? 'text-slate-300' : 'text-slate-400'}`}>
-                                        {i === 2 ? (
-                                            <>
-                                                <span className="text-brand-400 font-black">RankPilot</span>
-                                                {para.slice(9)}
-                                            </>
-                                        ) : para}
-                                    </p>
-                                ))}
-                            </div>
-
-                            {/* Timeline */}
-                            <div className="mt-10 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
+                        <div className="space-y-6">
+                            {[
+                                "Marketing technology has exploded over the last decade. But while we have more data than ever, most of it sits in isolation. GA4 tells you what happened on your site. Search Console tells you how you were found. Ad platforms tell you how much you spent.",
+                                "Connecting these dots manually takes hours of export, import, and formula debugging. Most teams either give up or hire expensive analysts.",
+                            ].map((para, i) => (
+                                <p key={i} className="text-base leading-relaxed font-medium text-neutral-500 dark:text-slate-400">
+                                    {para}
+                                </p>
+                            ))}
+                        </div>
+                        <div className="space-y-6">
+                            <p className="text-base leading-relaxed font-medium text-neutral-700 dark:text-slate-300">
+                                <span className="text-brand-400 font-black">RankPilot</span> was built to bridge this gap. By combining large language models with your live marketing data, we let you ask questions in plain English and get instant, actionable answers — as if you had a dedicated analyst available 24/7.
+                            </p>
+                            {/* Simplified Timeline */}
+                            <div className="pt-4 space-y-4">
                                 {[
                                     { year:'2023', label:'Concept born — unified analytics vision' },
                                     { year:'2024', label:'Built GA4 + GSC + Ads integrations' },
-                                    { year:'2025', label:'AI Analyst launched with streaming responses' },
-                                    { year:'2026', label:'Full platform with 4+ integrations live' },
+                                    { year:'2025', label:'AI Analyst launched globally' },
                                 ].map((item, i) => (
                                     <div key={i} className="flex items-center gap-4">
                                         <div className="w-12 h-7 rounded-lg bg-brand-500/10 border border-brand-500/20 flex items-center justify-center flex-shrink-0">
                                             <span className="text-[10px] font-black text-brand-400">{item.year}</span>
                                         </div>
-                                        <span className="text-xs font-semibold text-slate-400">{item.label}</span>
+                                        <span className="text-xs font-semibold text-neutral-500 dark:text-slate-400">{item.label}</span>
                                     </div>
                                 ))}
                             </div>
                         </div>
-
-                        {/* Right — visual */}
-                        <div className="relative">
-                            <div className="aspect-[4/3] rounded-3xl bg-slate-950 border border-white/10 overflow-hidden shadow-2xl relative group">
-
-                                {/* Background glow */}
-                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-brand-500/15 via-transparent to-transparent"/>
-
-                                {/* Center icon */}
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <CpuChipIcon className="w-28 h-28 text-brand-500/15 group-hover:scale-110 group-hover:text-brand-500/25 transition-all duration-700" strokeWidth={1}/>
-                                </div>
-
-                                {/* Floating cards */}
-                                <div className="absolute top-8 left-8 p-3.5 bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl"
-                                    style={{ animation:'float1 3s ease-in-out infinite' }}>
-                                    <div className="flex items-center gap-2">
-                                        <ChartBarIcon className="w-5 h-5 text-brand-400"/>
-                                        <div>
-                                            <p className="text-[10px] font-black text-white">GA4 Sessions</p>
-                                            <p className="text-[10px] text-slate-400">+24.3% this week</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="absolute bottom-8 right-8 p-3.5 bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl"
-                                    style={{ animation:'float2 4s ease-in-out infinite' }}>
-                                    <div className="flex items-center gap-2">
-                                        <SparklesIcon className="w-5 h-5 text-indigo-400"/>
-                                        <div>
-                                            <p className="text-[10px] font-black text-white">AI Insight Ready</p>
-                                            <p className="text-[10px] text-slate-400">3 opportunities found</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="absolute top-8 right-8 p-3.5 bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl"
-                                    style={{ animation:'float1 3.5s ease-in-out infinite', animationDelay:'0.5s' }}>
-                                    <div className="flex items-center gap-2">
-                                        <EyeIcon className="w-5 h-5 text-teal-400"/>
-                                        <div>
-                                            <p className="text-[10px] font-black text-white">GSC CTR</p>
-                                            <p className="text-[10px] text-slate-400">70.2% rate</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="absolute bottom-8 left-8 p-3.5 bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl"
-                                    style={{ animation:'float2 4.5s ease-in-out infinite', animationDelay:'1s' }}>
-                                    <div className="flex items-center gap-2">
-                                        <ShieldCheckIcon className="w-5 h-5 text-green-400"/>
-                                        <div>
-                                            <p className="text-[10px] font-black text-white">Encrypted</p>
-                                            <p className="text-[10px] text-slate-400">AES-256-GCM</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </section>
 
-            {/* 6. INTEGRATIONS — platform logos strip */}
-            <section className="py-20 bg-slate-950">
-                <div className="max-w-5xl mx-auto px-6 text-center">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-8">Unified with your tools</p>
-                    <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
-                        {[
-                            { name:'Google Analytics 4', emoji:'📊', color:'text-orange-400' },
-                            { name:'Search Console',     emoji:'🔍', color:'text-green-400'  },
-                            { name:'Google Ads',         emoji:'📢', color:'text-yellow-400' },
-                            { name:'Facebook Ads',       emoji:'📘', color:'text-blue-400'   },
-                        ].map(tool => (
-                            <div key={tool.name}
-                                className="flex items-center gap-2.5 px-5 py-3 bg-white/5 hover:bg-white/8 border border-white/10 hover:border-white/20 rounded-xl text-slate-300 text-sm font-bold transition-all hover:-translate-y-0.5">
-                                <span>{tool.emoji}</span>
-                                <span className={tool.color}>{tool.name}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
 
-            {/* 7. CTA SECTION — dramatic full-width */}
-            <section className="py-28 bg-slate-900 border-t border-white/5 relative overflow-hidden">
+
+            {/* 5. CTA SECTION — dramatic full-width */}
+            <section className="py-28 bg-neutral-50 dark:bg-slate-900 border-t border-neutral-200 dark:border-white/5 relative overflow-hidden">
                 <div className="absolute inset-0 pointer-events-none">
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-brand-600/15 rounded-full blur-[100px]"/>
                 </div>
@@ -331,10 +281,10 @@ const AboutPage = () => {
                         <span className="text-[10px] font-black text-brand-400 uppercase tracking-widest">Start Today</span>
                     </div>
 
-                    <h2 className="text-4xl md:text-5xl font-black text-white tracking-tight mb-4 leading-tight">
+                    <h2 className="text-4xl md:text-5xl font-black text-neutral-900 dark:text-white tracking-tight mb-4 leading-tight">
                         Ready to pilot<br/>your growth?
                     </h2>
-                    <p className="text-slate-400 text-lg font-medium mb-10 max-w-xl mx-auto leading-relaxed">
+                    <p className="text-neutral-500 dark:text-slate-400 text-lg font-medium mb-10 max-w-xl mx-auto leading-relaxed">
                         Join data-driven marketing teams who replaced their spreadsheets with RankPilot. Free to start. No credit card required.
                     </p>
 
@@ -345,7 +295,7 @@ const AboutPage = () => {
                             <ArrowRightIcon className="w-4 h-4 group-hover:translate-x-1 transition-transform"/>
                         </NavLink>
                         <NavLink to="/"
-                            className="px-8 py-4 text-slate-400 hover:text-white font-bold transition-colors text-base">
+                            className="px-8 py-4 text-neutral-500 dark:text-slate-400 hover:text-neutral-900 dark:hover:text-white font-bold transition-colors text-base">
                             ← Back to Home
                         </NavLink>
                     </div>
@@ -361,16 +311,7 @@ const AboutPage = () => {
 
             <Footer />
 
-            <style>{`
-                @keyframes float1 {
-                    0%, 100% { transform: translateY(0px); }
-                    50%       { transform: translateY(-10px); }
-                }
-                @keyframes float2 {
-                    0%, 100% { transform: translateY(0px); }
-                    50%       { transform: translateY(-14px); }
-                }
-            `}</style>
+
         </div>
     );
 };
