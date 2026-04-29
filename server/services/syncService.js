@@ -66,13 +66,12 @@ export const syncHistoricalData = async (accountId, source) => {
     const completeField = `${prefix}HistoricalComplete`;
     const indexField = `${prefix}HistoricalChunkIndex`;
 
-    //If source is not configured, skip it and clear status
-    if (!acc[configField]) {
-        console.log(`[Historical Sync] ⏭️ Skipping [${source.toUpperCase()}] for "${acc.siteName}" (Not Configured)`);
-        if (acc[statusField] !== 'idle') {
-            const updatedAcc = await UserAccounts.findByIdAndUpdate(accountId, { [statusField]: 'idle' }, { returnDocument: 'after' });
-            await updateGlobalSyncStatus(updatedAcc);
-        }
+    // If source is not configured OR historical sync is already complete, skip it
+    if (!acc[configField] || acc[completeField]) {
+        const reason = !acc[configField] ? 'Not Configured' : 'Already Complete';
+        console.log(`[Historical Sync] ⏭️ Skipping [${source.toUpperCase()}] for "${acc.siteName}" (${reason})`);
+        
+        await UserAccounts.findByIdAndUpdate(accountId, { [statusField]: 'idle' });
         await checkNextPendingSync(accountId);
         return;
     }
