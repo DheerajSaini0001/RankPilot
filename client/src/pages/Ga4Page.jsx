@@ -590,7 +590,18 @@ const Ga4Page = () => {
                         {/* 4. Action Buttons */}
                         <div className="flex flex-col sm:flex-row gap-2 shrink-0">
                             <button
-                                onClick={() => openWithQuestion(`Analyze my GA4 performance for ${startDate} to ${endDate}. Users: ${formatNumber(overview?.users || 0)}, Sessions: ${formatNumber(overview?.sessions || 0)}`)}
+                                onClick={() => {
+                                    const fullPrompt = `Act as my Marketing Coach. Analyze my complete GA4 dashboard for ${startDate} to ${endDate}:
+- **Performance**: ${formatNumber(overview?.users)} Users (${calculateChange(overview?.users, priorOverview?.users)}% growth), ${formatNumber(overview?.sessions)} Sessions, ${formatNumber(overview?.pageViews)} Page Views.
+- **Engagement**: ${engagementRate}% Rate, ${formatTime(overview?.avgSessionDuration)} Avg Duration, ${(overview?.bounceRate || 0).toFixed(1)}% Bounce.
+- **Audience**: ${newPct}% New vs ${retPct}% Returning.
+- **Top Channels**: ${traffic.slice(0, 3).map(t => `${t.source} (${t.sessions} sessions)`).join(', ')}.
+- **Top Content**: ${pages.slice(0, 3).map(p => p.path).join(', ')}.
+- **Devices**: ${breakdowns.devices.map(d => `${d.name} (${((d.value / (overview?.sessions || 1)) * 100).toFixed(0)}%)`).join(', ')}.
+
+Provide a comprehensive master summary of my site's health and 3 actionable strategic recommendations for immediate growth.`;
+                                    openWithQuestion(fullPrompt);
+                                }}
                                 className="h-8 px-4 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
                             >
                                 <SparklesIcon className="w-3.5 h-3.5" />
@@ -639,8 +650,8 @@ const Ga4Page = () => {
                         isPositive={true}
                         changeText="vs last period"
                         chartData={timeseries.map(d => d.sessions).slice(-10)}
-                        insight={intelligence?.kpiUsers}
-                        contextPrompt={`My website currently has ${formatNumber(overview?.users)} active users with ${formatNumber(overview?.newUsers)} being new visitors. How does this impact my growth strategy?`}
+                        insight={intelligence?.activeUsers}
+                        contextPrompt={`Act as my Marketing Coach. My website has ${formatNumber(overview?.users)} active users with ${formatNumber(overview?.newUsers)} being new visitors. Analyze this acquisition and provide a 1-sentence summary + 1-sentence strategic insight.`}
                     />
                     <KpiCard
                         title="Total Sessions"
@@ -651,8 +662,8 @@ const Ga4Page = () => {
                         isPositive={true}
                         changeText="vs last period"
                         chartData={timeseries.map(d => d.sessions).slice(-10)}
-                        insight={intelligence?.kpiSessions}
-                        contextPrompt={`Total sessions: ${formatNumber(overview?.sessions)}. How is the engagement volume compared to last period?`}
+                        insight={intelligence?.totalSessions}
+                        contextPrompt={`Act as my Marketing Coach. Total sessions are ${formatNumber(overview?.sessions)}. Compare this volume to my user base and provide a 1-sentence summary + 1-sentence strategic insight.`}
                     />
                     <KpiCard
                         title="Engagement Rate"
@@ -662,8 +673,8 @@ const Ga4Page = () => {
                         change={2.1}
                         isPositive={true}
                         changeText="vs last period"
-                        insight={intelligence?.kpiResonance}
-                        contextPrompt={`My Engagement Rate is ${(100 - (overview?.bounceRate || 0)).toFixed(1)}%. What does this tell me about how interesting my content is to visitors?`}
+                        insight={intelligence?.engagementRate}
+                        contextPrompt={`Act as my Marketing Coach. My Engagement Rate is ${engagementRate}%. Analyze this content resonance and provide a 1-sentence summary + 1-sentence strategic insight.`}
                     />
                     <KpiCard
                         title="Avg. Session Duration"
@@ -673,17 +684,17 @@ const Ga4Page = () => {
                         change={-0.5}
                         isPositive={false}
                         changeText="vs last period"
-                        insight={intelligence?.kpiDuration}
-                        contextPrompt={`The average user spends ${formatTime(overview?.avgSessionDuration)} on my site. Is this enough time to convert them?`}
+                        insight={intelligence?.avgSessionDuration}
+                        contextPrompt={`Act as my Marketing Coach. Users spend an average of ${formatTime(overview?.avgSessionDuration)} on site. Analyze this retention and provide a 1-sentence summary + 1-sentence strategic insight.`}
                     />
                 </div>
 
                 {/* ADD 2 — Summary Strip */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                     {[
-                        { label: 'Page Views', value: overview ? formatNumber(overview.pageViews) : '0', icon: <ChartBarIcon className="w-5 h-5 text-blue-500" />, insight: intelligence?.kpiPageViews },
-                        { label: 'New Users', value: formatNumber(newUsers), icon: <UsersIcon className="w-5 h-5 text-emerald-500" />, insight: intelligence?.kpiNewUsers },
-                        { label: 'Pages Per Session', value: pagesPerSession, icon: <GlobeAltIcon className="w-5 h-5 text-purple-500" />, insight: intelligence?.kpiPagesPerSession }
+                        { label: 'Page Views', value: overview ? formatNumber(overview.pageViews) : '0', icon: <ChartBarIcon className="w-5 h-5 text-blue-500" />, insight: intelligence?.pageViews },
+                        { label: 'New Users', value: formatNumber(newUsers), icon: <UsersIcon className="w-5 h-5 text-emerald-500" />, insight: intelligence?.newUsers },
+                        { label: 'Pages Per Session', value: pagesPerSession, icon: <GlobeAltIcon className="w-5 h-5 text-purple-500" />, insight: intelligence?.pagesPerSession }
                     ].map((card, idx) => (
                         <div key={idx} className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-4 shadow-sm group hover:border-brand-500/30 transition-all flex flex-col">
                             <div className="flex items-center gap-4 mb-3">
@@ -717,7 +728,7 @@ const Ga4Page = () => {
                             </div>
                             <div className="p-2 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 flex items-center gap-2">
                                 <button
-                                    onClick={() => openWithQuestion(`My GA4 sessions trend: ${timeseries.slice(-7).map(d => `${d.date}: ${d.sessions}`).join(', ')}. Total sessions: ${formatNumber(overview?.sessions)}, Engagement Rate: ${(100 - (overview?.bounceRate || 0)).toFixed(1)}%. What does my engagement look like and how can I improve it?`)}
+                                    onClick={() => openWithQuestion(`Act as my Marketing Coach. Analyze my session trend: ${timeseries.slice(-7).map(d => `${d.date}: ${d.sessions}`).join(', ')}. Identify any patterns (like weekend surges) and provide a 1-sentence summary + 1-sentence strategic insight.`)}
                                     className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
                                 >
                                     <SparklesIcon className="w-3.5 h-3.5" />
@@ -791,10 +802,10 @@ const Ga4Page = () => {
                         </div>
                         <div className="px-8 pb-8">
                             <SectionAiSummary 
-                                insight={intelligence?.matrix} 
+                                insight={intelligence?.sessionsOverTime} 
                                 loading={loading} 
                                 sectionTitle="AI SUMMARY"
-                                contextPrompt={`Analyze my engagement matrix: ${timeseries.slice(-7).map(d => `${d.date}: ${d.sessions} sessions`).join(', ')}. What trends do you see?`}
+                                contextPrompt={`Act as my Marketing Coach. Analyze the sessions trend: ${timeseries.slice(-7).map(d => `${d.date}: ${d.sessions} sessions`).join(', ')}. Provide a 1-sentence summary + 1-sentence strategic insight.`}
                             />
                         </div>
                     </div>
@@ -804,7 +815,7 @@ const Ga4Page = () => {
                         <div className="flex items-center justify-between mb-1">
                             <h3 className="text-base font-black text-neutral-900 dark:text-white">New vs Returning Users</h3>
                             <button
-                                onClick={() => openWithQuestion(`My GA4 user split: ${newPct}% new users (${formatNumber(newUsers)}) and ${retPct}% returning (${formatNumber(retUsers)}) out of ${formatNumber(overview?.users)} total. Is this a healthy ratio? What strategies can improve user retention?`)}
+                                onClick={() => openWithQuestion(`Act as my Marketing Coach. Analyze my user split: ${newPct}% New vs ${retPct}% Returning. Provide a 1-sentence summary of this loyalty and 1-sentence strategic insight to improve retention.`)}
                                 className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
                             >
                                 <SparklesIcon className="w-3.5 h-3.5" />
@@ -867,10 +878,10 @@ const Ga4Page = () => {
                         </div>
                         <div className="mt-auto">
                             <SectionAiSummary 
-                                insight={intelligence?.userType} 
+                                insight={intelligence?.newVsReturningUsers} 
                                 loading={loading} 
                                 sectionTitle="AI SUMMARY"
-                                contextPrompt={`My audience split: New Users (${formatNumber(newUsers)}), Returning Users (${formatNumber((overview?.users || 0) - newUsers)}). What strategies can I use to improve long-term user retention?`}
+                                contextPrompt={`Act as my Marketing Coach. My audience split: New (${newPct}%) vs Returning (${retPct}%). Provide a 1-sentence summary + 1-sentence strategic insight.`}
                             />
                         </div>
                     </div>
@@ -885,7 +896,7 @@ const Ga4Page = () => {
                         </div>
                         <div className="flex items-center gap-2">
                             <button
-                                onClick={() => openWithQuestion(`My GA4 engagement rate is ${engagementRate}% with ${formatNumber(engagedSessions)} engaged sessions. Average session duration: ${formatTime(overview?.avgSessionDuration)}. Is this good for my industry? What can I do to boost engagement?`)}
+                                onClick={() => openWithQuestion(`Act as my Marketing Coach. Analyze my engagement: ${engagementRate}% rate, ${formatNumber(engagedSessions)} engaged sessions, and ${formatTime(overview?.avgSessionDuration)} duration. Provide a 1-sentence summary + 1-sentence strategic insight.`)}
                                 className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
                             >
                                 <SparklesIcon className="w-3.5 h-3.5" />
@@ -920,10 +931,10 @@ const Ga4Page = () => {
                         💡 Engagement Rate counts sessions where user stayed 10+ sec, converted, or viewed 2+ pages.
                     </div>
                     <SectionAiSummary 
-                        insight={intelligence?.retention} 
+                        insight={intelligence?.engagementRates} 
                         loading={loading} 
                         sectionTitle="AI SUMMARY"
-                        contextPrompt={`Current engagement rate: ${(100 - (overview?.bounceRate || 0)).toFixed(1)}%. How does this compare to industry standards for ${siteName}?`}
+                        contextPrompt={`Act as my Marketing Coach. Analyze my engagement metrics: ${engagementRate}% rate and ${formatTime(overview?.avgSessionDuration)} duration. Provide a 1-sentence summary + 1-sentence strategic insight.`}
                     />
                 </div>
 
@@ -934,7 +945,7 @@ const Ga4Page = () => {
                         <div className="flex items-center justify-between mb-1">
                             <h3 className="text-sm font-black text-neutral-900 dark:text-white">Bounce Rate Over Time</h3>
                             <button
-                                onClick={() => openWithQuestion(`My average Engagement Rate is ${engagementRate}% (Bounce: ${(overview?.bounceRate || 0).toFixed(1)}%). Is this healthy for ${siteName}? What pages might be causing high bounce and how can I fix it?`)}
+                                onClick={() => openWithQuestion(`Act as my Marketing Coach. Analyze my bounce trend: ${timeseries.slice(-7).map(d => `${d.date}: ${d.bounceRate}%`).join(', ')}. Provide a 1-sentence summary of stability and 1-sentence strategic insight to fix spikes.`)}
                                 className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
                             >
                                 <SparklesIcon className="w-3.5 h-3.5" />
@@ -983,10 +994,10 @@ const Ga4Page = () => {
                             </ResponsiveContainer>
                         )}
                         <SectionAiSummary 
-                            insight={intelligence?.trendBounce} 
+                            insight={intelligence?.bounceRateOverTime} 
                             loading={loading} 
                             sectionTitle="AI SUMMARY"
-                            contextPrompt={`Analyze my engagement/bounce trend. Current average bounce: ${(overview?.bounceRate || 0).toFixed(1)}%. Which specific days show concerning spikes?`}
+                            contextPrompt={`Act as my Marketing Coach. Analyze the bounce trend: ${timeseries.slice(-7).map(d => `${d.date}: ${d.bounceRate}%`).join(', ')}. Provide a 1-sentence summary + 1-sentence strategic insight.`}
                         />
                     </div>
 
@@ -995,7 +1006,7 @@ const Ga4Page = () => {
                         <div className="flex items-center justify-between mb-1">
                             <h3 className="text-sm font-black text-neutral-900 dark:text-white">Page Views Over Time</h3>
                             <button
-                                onClick={() => openWithQuestion(`My GA4 total sessions: ${formatNumber(overview?.sessions)}, page views: ${formatNumber(overview?.pageViews)}, pages per session: ${pagesPerSession}. Are there any concerning spikes or dips? What does session distribution tell us?`)}
+                                onClick={() => openWithQuestion(`Act as my Marketing Coach. Analyze my traffic patterns: ${timeseries.slice(-7).map(d => `${d.date}: ${formatNumber(d.pageViews)} views`).join(', ')}. Provide a 1-sentence summary of the pattern and 1-sentence strategic volume insight.`)}
                                 className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
                             >
                                 <SparklesIcon className="w-3.5 h-3.5" />
@@ -1039,10 +1050,10 @@ const Ga4Page = () => {
                             </ResponsiveContainer>
                         )}
                          <SectionAiSummary 
-                            insight={intelligence?.trendVolume} 
+                            insight={intelligence?.pageViewsOverTime} 
                             loading={loading} 
                             sectionTitle="AI SUMMARY"
-                            contextPrompt={`My session volume distribution for this period. Total views: ${formatNumber(overview?.pageViews)}. How can I optimize traffic spread?`}
+                            contextPrompt={`Act as my Marketing Coach. Analyze my page views trend: ${timeseries.slice(-7).map(d => `${d.date}: ${d.pageViews} views`).join(', ')}. Provide a 1-sentence summary + 1-sentence strategic insight.`}
                         />
                     </div>
                 </div>
@@ -1054,7 +1065,7 @@ const Ga4Page = () => {
                         <div className="p-5 border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-dark-surface/50 flex items-center justify-between">
                             <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Top Traffic Sources </h3>
                             <button
-                                onClick={() => openWithQuestion(`My GA4 top traffic sources: ${traffic.slice(0, 5).map(t => `${t.channel} (${t.sessions} sessions)`).join(', ')}. Which channels are performing best? How can I optimize my traffic mix?`)}
+                                onClick={() => openWithQuestion(`Act as my Marketing Coach. Analyze my top traffic sources: ${traffic.slice(0, 5).map(t => `${t.source}: ${t.sessions} sessions`).join(', ')}. Provide a 1-sentence summary + 1-sentence strategic channel insight.`)}
                                 className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
                             >
                                 <SparklesIcon className="w-3.5 h-3.5" />
@@ -1066,10 +1077,10 @@ const Ga4Page = () => {
                         </div>
                         <div className="p-5 pt-0">
                             <SectionAiSummary 
-                                insight={intelligence?.sources} 
+                                insight={intelligence?.topTrafficSources} 
                                 loading={loading} 
                                 sectionTitle="AI SUMMARY"
-                                contextPrompt={`My top traffic sources: ${traffic.slice(0, 5).map(t => `${t.source}: ${t.sessions} sessions`).join(', ')}. Where should I focus my marketing budget?`}
+                                contextPrompt={`Act as my Marketing Coach. Analyze top sources: ${traffic.slice(0, 5).map(t => `${t.source}: ${t.sessions} sessions`).join(', ')}. Provide a 1-sentence summary + 1-sentence strategic insight.`}
                             />
                         </div>
                     </div>
@@ -1078,7 +1089,7 @@ const Ga4Page = () => {
                         <div className="p-5 border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-dark-surface/50 flex items-center justify-between">
                             <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Top Pages</h3>
                             <button
-                                onClick={() => openWithQuestion(`My GA4 top pages: ${pages.slice(0, 5).map(p => `${p.path} (${p.views} views)`).join(', ')}. Which pages have the best performance? Are there pages with high views but low engagement?`)}
+                                onClick={() => openWithQuestion(`Act as my Marketing Coach. Analyze my top pages: ${pages.slice(0, 5).map(p => `${p.path}: ${p.views} views`).join(', ')}. Provide a 1-sentence summary + 1-sentence strategic optimization insight.`)}
                                 className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
                             >
                                 <SparklesIcon className="w-3.5 h-3.5" />
@@ -1090,10 +1101,10 @@ const Ga4Page = () => {
                         </div>
                         <div className="p-5 pt-0">
                             <SectionAiSummary 
-                                insight={intelligence?.pages} 
+                                insight={intelligence?.topPages} 
                                 loading={loading} 
                                 sectionTitle="AI SUMMARY"
-                                contextPrompt={`My top pages: ${pages.slice(0, 5).map(p => `${p.path}: ${p.views} views`).join(', ')}. Which pages need better conversion optimization?`}
+                                contextPrompt={`Act as my Marketing Coach. Analyze top pages: ${pages.slice(0, 5).map(p => `${p.path}: ${p.views} views`).join(', ')}. Provide a 1-sentence summary + 1-sentence strategic insight.`}
                             />
                         </div>
                     </div>
@@ -1108,7 +1119,7 @@ const Ga4Page = () => {
                                 <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Sessions by device type</p>
                             </div>
                             <button
-                                onClick={() => openWithQuestion(`My GA4 device breakdown: ${breakdowns.devices.map(d => `${d.name}: ${formatNumber(d.value)} sessions`).join(', ')}. Should I prioritize mobile optimization? Any device-specific UX improvements?`)}
+                                onClick={() => openWithQuestion(`Act as my Marketing Coach. Analyze device breakdown: ${breakdowns.devices.map(d => `${d.name}: ${((d.value / overview.sessions) * 100).toFixed(0)}%`).join(', ')}. Provide a 1-sentence summary + 1-sentence strategic UX insight.`)}
                                 className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
                             >
                                 <SparklesIcon className="w-3.5 h-3.5" />
@@ -1178,10 +1189,10 @@ const Ga4Page = () => {
                         </div> {/* flex-1 content wrapper ends */}
                         <div className="mt-auto">
                             <SectionAiSummary 
-                                insight={intelligence?.devices} 
+                                insight={intelligence?.deviceBreakdown} 
                                 loading={loading} 
                                 sectionTitle="AI SUMMARY"
-                                contextPrompt={`Device breakdown: ${breakdowns.devices.map(d => `${d.name}: ${d.value} sessions`).join(', ')}. Contrast mobile vs desktop behavior.`}
+                                contextPrompt={`Act as my Marketing Coach. Analyze device split: ${breakdowns.devices.map(d => `${d.name}: ${((d.value / overview.sessions) * 100).toFixed(0)}%`).join(', ')}. Provide a 1-sentence summary + 1-sentence strategic insight.`}
                             />
                         </div>
                     </div> {/* Device Breakdown card ends */}
@@ -1194,7 +1205,7 @@ const Ga4Page = () => {
                                 <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Top 5 countries by sessions</p>
                             </div>
                             <button
-                                onClick={() => openWithQuestion(`My top GA4 locations by sessions: ${breakdowns.locations.slice(0, 5).map(l => `${l.name}: ${formatNumber(l.value)}`).join(', ')}. Any geo-based opportunities or localization strategies I should pursue?`)}
+                                onClick={() => openWithQuestion(`Act as my Marketing Coach. Analyze top 5 locations: ${breakdowns.locations.slice(0, 5).map(l => `${l.name}: ${((l.value / overview.sessions) * 100).toFixed(0)}%`).join(', ')}. Provide a 1-sentence summary + 1-sentence strategic geo growth insight.`)}
                                 className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
                             >
                                 <SparklesIcon className="w-3.5 h-3.5" />
@@ -1229,10 +1240,10 @@ const Ga4Page = () => {
                         </div> {/* flex-1 content wrapper ends */}
                         <div className="mt-auto">
                             <SectionAiSummary 
-                                insight={intelligence?.geo} 
+                                insight={intelligence?.topLocations} 
                                 loading={loading} 
                                 sectionTitle="AI SUMMARY"
-                                contextPrompt={`Top locations: ${breakdowns.locations.slice(0, 5).map(l => `${l.name}: ${l.value} sessions`).join(', ')}. Any geographical expansion opportunities?`}
+                                contextPrompt={`Act as my Marketing Coach. Analyze top 5 locations: ${breakdowns.locations.slice(0, 5).map(l => `${l.name}: ${((l.value / overview.sessions) * 100).toFixed(0)}%`).join(', ')}. Provide a 1-sentence summary + 1-sentence strategic insight.`}
                             />
                         </div>
                     </div> {/* Geography Breakdown card ends */}
@@ -1247,7 +1258,7 @@ const Ga4Page = () => {
                         </div>
                         <div className="flex items-center gap-2">
                             <button
-                                onClick={() => openWithQuestion(`My GA4 comparison — Users: ${formatNumber(overview?.users)} vs ${formatNumber(priorOverview?.users)}, Sessions: ${formatNumber(overview?.sessions)} vs ${formatNumber(priorOverview?.sessions)}, Bounce: ${(overview?.bounceRate || 0).toFixed(1)}% vs ${(priorOverview?.bounceRate || 0).toFixed(1)}%. What are the most significant changes and what might be causing them?`)}
+                                onClick={() => openWithQuestion(`Act as my Marketing Coach. Analyze my trajectory: Users (${calculateChange(overview?.users, priorOverview?.users)}%), Sessions (${calculateChange(overview?.sessions, priorOverview?.sessions)}%), Views (${calculateChange(overview?.pageViews, priorOverview?.pageViews)}%). Provide a 1-sentence trajectory summary + 1-sentence strategic future insight.`)}
                                 className="px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"
                             >
                                 <SparklesIcon className="w-3.5 h-3.5" />
@@ -1299,10 +1310,10 @@ const Ga4Page = () => {
                         </table>
                     </div>
                     <SectionAiSummary 
-                        insight={intelligence?.growth} 
+                        insight={intelligence?.thisPeriodVsLastPeriod} 
                         loading={loading} 
                         sectionTitle="AI SUMMARY"
-                        contextPrompt={`Analyze the period comparison data. Users: ${overview?.users} (${overview?.users >= priorOverview?.users ? '+' : ''}${((overview?.users / priorOverview?.users - 1) * 100).toFixed(1)}%). Is this growth sustainable?`}
+                        contextPrompt={`Act as my Marketing Coach. Analyze the period comparison: Users (${calculateChange(overview?.users, priorOverview?.users)}%), Sessions (${calculateChange(overview?.sessions, priorOverview?.sessions)}%), Views (${calculateChange(overview?.pageViews, priorOverview?.pageViews)}%). Provide a 1-sentence summary + 1-sentence strategic insight.`}
                     />
                 </div>
 
