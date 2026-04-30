@@ -9,16 +9,13 @@ import { syncGsc, syncGa4, syncGoogleAds, syncFacebookAds } from '../services/sy
 import NodeCache from 'node-cache';
 import { generateGa4Intelligence, generateGscIntelligence, generateDashboardIntelligence } from '../services/aiIntelligenceService.js';
 
-// Initialize cache with 10-minute TTL
 const analyticsCache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
 
-// Helper to generate a unique cache key based on user, site, and filters
 const getAnalyticsCacheKey = (userId, prefix, query) => {
     const { startDate, endDate, siteId, device } = query;
     return `${prefix}_${userId}_${siteId || 'any'}_${startDate}_${endDate}_${device || 'all'}`;
 };
 
-// Helper to clear all cache for a specific user (used after sync)
 const clearUserCache = (userId) => {
     const keys = analyticsCache.keys();
     const userKeys = keys.filter(k => k.includes(`_${userId}_`));
