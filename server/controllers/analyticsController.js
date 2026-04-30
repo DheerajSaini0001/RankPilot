@@ -7,9 +7,10 @@ import AiIntelligence from '../models/AiIntelligence.js';
 import mongoose from 'mongoose';
 import { syncGsc, syncGa4, syncGoogleAds, syncFacebookAds } from '../services/syncService.js';
 import NodeCache from 'node-cache';
-import { generateGa4Intelligence, generateGscIntelligence, generateDashboardIntelligence } from '../services/aiIntelligenceService.js';
+import { generateGa4Intelligence, generateGscIntelligence, generateDashboardIntelligence, getPlaceholderIntelligence } from '../services/aiIntelligenceService.js';
 
 const analyticsCache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
+
 
 const getAnalyticsCacheKey = (userId, prefix, query) => {
     const { startDate, endDate, siteId, device } = query;
@@ -275,19 +276,39 @@ export const getDashboardSummary = async (req, res) => {
         if (isAiValid) {
             result.intelligence = existingAi.content;
         } else {
-            result.intelligence = await generateDashboardIntelligence(result, acc);
+            const isHistoricalSyncInProgress = 
+                (acc.ga4PropertyId && !acc.ga4HistoricalComplete) ||
+                (acc.gscSiteUrl && !acc.gscHistoricalComplete) ||
+                (acc.googleAdsCustomerId && !acc.googleAdsHistoricalComplete) ||
+                (acc.facebookAdAccountId && !acc.facebookAdsHistoricalComplete);
 
-            if (siteId && !result.intelligence.isFallback) {
-                await AiIntelligence.findOneAndUpdate(
-                    { siteId, platform: 'dash', startDate, endDate, device },
-                    {
-                        userId,
-                        content: result.intelligence,
-                        lastSyncedAtOnGeneration: new Date(latestSync),
-                        createdAt: new Date()
-                    },
-                    { upsert: true }
-                );
+            if (isHistoricalSyncInProgress) {
+                result.intelligence = getPlaceholderIntelligence('dash', 'syncing');
+            } else {
+                const hasActualData = 
+                    (result.ga4?.sessions > 0) || 
+                    (result.gsc?.clicks > 0) || 
+                    (result.googleAds?.spend > 0) || 
+                    (result.facebookAds?.spend > 0);
+
+                if (!hasActualData) {
+                    result.intelligence = getPlaceholderIntelligence('dash', 'no_data');
+                } else {
+                    result.intelligence = await generateDashboardIntelligence(result, acc);
+
+                    if (siteId && !result.intelligence.isFallback) {
+                        await AiIntelligence.findOneAndUpdate(
+                            { siteId, platform: 'dash', startDate, endDate, device },
+                            {
+                                userId,
+                                content: result.intelligence,
+                                lastSyncedAtOnGeneration: new Date(latestSync),
+                                createdAt: new Date()
+                            },
+                            { upsert: true }
+                        );
+                    }
+                }
             }
         }
 
@@ -462,19 +483,27 @@ export const getGa4Summary = async (req, res) => {
         if (isAiValid) {
             result.intelligence = existingAi.content;
         } else {
-            result.intelligence = await generateGa4Intelligence(result, siteName);
+            if (!syncMetadata.ga4HistoricalComplete) {
+                result.intelligence = getPlaceholderIntelligence('ga4', 'syncing');
+            } else {
+                if (!(result.overview?.sessions > 0)) {
+                    result.intelligence = getPlaceholderIntelligence('ga4', 'no_data');
+                } else {
+                    result.intelligence = await generateGa4Intelligence(result, siteName);
 
-            if (siteId && !result.intelligence.isFallback) {
-                await AiIntelligence.findOneAndUpdate(
-                    { siteId, platform: 'ga4', startDate, endDate, device },
-                    {
-                        userId,
-                        content: result.intelligence,
-                        lastSyncedAtOnGeneration: syncMetadata?.lastSyncedAt || new Date(),
-                        createdAt: new Date()
-                    },
-                    { upsert: true }
-                );
+                    if (siteId && !result.intelligence.isFallback) {
+                        await AiIntelligence.findOneAndUpdate(
+                            { siteId, platform: 'ga4', startDate, endDate, device },
+                            {
+                                userId,
+                                content: result.intelligence,
+                                lastSyncedAtOnGeneration: syncMetadata?.lastSyncedAt || new Date(),
+                                createdAt: new Date()
+                            },
+                            { upsert: true }
+                        );
+                    }
+                }
             }
         }
 
@@ -487,7 +516,6 @@ export const getGa4Summary = async (req, res) => {
 
 export const getGscSummary = async (req, res) => {
     const { startDate, endDate, siteId, device = 'all' } = req.query;
-        console.log(req.query);
     if (!siteId) {
         return res.status(400).json({ success: false, message: 'Site ID is required' });
     }
@@ -651,19 +679,27 @@ export const getGscSummary = async (req, res) => {
         if (isAiValid) {
             result.intelligence = existingAi.content;
         } else {
-            result.intelligence = await generateGscIntelligence(result, siteName);
+            if (!syncMetadata.gscHistoricalComplete) {
+                result.intelligence = getPlaceholderIntelligence('gsc', 'syncing');
+            } else {
+                if (!(result.overview?.clicks > 0)) {
+                    result.intelligence = getPlaceholderIntelligence('gsc', 'no_data');
+                } else {
+                    result.intelligence = await generateGscIntelligence(result, siteName);
 
-            if (siteId && !result.intelligence.isFallback) {
-                await AiIntelligence.findOneAndUpdate(
-                    { siteId, platform: 'gsc', startDate, endDate, device },
-                    {
-                        userId,
-                        content: result.intelligence,
-                        lastSyncedAtOnGeneration: syncMetadata?.lastSyncedAt || new Date(),
-                        createdAt: new Date()
-                    },
-                    { upsert: true }
-                );
+                    if (siteId && !result.intelligence.isFallback) {
+                        await AiIntelligence.findOneAndUpdate(
+                            { siteId, platform: 'gsc', startDate, endDate, device },
+                            {
+                                userId,
+                                content: result.intelligence,
+                                lastSyncedAtOnGeneration: syncMetadata?.lastSyncedAt || new Date(),
+                                createdAt: new Date()
+                            },
+                            { upsert: true }
+                        );
+                    }
+                }
             }
         }
 

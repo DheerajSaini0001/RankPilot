@@ -1,5 +1,43 @@
 import { callGemini } from './geminiService.js';
 
+export const getPlaceholderIntelligence = (platform, type = 'syncing') => {
+    const messages = {
+        syncing: "Historical data synchronization is currently in progress. AI-powered insights and intelligence will be available once the initial data sync is complete. Please check back in a few minutes.",
+        no_data: "No significant data found for this period. AI-powered insights will be available once your website starts receiving traffic or your ad campaigns become active."
+    };
+    
+    const message = messages[type] || messages.syncing;
+    
+    const keys = {
+        dash: [
+            'websiteSummary', 'overviewGA4', 'overviewGSC', 'overviewGAds', 'overviewFAds',
+            'metricTraffic', 'metricClicks', 'metricSpend', 'metricConversions',
+            'metricImpressions', 'metricEfficiency', 'adWinnerInsight',
+            'growthMatrixInsight', 'topPagesInsight', 'comparisonInsight'
+        ],
+        ga4: [
+            'activeUsers', 'totalSessions', 'engagementRate', 'avgSessionDuration',
+            'pageViews', 'newUsers', 'pagesPerSession', 'sessionsOverTime',
+            'newVsReturningUsers', 'engagementRates', 'bounceRateOverTime',
+            'pageViewsOverTime', 'topTrafficSources', 'topPages',
+            'deviceBreakdown', 'topLocations', 'thisPeriodVsLastPeriod'
+        ],
+        gsc: [
+            'searchClicks', 'impressions', 'avgCtr', 'avgPosition', 'totalQueries',
+            'totalPages', 'topPosition', 'searchPerformanceOverview',
+            'clickThroughRateTrend', 'averageRankingPosition', 'lowCTRKeywords',
+            'keywordsNearPage1', 'topQueries', 'topLandingPages',
+            'dailyImpressionVolume', 'periodComparison'
+        ]
+    };
+
+    const result = { [type === 'syncing' ? 'isSyncing' : 'noData']: true };
+    (keys[platform] || []).forEach(key => {
+        result[key] = message;
+    });
+    return result;
+};
+
 export const generateGa4Intelligence = async (data, siteName) => {
     try {
         const calculateGrowth = (curr, prior) => {
