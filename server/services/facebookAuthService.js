@@ -16,7 +16,6 @@ export const getValidFacebookToken = async (userId, tokenId = null) => {
     // Check if token is nearing expiry (within 3 days) and needs refresh
     if (tokenDoc.expiresAt && tokenDoc.expiresAt.getTime() < Date.now() + (3 * 24 * 60 * 60 * 1000)) {
         try {
-            console.log(`[Facebook] Refreshing token for user ${userId}...`);
             const data = await exchangeLongLivedToken(decrypt(tokenDoc.accessToken));
             
             if (data.access_token) {
@@ -25,7 +24,6 @@ export const getValidFacebookToken = async (userId, tokenId = null) => {
                     tokenDoc.expiresAt = new Date(Date.now() + data.expires_in * 1000);
                 }
                 await tokenDoc.save();
-                console.log(`[Facebook] Token refreshed successfully for user ${userId}`);
             }
         } catch (err) {
             console.error('Error refreshing Facebook token', err.message);

@@ -47,7 +47,6 @@ const defaultConfigs = [
 
 export const initConfig = async () => {
     try {
-        console.log("Synchronizing PlatformConfig from environment variables...");
         for (const item of defaultConfigs) {
             const exists = await PlatformConfig.findOne({ key: item.key });
             if (!exists) {

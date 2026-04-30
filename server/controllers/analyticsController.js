@@ -7,7 +7,7 @@ import AiIntelligence from '../models/AiIntelligence.js';
 import mongoose from 'mongoose';
 import { syncGsc, syncGa4, syncGoogleAds, syncFacebookAds } from '../services/syncService.js';
 import NodeCache from 'node-cache';
-import { callGemini } from '../services/geminiService.js';
+import { generateGa4Intelligence, generateGscIntelligence, generateDashboardIntelligence } from '../services/aiIntelligenceService.js';
 
 // Initialize cache with 10-minute TTL
 const analyticsCache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
@@ -183,163 +183,8 @@ export const getDashboardSummary = async (req, res) => {
             }
         });
 
-        // STEP 5: Strategic AI Intelligence
         const device = req.query.device || 'all';
-        const dataForAI = {
-            siteName: acc?.siteName || 'Site',
-            ga4: {
-                ...ga,
-                priorSessions: pGa.sessions,
-                growthSessions: calculateGrowth(ga.sessions, pGa.sessions),
-                growthUsers: calculateGrowth(ga.users, pGa.users)
-            },
-            gsc: {
-                ...gs,
-                avgPosition: gs.position,
-                priorClicks: pGs.clicks,
-                growthClicks: calculateGrowth(gs.clicks, pGs.clicks),
-                growthImpressions: calculateGrowth(gs.impressions, pGs.impressions)
-            },
-            googleAds: {
-                ...ad.google,
-                priorSpend: pAd.google.spend,
-                priorConversions: pAd.google.conversions,
-                growthConversions: calculateGrowth(ad.google.conversions, pAd.google.conversions),
-                growthSpend: calculateGrowth(ad.google.spend, pAd.google.spend)
-            },
-            facebookAds: {
-                ...ad.facebook,
-                priorSpend: pAd.facebook.spend,
-                priorReach: pAd.facebook.reach,
-                growthReach: calculateGrowth(ad.facebook.reach, pAd.facebook.reach),
-                growthSpend: calculateGrowth(ad.facebook.spend, pAd.facebook.spend)
-            },
-            topPages: topPages.map(p => ({ url: p._id || '/', views: p.views, users: p.users }))
-        };
 
-        const generateIntelligence = async (data) => {
-            try {
-                const conn = {
-                    ga4: !!acc?.ga4PropertyId,
-                    gsc: !!acc?.gscSiteUrl,
-                    googleAds: !!acc?.googleAdsCustomerId,
-                    facebookAds: !!acc?.facebookAdAccountId
-                };
-
-                const prompt = `
-                  Act as your expert Marketing Intelligence Assistant. Analyze this data and provide EXACTLY 15 friendly, data-driven one-liners for your website dashboard.
-                  Your tone should be professional, encouraging, and focused on "you" and "your" brand's growth.
-                  
-                  CONNECTION STATUS:
-                  - GA4: ${conn.ga4 ? 'ONLINE' : 'OFFLINE'}
-                  - GSC: ${conn.gsc ? 'ONLINE' : 'OFFLINE'}
-                  - Google Ads: ${conn.googleAds ? 'ONLINE' : 'OFFLINE'}
-                  - Facebook Ads: ${conn.facebookAds ? 'ONLINE' : 'OFFLINE'}
-
-                  RAW DATA:
-                  - GA4: ${conn.ga4 ? `${data.ga4.sessions} sessions (${data.ga4.growthSessions}% growth), ${data.ga4.users} users, ${data.ga4.bounceRate}% bounce (Prior: ${data.ga4.priorSessions} sessions)` : 'NO DATA'}
-                  - GSC: ${conn.gsc ? `${data.gsc.clicks} clicks (${data.gsc.growthClicks}% growth), ${data.gsc.impressions} impressions, #${data.gsc.avgPosition?.toFixed(1)} pos (Prior: ${data.gsc.priorClicks} clicks)` : 'NO DATA'}
-                  - Google Ads: ${conn.googleAds ? `$${data.googleAds.spend} spend (${data.googleAds.growthSpend}% growth), ${data.googleAds.conversions} conv (${data.googleAds.growthConversions}% growth), ${(data.googleAds.ctr * 100).toFixed(2)}% CTR` : 'NO DATA'}
-                  - FB Ads: ${conn.facebookAds ? `$${data.facebookAds.spend} spend (${data.facebookAds.growthSpend}% growth), ${data.facebookAds.roas}x ROAS, ${data.facebookAds.reach} reach (${data.facebookAds.growthReach}% growth)` : 'NO DATA'}
-                  - Top page: ${data.topPages[0]?.url || 'Home'} (${data.topPages[0]?.views || 0} views, ${data.topPages[0]?.users || 0} visitors).
-
-                  EXPECTED JSON FORMAT:
-                  {
-                    "websiteSummary": "A big-picture look at your site performance for ${data.siteName}. Mention ${data.ga4.sessions} sessions and ${data.gsc.clicks} clicks. (20-25 words).",
-                    "overviewGA4": "Friendly summary of your traffic (${data.ga4.sessions} sessions) and ${data.ga4.growthSessions}% growth. (25-30 words).",
-                    "overviewGSC": "Encouraging take on your Google search visibility with ${data.gsc.clicks} clicks and #${data.gsc.avgPosition} avg position. (25-30 words).",
-                    "overviewGAds": "Simple summary of your Google Ads success: $${data.googleAds.spend} spend for ${data.googleAds.conversions} conversions. (25-30 words).",
-                    "overviewFAds": "Friendly look at your Facebook impact: $${data.facebookAds.spend} spend reaching ${data.facebookAds.reach} people with ${data.facebookAds.roas}x ROAS. (25-30 words).",
-                    "metricTraffic": "Simple take on your visit trends (${data.ga4.sessions} sessions). (20-25 words).",
-                    "metricClicks": "Encouraging note on your organic growth (${data.gsc.clicks} clicks). (20-25 words).",
-                    "metricSpend": "Comforting summary of your $${(data.googleAds.spend + data.facebookAds.spend).toFixed(2)} total ad investment. (20-25 words).",
-                    "metricConversions": "Exciting summary of your ${data.googleAds.conversions + data.facebookAds.conversions} total conversions. (20-25 words).",
-                    "metricImpressions": "A note on how many eyes (${data.googleAds.impressions + data.facebookAds.reach} impressions/reach) are seeing your brand. (20-25 words).",
-                    "metricEfficiency": "Quick tip on getting the most out of your budget based on your ${(data.googleAds.ctr * 100).toFixed(2)}% Google CTR and ${data.facebookAds.roas}x Meta ROAS. (20-25 words).",
-                    "adWinnerInsight": "A clear, friendly comparison of where you're winning most based on your Ad Platform Comparison table: Google ($${data.googleAds.spend} spend, ${data.googleAds.clicks} clicks, ${data.googleAds.conversions} conversions, $${data.googleAds.cpc.toFixed(2)} CPC, ${(data.googleAds.ctr * 100).toFixed(2)}% CTR) vs Meta ($${data.facebookAds.spend} spend, ${data.facebookAds.clicks} clicks, ${data.facebookAds.conversions} conversions, $${data.facebookAds.cpc.toFixed(2)} CPC, ${(data.facebookAds.ctr * 100).toFixed(2)}% CTR). (40-45 words).",
-                    "growthMatrixInsight": "Exciting analysis of your multi-channel growth journey. Analyze these trends: ${data.ga4.growthSessions}% sessions growth (GA4), ${data.gsc.growthClicks}% clicks growth (GSC), ${data.googleAds.growthConversions}% conversion growth (GAds), and ${data.facebookAds.growthReach}% reach growth (Meta). (40-45 words).",
-                    "topPagesInsight": "Simple advice on how to make your best page (${data.topPages[0]?.url || 'Home'} with ${data.topPages[0]?.views || 0} views and ${data.topPages[0]?.users || 0} unique visitors) work even harder. (40-45 words).",
-                    "comparisonInsight": "An encouraging look at your performance journey. Compare this period vs prior: Sessions (${data.ga4.sessions} vs ${data.ga4.priorSessions}), GSC Clicks (${data.gsc.clicks} vs ${data.gsc.priorClicks}), and Total Ad Spend ($${(data.googleAds.spend + data.facebookAds.spend).toFixed(2)} vs $${(data.googleAds.priorSpend + data.facebookAds.priorSpend).toFixed(2)}). (40-45 words).",
-                  }
-
-                  STRICT RULES:
-                  1. If a source is OFFLINE, the corresponding insight MUST be exactly: "Connect [Platform Name] to unlock your strategic insights."
-                  2. Maintain a "Marketing Coach" persona—professional but very accessible.
-                  3. Use "you" and "your" to refer to the data. 
-                  4. Strictly follow the word limits. NEVER include word counts or bracketed limits like "(25 words)" in your response.
-                `;
-                const aiRes = await callGemini(prompt, [], "Respond ONLY with JSON.");
-                const parsedRes = JSON.parse(aiRes.content.replace(/```json|```/g, '').trim());
-
-                return parsedRes;
-
-            } catch (error) {
-                console.error("Gemini AI failed, using Data-Driven Fallback Engine:", error);
-                const conn = {
-                    ga4: !!acc?.ga4PropertyId,
-                    gsc: !!acc?.gscSiteUrl,
-                    googleAds: !!acc?.googleAdsCustomerId,
-                    facebookAds: !!acc?.facebookAdAccountId
-                };
-                return {
-                    websiteSummary: `Your site performance for ${data.siteName} is looking stable with ${data.ga4.sessions} total sessions and ${data.gsc.clicks} organic clicks captured during this current analysis period.`,
-                    overviewGA4: conn.ga4 ? `Your traffic is holding steady at ${data.ga4.sessions} sessions with a ${data.ga4.growthSessions}% growth rate, showing that your audience engagement strategy is consistently reaching new people.` : "Connect Google Analytics 4 to unlock unique traffic insights and see how your users interact with your brand in real-time for better growth opportunities.",
-                    overviewGSC: conn.gsc ? `Your search visibility is active with ${data.gsc.clicks} clicks and an average position of #${data.gsc.avgPosition?.toFixed(1)}, indicating your content is ranking well for your target keywords.` : "Connect Google Search Console to monitor keyword performance and see which organic search terms are driving the most traffic to your primary content pages.",
-                    overviewGAds: conn.googleAds ? `Your Google Ads are performing with $${data.googleAds.spend} spend and ${data.googleAds.conversions} conversions, proving that your search campaigns are successfully driving valuable actions for your business.` : "Connect your Google Ads account to track your campaign efficiency and see how much value your search advertising is creating for your business overall.",
-                    overviewFAds: conn.facebookAds ? `Your Meta impact is clear with $${data.facebookAds.spend} spend reaching ${data.facebookAds.reach} people at a ${data.facebookAds.roas}x ROAS, showing strong resonance with your social audience.` : "Connect your Meta Ad account to measure your social reach and see how your creative assets are impacting your overall brand visibility and business growth.",
-                    metricTraffic: conn.ga4 ? `You've welcomed ${data.ga4.sessions} visitors this period; this consistent flow of traffic provides a solid foundation for your brand's digital growth and expansion.` : "Connect Google Analytics 4 to track your visitors and see how people interact with your site in real-time across all your pages.",
-                    metricClicks: conn.gsc ? `Your content earned ${data.gsc.clicks} clicks from Google; this organic interest shows that your SEO efforts are successfully capturing the attention of your target audience.` : "Link Google Search Console to see your search clicks and find out which keywords bring people to your site every single day.",
-                    metricSpend: (conn.googleAds || conn.facebookAds) ? `Your total ad investment of $${(data.googleAds.spend + data.facebookAds.spend).toFixed(2)} is being managed across platforms to ensure you're reaching customers where they are most active.` : "Connect your Ad accounts to monitor your spend and ensure every marketing dollar is working hard for your business and your goals.",
-                    metricConversions: (conn.googleAds || conn.facebookAds) ? `You have successfully captured ${data.googleAds.conversions + data.facebookAds.conversions} total conversions, showing that your marketing funnel is effectively turning visitors into valuable leads.` : "Connect your Ad accounts to track your goals and see exactly how much value your marketing efforts are creating for your site.",
-                    metricImpressions: (conn.googleAds || conn.facebookAds) ? `Your brand has earned ${data.googleAds.impressions + data.facebookAds.reach} total impressions and reach, significantly boosting your visibility and name recognition in the digital marketplace.` : "Connect your Ad accounts to see your reach and find out how many people are discovering your business through your paid campaigns.",
-                    metricEfficiency: (conn.googleAds || conn.facebookAds) ? `Your campaigns are operating with a ${(data.googleAds.ctr * 100).toFixed(2)}% Google CTR and ${data.facebookAds.roas}x Meta ROAS, showing a healthy level of efficiency in your current paid strategy.` : "Connect your Ad accounts to identify which campaigns are giving you the best return on your investment and reaching the right audience.",
-                    adWinnerInsight: (conn.googleAds && conn.facebookAds) ? `By comparing your performance across platforms, we see that Google Ads ($${data.googleAds.spend}) and Meta Ads ($${data.facebookAds.spend}) are both contributing to your overall growth. To maximize results, we recommend focusing your future budget on the specific channel currently delivering the lowest cost-per-action for your brand.` : "Connect both Google and Meta ads to compare them side-by-side; our AI will help you pick winners and spend your budget more effectively across every single digital channel.",
-                    growthMatrixInsight: `Your current multi-channel growth journey shows ${data.ga4.growthSessions}% session growth and ${data.gsc.growthClicks}% click growth this period. This positive upward trend suggests that your combined organic and paid strategies are working effectively together to expand your digital footprint and reach new potential customers across the web.`,
-                    topPagesInsight: conn.ga4 ? `Your top performing page (${data.topPages[0]?.url || 'Home'}) is attracting significant attention with ${data.topPages[0]?.views || 0} views this period. We suggest refining its conversion path and adding a clearer call-to-action to help you turn this high-intent traffic into even more measurable results and long-term brand loyalty.` : "Connect Google Analytics 4 to find your most popular content; knowing your best pages is key to making your entire website perform better.",
-                    comparisonInsight: `Comparing today's ${data.ga4.sessions} sessions to the prior period's ${data.ga4.priorSessions} sessions confirms that your marketing efforts are moving in the right direction. This steady increase in traffic across channels proves that your current strategy is resonating with your audience and building a solid foundation for your brand's long-term digital success.`
-                };
-            }
-        };
-
-        // Check if we have valid intelligence in DB
-        const latestSync = Math.max(
-            new Date(acc?.gscLastSyncedAt || 0),
-            new Date(acc?.ga4LastSyncedAt || 0),
-            new Date(acc?.googleAdsLastSyncedAt || 0),
-            new Date(acc?.facebookAdsLastSyncedAt || 0)
-        );
-
-        const existingAi = await AiIntelligence.findOne({
-            siteId,
-            platform: 'dash',
-            startDate,
-            endDate,
-            device
-        });
-
-        const isAiValid = existingAi &&
-            existingAi.lastSyncedAtOnGeneration >= latestSync;
-
-        let intelligence;
-        if (isAiValid) {
-            intelligence = existingAi.content;
-        } else {
-            intelligence = await generateIntelligence(dataForAI);
-
-            // Save or Update in DB for persistent caching
-            if (siteId) {
-                await AiIntelligence.findOneAndUpdate(
-                    { siteId, platform: 'dash', startDate, endDate, device },
-                    {
-                        userId,
-                        content: intelligence,
-                        lastSyncedAtOnGeneration: new Date(latestSync),
-                        createdAt: new Date()
-                    },
-                    { upsert: true }
-                );
-            }
-        }
         const totalSessions = ga.sessions || 0;
         const result = {
             userName: req.user?.displayName || 'User',
@@ -404,12 +249,47 @@ export const getDashboardSummary = async (req, res) => {
                 views: p.views,
                 bounce: (p.bounceRate || 0).toFixed(0) + '%',
                 share: totalSessions > 0 ? ((p.users / totalSessions) * 100).toFixed(1) : 0
-            })),
-
-            intelligence: {
-                ...intelligence
-            },
+            }))
         };
+
+        // Check if we have valid intelligence in DB
+        const latestSync = Math.max(
+            new Date(acc?.gscLastSyncedAt || 0),
+            new Date(acc?.ga4LastSyncedAt || 0),
+            new Date(acc?.googleAdsLastSyncedAt || 0),
+            new Date(acc?.facebookAdsLastSyncedAt || 0)
+        );
+
+        const existingAi = await AiIntelligence.findOne({
+            siteId,
+            platform: 'dash',
+            startDate,
+            endDate,
+            device
+        });
+
+        const isAiValid = existingAi &&
+            existingAi.lastSyncedAtOnGeneration >= latestSync;
+
+        if (isAiValid) {
+            result.intelligence = existingAi.content;
+        } else {
+            result.intelligence = await generateDashboardIntelligence(result, acc);
+
+            // Save or Update in DB for persistent caching
+            if (siteId) {
+                await AiIntelligence.findOneAndUpdate(
+                    { siteId, platform: 'dash', startDate, endDate, device },
+                    {
+                        userId,
+                        content: result.intelligence,
+                        lastSyncedAtOnGeneration: new Date(latestSync),
+                        createdAt: new Date()
+                    },
+                    { upsert: true }
+                );
+            }
+        }
 
         analyticsCache.set(cacheKey, result);
 
@@ -566,76 +446,6 @@ export const getGa4Summary = async (req, res) => {
         // STEP: Strategic AI Intelligence for GA4
         const siteName = syncMetadata?.siteName || "your website";
 
-        const generateGa4Intelligence = async (data) => {
-            try {
-                const prompt = `
-                  Act as an expert Marketing Intelligence Assistant for the website "${siteName}". 
-                  Analyze this GA4 data and provide EXACTLY 17 friendly, data-driven summaries for the business owner.
-                  Your tone should be professional yet encouraging, using "you" and "your" to make it personal and actionable for ${siteName}.
-                  
-                  EXPECTED JSON FORMAT:
-                  {
-                    "kpiUsers": "Active Users Card (10-12 words). Analyze ${data.overview.users} current vs ${data.priorOverview.users} prior users. Summarize the growth or dip.",
-                    "kpiSessions": "Total Sessions Card (10-12 words). Analyze ${data.overview.sessions} current vs ${data.priorOverview.sessions} prior sessions. Comment on traffic volume.",
-                    "kpiResonance": "Engagement Rate Card (10-12 words). Current Engagement Rate is ${(100 - data.overview.bounceRate).toFixed(1)}%. Explain what this means for interaction quality.",
-                    "kpiDuration": "Avg. Duration Card (10-12 words). Analyze ${data.overview.avgSessionDuration} seconds average stay. Comment on attention capture.",
-                    "kpiPageViews": "Page Views Strip (15-20 words). Total views are ${data.overview.pageViews}. Discuss the scale of content discovery.",
-                    "kpiNewUsers": "New Users Strip (15-20 words). Based on ${data.overview.newUsers} new users out of ${data.overview.users} total, comment on reach.",
-                    "kpiPagesPerSession": "Content Depth Strip (15-20 words). Average ${(data.overview.pageViews / (data.overview.sessions || 1)).toFixed(2)} pages per session. Comment on how deep users explore your site.",
-                    "matrix": "Sessions Trend Summary (25-30 words). Analyze this 7-day trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({ date: d.date, sessions: d.sessions })))}.",
-                    "userType": "Loyalty Summary (25-30 words). Analyze the audience split: ${data.overview.newUsers} New vs ${data.overview.users - data.overview.newUsers} Returning users. Evaluate brand loyalty.",
-                    "retention": "Engagement Deep Dive (40-45 words). Analyze: ${(100 - data.overview.bounceRate).toFixed(1)}% engagement rate, ${data.overview.avgSessionDuration}s duration, and trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({ date: d.date, bounce: d.bounceRate })))}.",
-                    "trendBounce": "Bounce Trend (25-30 words). Interpret daily bounce changes from this trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({ date: d.date, bounce: d.bounceRate })))}.",
-                    "trendVolume": "Traffic Patterns (25-30 words). Analyze daily fluctuations from this trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({ date: d.date, views: d.pageViews })))}.",
-                    "sources": "Traffic Channels (25-30 words). Analyze these top sources: ${JSON.stringify(data.traffic.slice(0, 3))}. Identify winners.",
-                    "pages": "Content Performance (25-30 words). Analyze these top pages: ${JSON.stringify(data.pages.slice(0, 3))}. Suggest optimizations.",
-                    "devices": "Device Experience (25-30 words). Analyze this split: ${data.breakdowns.devices.map(d => `${d.name}: ${d.value} sessions`).join(', ')}. Compare mobile vs desktop behavior.",
-                    "geo": "Geo Opportunities (25-30 words). Top locations: ${data.breakdowns.locations.slice(0, 3).map(l => `${l.name}: ${l.value} sessions`).join(', ')}. Suggest local growth tips.",
-                    "growth": "Master Growth Report (40-45 words). Comprehensive comparison of current vs prior: Users (${data.overview.users} vs ${data.priorOverview.users}), New Users (${data.overview.newUsers} vs ${data.priorOverview.newUsers}), Sessions (${data.overview.sessions} vs ${data.priorOverview.sessions}), Views (${data.overview.pageViews} vs ${data.priorOverview.pageViews}), Bounce (${data.overview.bounceRate}% vs ${data.priorOverview.bounceRate}%), Duration (${data.overview.avgSessionDuration}s vs ${data.priorOverview.avgSessionDuration}s). Summarize overall growth trajectory."
-                  }
-
-                  STRICT RULES:
-                  1. Maintain a high-quality "Marketing Coach" persona.
-                  2. Use "you" and "your" to refer to the user's data.
-                  3. Combine a clear SUMMARY with a friendly STRATEGIC INSIGHT.
-                  4. Strictly follow the word limits. NEVER include word counts or bracketed limits like "(25 words)" in your response.
-                `;
-                const aiRes = await callGemini(prompt, [], "Respond ONLY with JSON.");
-                return JSON.parse(aiRes.content.replace(/```json|```/g, '').trim());
-            } catch (error) {
-                console.error("GA4 AI Intelligence failed:", error);
-                const userDiff = data.overview.users - data.priorOverview.users;
-                const sessDiff = data.overview.sessions - data.priorOverview.sessions;
-                const bounceDiff = data.overview.bounceRate - data.priorOverview.bounceRate;
-
-                return {
-                    kpiUsers: userDiff >= 0
-                        ? `Great news! Active users grew to ${data.overview.users}. Your acquisition strategy is performing well.`
-                        : `Active users are at ${data.overview.users}. Consider a quick campaign to boost your reach.`,
-                    kpiSessions: sessDiff >= 0
-                        ? `Traffic is up with ${data.overview.sessions} sessions. Your site visibility is climbing steadily.`
-                        : `Sessions are at ${data.overview.sessions}. Focus on driving more consistent daily visitor traffic.`,
-                    kpiResonance: bounceDiff <= 0
-                        ? `Engagement improved! Your rate climbed to ${(100 - data.overview.bounceRate).toFixed(1)}%. Content is resonating well.`
-                        : `Engagement rate is ${(100 - data.overview.bounceRate).toFixed(1)}%. Optimize top landing pages for better interaction.`,
-                    kpiDuration: `Visitors stay for ${(data.overview.avgSessionDuration).toFixed(0)}s on average. Your site successfully captures their interest.`,
-                    kpiPageViews: `Total views reached ${data.overview.pageViews}. Use more internal links to help your users discover even more great content today.`,
-                    kpiNewUsers: `You've welcomed ${data.overview.newUsers} new users. Focus on turning these first-time visitors into loyal brand fans for long-term growth.`,
-                    kpiPagesPerSession: `Users explore ${(data.overview.pageViews / (data.overview.sessions || 1)).toFixed(2)} pages per visit. Your clear site navigation is successfully aiding deeper content discovery.`,
-                    matrix: `Your ${data.timeseries.length}-day session trends show ${sessDiff >= 0 ? 'growth' : 'stability'}. Continue monitoring your daily traffic peaks closely to optimize your posting schedule and capture the maximum amount of visitor interest effectively.`,
-                    userType: `Your audience is a healthy mix of ${data.overview.newUsers} New vs ${data.overview.users - data.overview.newUsers} Returning users. This solid blend of fresh discovery and brand loyalty is excellent for your long-term growth.`,
-                    retention: `Engagement metrics including your ${(100 - data.overview.bounceRate).toFixed(1)}% engagement rate remain ${bounceDiff <= 0 ? 'strong' : 'consistent'}. To maintain this interest, focus on refining your user experience and ensuring your most popular landing pages are perfectly optimized to guide visitors toward your goals consistently.`,
-                    trendBounce: `Daily bounce trends are ${bounceDiff <= 0 ? 'improving steadily' : 'stabilizing'}. Keep a close watch for any unexpected spikes on your high-traffic pages and ensure that your technical performance remains fast and inviting for all users.`,
-                    trendVolume: `Traffic patterns for your ${data.overview.pageViews} views are ${sessDiff >= 0 ? 'climbing consistently' : 'steady'}. Keep your top-performing content fresh and updated to ensure that your growing audience finds significant value every time they return to your site.`,
-                    sources: `${data.traffic[0]?.source || data.traffic[0]?.channel || 'Direct'} is currently your #1 traffic source. Doubling down on your top-performing channels while testing one new acquisition strategy this month will yield the best long-term growth results for you.`,
-                    pages: `Your top page "${data.pages[0]?.path || '/'}" is performing ${userDiff >= 0 ? 'exceptionally well' : 'consistently'} right now. Consider adding a friendly call-to-action here to convert this high volume of traffic into loyal brand subscribers.`,
-                    devices: `${data.breakdowns.devices[0]?.name || 'Mobile'} users are currently your biggest audience segment. Ensure your site experience is perfectly optimized for smaller screens with fast loading times and intuitive navigation to keep these visitors highly engaged.`,
-                    geo: `Your brand is currently strongest in ${data.breakdowns.locations[0]?.name || 'your top region'}. Expanding your marketing reach to similar geographical areas could unlock significant new growth opportunities and help you build a truly global audience.`,
-                    growth: `The overall trajectory for your ${data.overview.users} users is ${userDiff >= 0 ? 'positive' : 'stable'} and shows great potential. Keep scaling your winning campaigns and top content paths to ensure future success, as your current foundation is strong enough to support higher levels of global brand visibility.`
-                };
-            }
-        };
-
         // STEP: Strategic AI Intelligence for GA4
         const device = req.query.device || 'all';
 
@@ -654,7 +464,7 @@ export const getGa4Summary = async (req, res) => {
         if (isAiValid) {
             result.intelligence = existingAi.content;
         } else {
-            result.intelligence = await generateGa4Intelligence(result);
+            result.intelligence = await generateGa4Intelligence(result, siteName);
 
             // Save or Update in DB for persistent caching
             if (siteId) {
@@ -825,74 +635,6 @@ export const getGscSummary = async (req, res) => {
 
         const siteName = syncMetadata?.siteName || "your website";
 
-        const generateGscIntelligence = async (data) => {
-            try {
-                const prompt = `
-                  Act as an expert SEO & Marketing Intelligence Assistant for the website "${siteName}". 
-                  Analyze this Google Search Console (GSC) data and provide EXACTLY 10 friendly, data-driven summaries for the business owner.
-                  Your tone should be professional yet encouraging, using "you" and "your" to make it personal and actionable for ${siteName}.
-                  
-                  EXPECTED JSON FORMAT:
-                  {
-                    "searchClicks": "Search Clicks Card (8-10 words). Analyze ${data.overview.clicks} clicks vs ${data.priorOverview.clicks} prior. Summarize the growth or dip.",
-                    "impressions": "Impressions Card (8-10 words). Analyze ${data.overview.impressions} current vs ${data.priorOverview.impressions} prior. Comment on search visibility.",
-                    "avgCtr": "Avg. CTR Card (8-10 words). Current CTR is ${(data.overview.ctr * 100).toFixed(2)}%. Explain what this means for snippet attractiveness.",
-                    "avgPosition": "Avg. Position Card (8-10 words). Analyze #${data.overview.position?.toFixed(1)} current vs #${data.priorOverview.position?.toFixed(1)} prior. Comment on overall ranking trend.",
-                    "totalQueries": "Search Queries Summary (10-12 words). Total unique queries are ${data.totalQueries}. Discuss the breadth of your search reach.",
-                    "totalPages": "Total Pages Card (10-12 words). Analyze ${data.totalPages} ranking pages. Comment on the scope of your content visibility.",
-                    "topPosition": "Top Position Strip (10-12 words). Analyze your best rank of #${data.topPosition?.toFixed(1)}. Comment on your highest achievement.",
-                    "searchPerformanceOverview": "Search Patterns (40-45 words). Analyze the clicks and impressions trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({ date: d.date, clicks: d.clicks, impressions: d.impressions })))}.",
-                    "clickThroughRateTrend": "CTR Trend Chart (20-25 words). Analyze this 7-day CTR trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({ date: d.date, ctr: (d.ctr * 100).toFixed(2) + '%' })))}. Comment on the engagement trajectory.",
-                    "averageRankingPosition": "Position Trend Chart (20-25 words). Analyze this 7-day ranking trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({ date: d.date, pos: d.position.toFixed(1) })))}. Identify if you are climbing or slipping.",
-                    "lowCTRKeywords": "CTR Opportunities (20-25 words). Analyze these low-CTR high-visibility keywords: ${JSON.stringify(data.queries.filter(q => q.impressions > 50 && q.ctr < 0.05).slice(0, 3).map(q => q.query))}. Suggest quick fixes.",
-                    "keywordsNearPage1": "Close to Page 1 (20-25 words). Analyze these keywords ranking 8-20: ${JSON.stringify(data.queries.filter(q => q.position >= 8 && q.position <= 20).slice(0, 3).map(q => q.query))}. Suggest a push strategy.",
-                    "topQueries": "Top Queries analysis (20-25 words). Analyze these top keywords: ${JSON.stringify(data.queries.slice(0, 3).map(q => q.query))}. Identify keyword winners.",
-                    "topLandingPages": "Top Pages analysis (20-25 words). Analyze these top landing pages: ${JSON.stringify(data.pages.slice(0, 3).map(p => p.page))}. Suggest content optimizations.",
-                    "dailyImpressionVolume": "Impression Volume Chart (40-45 words). Analyze this 7-day visibility trend: ${JSON.stringify(data.timeseries.slice(-7).map(d => ({ date: d.date, impr: d.impressions })))}. Comment on search reach density.",
-                    "periodComparison": "Master GSC Growth Report (40-45 words). Comprehensive comparison of current vs prior: Clicks (${data.overview.clicks} vs ${data.priorOverview.clicks}), Impressions (${data.overview.impressions} vs ${data.priorOverview.impressions}), CTR (${(data.overview.ctr * 100).toFixed(2)}% vs ${(data.priorOverview.ctr * 100).toFixed(2)}%), Position (#${data.overview.position?.toFixed(1)} vs #${data.priorOverview.position?.toFixed(1)}). Summarize overall SEO trajectory."
-                  }
-
-                  STRICT RULES:
-                  1. Maintain a high-quality "SEO Coach" persona.
-                  2. Use "you" and "your" to refer to the user's data.
-                  3. Combine a clear SUMMARY with a friendly STRATEGIC INSIGHT.
-                  4. NEVER include word counts, bracketed hints, or text like "(10 words)" in your response. Return ONLY the insight text.
-                `;
-                const aiRes = await callGemini(prompt, [], "Respond ONLY with JSON.");
-                return JSON.parse(aiRes.content.replace(/```json|```/g, '').trim());
-            } catch (error) {
-                console.error("GSC AI Intelligence failed:", error);
-                const clickDiff = data.overview.clicks - data.priorOverview.clicks;
-                const impDiff = data.overview.impressions - data.priorOverview.impressions;
-                const posDiff = data.overview.position - data.priorOverview.position; // Lower is better
-
-                return {
-                    searchClicks: clickDiff >= 0
-                        ? `Search clicks grew to ${data.overview.clicks}. Your content attracts interest.`
-                        : `Clicks are at ${data.overview.clicks}. Update title tags to boost CTR.`,
-                    impressions: impDiff >= 0
-                        ? `Visibility rose to ${data.overview.impressions}. Your brand appears more often.`
-                        : `Impressions are at ${data.overview.impressions}. Expand content to reach more.`,
-                    avgCtr: `CTR is ${(data.overview.ctr * 100).toFixed(2)}%. Your search snippets effectively convince visitors.`,
-                    totalPages: `You have ${data.totalPages} ranking pages. This ensures multiple entry points for visitors.`,
-                    avgPosition: posDiff <= 0
-                        ? `Rank improved to #${data.overview.position?.toFixed(1)}. You're climbing Google rankings.`
-                        : `Position is #${data.overview.position?.toFixed(1)}. Target high-intent keywords to improve.`,
-                    topPosition: `Achieved top rank #${data.topPosition?.toFixed(1)}. Maintaining this position is key to success.`,
-                    clickThroughRateTrend: `CTR is averaging ${(data.overview.ctr * 100).toFixed(2)}%. This indicates your snippets capture audience interest. Optimize meta tags to further boost your engagement rates.`,
-                    averageRankingPosition: `Ranking position shows ${posDiff <= 0 ? 'positive improvement' : 'steady performance'}. Continue optimizing top pages to maintain this competitive edge and secure higher organic visibility.`,
-                    lowCTRKeywords: `You have high-visibility keywords with low CTR. Updating titles to be more enticing could significantly boost click volume and traffic efficiency.`,
-                    keywordsNearPage1: `Keywords like "${data.queries.find(q => q.position >= 8 && q.position <= 20)?.query || 'secondary terms'}" are near Page 1. Small content updates or internal links could push them higher.`,
-                    dailyImpressionVolume: `Search visibility shows ${impDiff >= 0 ? 'growth' : 'stability'} with ${data.overview.impressions} total impressions. Consistent visibility across search results is a key indicator of your brand authority. Monitoring daily volume helps you understand how seasonal trends affect your overall search market share.`,
-                    topQueries: `Top queries drive most organic traffic. Focusing on maintaining these rankings ensures steady flow. Identify new keyword variations to expand your search reach.`,
-                    topLandingPages: `Top landing pages are valuable assets. Optimizing their conversion paths maximizes organic traffic ROI. Refresh content regularly to stay relevant and maintain authority.`,
-                    totalQueries: `You're ranking for ${data.totalQueries} unique queries. This diverse foundation helps growth.`,
-                    searchPerformanceOverview: `Your search trends show ${clickDiff >= 0 ? 'positive growth' : 'steady performance'}. By analyzing weekly peaks, you can identify high-activity periods. Your current volume of ${data.overview.clicks} clicks indicates that your content strategy is effectively capturing organic demand across your core search terms.`,
-                    periodComparison: `SEO trajectory for ${data.overview.clicks} clicks is ${clickDiff >= 0 ? 'positive' : 'stable'}. Focusing on winning keywords and improving page CTR positions you for expansion. Your combined metrics suggest that refined optimization of your highest-impression pages will yield the best growth.`
-                };
-            }
-        };
-
         // STEP: Strategic AI Intelligence for GSC
         const device = req.query.device || 'all';
 
@@ -911,7 +653,7 @@ export const getGscSummary = async (req, res) => {
         if (isAiValid) {
             result.intelligence = existingAi.content;
         } else {
-            result.intelligence = await generateGscIntelligence(result);
+            result.intelligence = await generateGscIntelligence(result, siteName);
 
             // Save or Update in DB for persistent caching
             if (siteId) {

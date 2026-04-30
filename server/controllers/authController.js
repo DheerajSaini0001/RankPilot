@@ -57,10 +57,6 @@ export const register = async (req, res) => {
         await sendVerificationEmail(email, rawToken);
     } catch (emailErr) {
         console.error('Verification email failed:', emailErr.message);
-        console.log(`\n================================`);
-        console.log(`✅ VERIFY EMAIL LINK (use this locally):`);
-        console.log(`${process.env.CLIENT_URL || 'http://localhost:5173'}/verify-email?token=${rawToken}`);
-        console.log(`================================\n`);
     }
 
     res.status(201).json({ message: 'Account created! Please check your email to verify your account.' });

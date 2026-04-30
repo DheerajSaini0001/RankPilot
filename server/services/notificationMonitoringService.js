@@ -10,7 +10,6 @@ import { generateWeeklyInsightInternal, generateSuggestedQuestionsInternal } fro
 
 // Weekly check for significant performance drops (comparing last 7 days with previous 7 days)
 export const checkPerformanceDrops = async () => {
-    console.log('📉 [Monitoring] Analyzing performance for significant drops...');
     const now = new Date();
     const splitDate = new Date();
     splitDate.setDate(now.getDate() - 7);
@@ -59,7 +58,6 @@ export const checkPerformanceDrops = async () => {
 
 // Checks for sources with zero data for the last 3 days.
 export const checkInactiveSources = async () => {
-    console.log('[Monitoring] Checking for inactive sources (Zero Data)...');
     const threeDaysAgo = new Date();
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
@@ -99,7 +97,6 @@ export const checkInactiveSources = async () => {
 
 // Monthly growth check (comparing last month vs previous month).
 export const checkMonthlyGrowth = async () => {
-    console.log('[Monitoring] Calculating monthly growth summary...');
     const now = new Date();
     const firstDayThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -149,7 +146,6 @@ export const checkMonthlyGrowth = async () => {
 
 // Ad Spend Alert for sudden spikes.
 export const checkAdSpendSpikes = async () => {
-    console.log('[Monitoring] Checking for Ad spend spikes...');
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     yesterday.setHours(0,0,0,0);
@@ -198,12 +194,10 @@ export const checkAdSpendSpikes = async () => {
 
 // Generate weekly reports for ALL users.
 export const generateWeeklyInsightsForAllUsers = async () => {
-    console.log('🤖 [AI] Generating weekly insights for all active sites...');
     try {
         const accounts = await UserAccounts.find();
         for (const acc of accounts) {
             try {
-                console.log(`[AI] Processing Weekly Insight for site: ${acc.siteName} (User: ${acc.userId})`);
                 await generateWeeklyInsightInternal(acc.userId, acc._id);
             } catch (err) {
                 console.error(`[AI] Failed to generate insight for ${acc.siteName}:`, err.message);
@@ -216,12 +210,10 @@ export const generateWeeklyInsightsForAllUsers = async () => {
 
 // Generate suggested questions for ALL users.
 export const generateSuggestedQuestionsForAllUsers = async () => {
-    console.log('🤖 [AI] Generating suggested questions for all active sites...');
     try {
         const accounts = await UserAccounts.find();
         for (const acc of accounts) {
             try {
-                console.log(`[AI] Processing Suggested Questions for site: ${acc.siteName} (User: ${acc.userId})`);
                 await generateSuggestedQuestionsInternal(acc.userId, acc._id);
             } catch (err) {
                 console.error(`[AI] Failed to generate questions for ${acc.siteName}:`, err.message);
