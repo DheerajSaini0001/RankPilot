@@ -128,7 +128,7 @@ const Ga4Page = () => {
             const query = new URLSearchParams({
                 startDate,
                 endDate,
-                ...(device && { device }),
+                device: device || 'all',
                 ...(campaign && { campaign }),
                 ...(channel && { channel }),
                 ...(activeSiteId && { siteId: activeSiteId })
@@ -540,7 +540,7 @@ const Ga4Page = () => {
                                             {isDeviceMenuOpen && (
                                                 <div className="absolute top-full left-0 mt-2 z-[100] bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl p-1.5 min-w-[120px] animate-in fade-in zoom-in-95 duration-200 normal-case tracking-normal">
                                                     {[
-                                                        { label: 'All Devices', value: '', icon: FunnelIcon },
+                                                        { label: 'All Devices', value: 'all', icon: FunnelIcon },
                                                         { label: 'Mobile', value: 'mobile', icon: DevicePhoneMobileIcon },
                                                         { label: 'Desktop', value: 'desktop', icon: ComputerDesktopIcon },
                                                         { label: 'Tablet', value: 'tablet', icon: DeviceTabletIcon },
@@ -548,7 +548,7 @@ const Ga4Page = () => {
                                                         <button
                                                             key={d.value}
                                                             onClick={() => handleDeviceSelect(d.value)}
-                                                            className={`w-full text-left px-3 py-2 rounded-xl text-[10px] font-bold transition-all flex items-center gap-2 ${(device || '') === d.value
+                                                            className={`w-full text-left px-3 py-2 rounded-xl text-[10px] font-bold transition-all flex items-center gap-2 ${device === d.value
                                                                 ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20'
                                                                 : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
                                                                 }`}
@@ -592,14 +592,14 @@ const Ga4Page = () => {
                             <button
                                 onClick={() => {
                                     const fullPrompt = `Act as my Marketing Coach. Analyze my complete GA4 dashboard for ${startDate} to ${endDate}:
-- **Performance**: ${formatNumber(overview?.users)} Users (${calculateChange(overview?.users, priorOverview?.users)}% growth), ${formatNumber(overview?.sessions)} Sessions, ${formatNumber(overview?.pageViews)} Page Views.
-- **Engagement**: ${engagementRate}% Rate, ${formatTime(overview?.avgSessionDuration)} Avg Duration, ${(overview?.bounceRate || 0).toFixed(1)}% Bounce.
-- **Audience**: ${newPct}% New vs ${retPct}% Returning.
-- **Top Channels**: ${traffic.slice(0, 3).map(t => `${t.source} (${t.sessions} sessions)`).join(', ')}.
-- **Top Content**: ${pages.slice(0, 3).map(p => p.path).join(', ')}.
-- **Devices**: ${breakdowns.devices.map(d => `${d.name} (${((d.value / (overview?.sessions || 1)) * 100).toFixed(0)}%)`).join(', ')}.
+                                    - **Performance**: ${formatNumber(overview?.users)} Users (${calculateChange(overview?.users, priorOverview?.users)}% growth), ${formatNumber(overview?.sessions)} Sessions, ${formatNumber(overview?.pageViews)} Page Views.
+                                    - **Engagement**: ${engagementRate}% Rate, ${formatTime(overview?.avgSessionDuration)} Avg Duration, ${(overview?.bounceRate || 0).toFixed(1)}% Bounce.
+                                    - **Audience**: ${newPct}% New vs ${retPct}% Returning.
+                                    - **Top Channels**: ${traffic.slice(0, 3).map(t => `${t.source} (${t.sessions} sessions)`).join(', ')}.
+                                    - **Top Content**: ${pages.slice(0, 3).map(p => p.path).join(', ')}.
+                                    - **Devices**: ${breakdowns.devices.map(d => `${d.name} (${((d.value / (overview?.sessions || 1)) * 100).toFixed(0)}%)`).join(', ')}.
 
-Provide a comprehensive master summary of my site's health and 3 actionable strategic recommendations for immediate growth.`;
+                                    Provide a comprehensive master summary of my site's health and 3 actionable strategic recommendations for immediate growth.`;
                                     openWithQuestion(fullPrompt);
                                 }}
                                 className="h-8 px-4 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-sm"

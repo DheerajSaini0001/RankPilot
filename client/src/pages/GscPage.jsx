@@ -128,7 +128,7 @@ import { formatDistanceToNow } from 'date-fns';
                 const query = new URLSearchParams({
                     startDate,
                     endDate,
-                    ...(device && { device }),
+                    device: device || 'all',
                     ...(activeSiteId && { siteId: activeSiteId })
                 }).toString();
                 

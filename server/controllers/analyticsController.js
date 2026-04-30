@@ -37,13 +37,16 @@ export const buildMatchFilter = async (userId, query) => {
         filter['metadata.siteId'] = typeof siteId === 'string' ? new mongoose.Types.ObjectId(siteId) : siteId;
     }
 
-    if (device) filter["metadata.dimensions.device"] = device;
+    if (device && device !== 'all') filter["metadata.dimensions.device"] = device;
 
     return filter;
 };
 
 export const getDashboardSummary = async (req, res) => {
-    const { startDate, endDate, siteId } = req.query;
+    const { startDate, endDate, siteId, device } = req.query;
+    if (!siteId) {
+        return res.status(400).json({ success: false, message: 'Site ID is required' });
+    }
     const userId = req.user._id;
 
     const cacheKey = getAnalyticsCacheKey(userId, 'dash', req.query);
@@ -60,6 +63,10 @@ export const getDashboardSummary = async (req, res) => {
         const acc = await UserAccounts.findOne({ _id: siteId, userId })
             .select('siteName syncStatus ga4HistoricalComplete gscHistoricalComplete googleAdsHistoricalComplete facebookAdsHistoricalComplete ga4PropertyId gscSiteUrl googleAdsCustomerId facebookAdAccountId ga4LastSyncedAt gscLastSyncedAt googleAdsLastSyncedAt facebookAdsLastSyncedAt');
 
+        if (!acc) {
+            return res.status(404).json({ success: false, message: 'Account not found' });
+        }
+
         const start = new Date(startDate);
         const end = new Date(endDate);
         const duration = end - start;
@@ -71,16 +78,18 @@ export const getDashboardSummary = async (req, res) => {
             buildMatchFilter(userId, { ...req.query, startDate: prevStart.toISOString().split('T')[0], endDate: prevEnd.toISOString().split('T')[0] })
         ]);
 
+        const gscFilters = await Promise.all([
+            buildMatchFilter(userId, { ...req.query, device: 'all' }),
+            buildMatchFilter(userId, { ...req.query, device: 'all', startDate: prevStart.toISOString().split('T')[0], endDate: prevEnd.toISOString().split('T')[0] })
+        ]);
+
         const [ga4Data, gscData, gAdsData, fAdsData, ga4Ts, gscTs, adsTs, pGa4Data, pGscData, pGAdsData, pFAdsData, topPages] = await Promise.all([
-            // Current Period Aggregates (0-3)
             Ga4Metric.aggregate([{ $match: filters[0] }, { $group: { _id: null, users: { $sum: "$metrics.users" }, sessions: { $sum: "$metrics.sessions" }, pageViews: { $sum: "$metrics.pageViews" }, bounceRate: { $avg: "$metrics.bounceRate" }, avgSessionDuration: { $avg: "$metrics.avgSessionDuration" } } }]),
-            GscMetric.aggregate([{ $match: filters[0] }, { $group: { _id: null, clicks: { $sum: "$metrics.clicks" }, impressions: { $sum: "$metrics.impressions" }, position: { $avg: "$metrics.position" } } }]),
+            GscMetric.aggregate([{ $match: gscFilters[0] }, { $group: { _id: null, clicks: { $sum: "$metrics.clicks" }, impressions: { $sum: "$metrics.impressions" }, position: { $avg: "$metrics.position" } } }]),
             GoogleAdsMetric.aggregate([{ $match: filters[0] }, { $group: { _id: null, spend: { $sum: "$metrics.spend" }, conversions: { $sum: "$metrics.conversions" }, impressions: { $sum: "$metrics.impressions" }, clicks: { $sum: "$metrics.clicks" }, reach: { $sum: "$metrics.reach" }, purchaseValue: { $sum: "$metrics.purchase_value" } } }]),
             FacebookAdsMetric.aggregate([{ $match: filters[0] }, { $group: { _id: null, spend: { $sum: "$metrics.spend" }, conversions: { $sum: "$metrics.conversions" }, impressions: { $sum: "$metrics.impressions" }, clicks: { $sum: "$metrics.clicks" }, reach: { $sum: "$metrics.reach" }, purchaseValue: { $sum: "$metrics.purchase_value" } } }]),
-            // Timeseries
             Ga4Metric.aggregate([{ $match: filters[0] }, { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, sessions: { $sum: "$metrics.sessions" } } }, { $sort: { _id: 1 } }]),
-            GscMetric.aggregate([{ $match: filters[0] }, { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, clicks: { $sum: "$metrics.clicks" }, impressions: { $sum: "$metrics.impressions" } } }, { $sort: { _id: 1 } }]),
-            // Combined Ads Spend for Timeseries
+            GscMetric.aggregate([{ $match: gscFilters[0] }, { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, clicks: { $sum: "$metrics.clicks" }, impressions: { $sum: "$metrics.impressions" } } }, { $sort: { _id: 1 } }]),
             Promise.all([
                 GoogleAdsMetric.aggregate([{ $match: filters[0] }, { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, spend: { $sum: "$metrics.spend" }, conversions: { $sum: "$metrics.conversions" }, clicks: { $sum: "$metrics.clicks" }, impressions: { $sum: "$metrics.impressions" } } }]),
                 FacebookAdsMetric.aggregate([{ $match: filters[0] }, { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, spend: { $sum: "$metrics.spend" }, conversions: { $sum: "$metrics.conversions" }, clicks: { $sum: "$metrics.clicks" }, impressions: { $sum: "$metrics.impressions" } } }])
@@ -96,16 +105,15 @@ export const getDashboardSummary = async (req, res) => {
                 });
                 return Object.values(map).sort((a, b) => a._id.localeCompare(b._id));
             }),
-            // Prior Period for Growth
+         
             Ga4Metric.aggregate([{ $match: filters[1] }, { $group: { _id: null, sessions: { $sum: "$metrics.sessions" }, users: { $sum: "$metrics.users" } } }]),
-            GscMetric.aggregate([{ $match: filters[1] }, { $group: { _id: null, clicks: { $sum: "$metrics.clicks" }, impressions: { $sum: "$metrics.impressions" } } }]),
+            GscMetric.aggregate([{ $match: gscFilters[1] }, { $group: { _id: null, clicks: { $sum: "$metrics.clicks" }, impressions: { $sum: "$metrics.impressions" } } }]),
             GoogleAdsMetric.aggregate([{ $match: filters[1] }, { $group: { _id: null, spend: { $sum: "$metrics.spend" }, conversions: { $sum: "$metrics.conversions" } } }]),
             FacebookAdsMetric.aggregate([{ $match: filters[1] }, { $group: { _id: null, spend: { $sum: "$metrics.spend" }, reach: { $sum: "$metrics.reach" } } }]),
-            // Content
+           
             Ga4Metric.aggregate([{ $match: filters[0] }, { $group: { _id: "$metadata.dimensions.pagePath", views: { $sum: "$metrics.pageViews" }, users: { $sum: "$metrics.users" }, bounceRate: { $avg: "$metrics.bounceRate" } } }, { $sort: { views: -1 } }, { $limit: 10 }])
         ]);
 
-        // STEP 4: Advanced Mapping
         const ga = ga4Data[0] || { users: 0, sessions: 0, pageViews: 0, bounceRate: 0, avgSessionDuration: 0 };
         const gsRaw = gscData[0] || { clicks: 0, impressions: 0, position: 0 };
         const gs = { ...gsRaw, ctr: gsRaw.impressions > 0 ? (gsRaw.clicks / gsRaw.impressions) : 0 };
@@ -183,8 +191,6 @@ export const getDashboardSummary = async (req, res) => {
             }
         });
 
-        const device = req.query.device || 'all';
-
         const totalSessions = ga.sessions || 0;
         const result = {
             userName: req.user?.displayName || 'User',
@@ -241,7 +247,6 @@ export const getDashboardSummary = async (req, res) => {
             },
             connectionStatus: { ga4: !!acc?.ga4PropertyId, gsc: !!acc?.gscSiteUrl, googleAds: !!acc?.googleAdsCustomerId, facebookAds: !!acc?.facebookAdAccountId },
 
-            // Analytics Assets
             timeseries: Object.values(tsMap).sort((a, b) => a.date.localeCompare(b.date)),
             topPages: topPages.map(p => ({
                 url: p._id || '/',
@@ -252,7 +257,6 @@ export const getDashboardSummary = async (req, res) => {
             }))
         };
 
-        // Check if we have valid intelligence in DB
         const latestSync = Math.max(
             new Date(acc?.gscLastSyncedAt || 0),
             new Date(acc?.ga4LastSyncedAt || 0),
@@ -276,8 +280,7 @@ export const getDashboardSummary = async (req, res) => {
         } else {
             result.intelligence = await generateDashboardIntelligence(result, acc);
 
-            // Save or Update in DB for persistent caching
-            if (siteId) {
+            if (siteId && !result.intelligence.isFallback) {
                 await AiIntelligence.findOneAndUpdate(
                     { siteId, platform: 'dash', startDate, endDate, device },
                     {
@@ -301,7 +304,10 @@ export const getDashboardSummary = async (req, res) => {
 };
 
 export const getGa4Summary = async (req, res) => {
-    const { startDate, endDate, siteId } = req.query;
+    const { startDate, endDate, siteId, device } = req.query;
+    if (!siteId) {
+        return res.status(400).json({ success: false, message: 'Site ID is required' });
+    }
     const userId = req.user._id;
 
     const cacheKey = getAnalyticsCacheKey(userId, 'ga4', req.query);
@@ -309,21 +315,20 @@ export const getGa4Summary = async (req, res) => {
     if (cachedData) return res.status(200).json(cachedData);
 
     try {
-        let syncMetadata = null;
-        if (siteId) {
-            const acc = await UserAccounts.findOne({ _id: siteId, userId }).select('siteName ga4LastSyncedAt syncStatus ga4HistoricalComplete');
-            if (acc) {
-                syncMetadata = {
-                    siteName: acc.siteName,
-                    lastSyncedAt: acc.ga4LastSyncedAt,
-                    syncStatus: acc.syncStatus,
-                    ga4HistoricalComplete: acc.ga4HistoricalComplete
-                };
-            }
+        const acc = await UserAccounts.findOne({ _id: siteId, userId }).select('siteName ga4LastSyncedAt syncStatus ga4HistoricalComplete');
+        if (!acc) {
+            return res.status(404).json({ success: false, message: 'Account not found' });
         }
+
+        const syncMetadata = {
+            siteName: acc.siteName,
+            lastSyncedAt: acc.ga4LastSyncedAt,
+            syncStatus: acc.syncStatus,
+            ga4HistoricalComplete: acc.ga4HistoricalComplete
+        };
+
         const filter = await buildMatchFilter(userId, req.query);
 
-        // Calculate previous period
         const start = new Date(startDate);
         const end = new Date(endDate);
         const diff = end - start;
@@ -433,7 +438,7 @@ export const getGa4Summary = async (req, res) => {
                 sessions: d.sessions,
                 pageViews: d.pageViews || 0,
                 users: d.users || 0,
-                bounceRate: parseFloat((d.bounceRate || 0).toFixed(1)) // Already scaled in syncService
+                bounceRate: parseFloat((d.bounceRate || 0).toFixed(1))
             })),
             traffic: traffic.map(d => ({ channel: d._id.channel, source: d._id.source, sessions: d.sessions, users: d.users })),
             pages: pages.map(d => ({ path: d._id.path, title: d._id.title, views: d.views, users: d.users, bounceRate: d.bounceRate })),
@@ -443,13 +448,9 @@ export const getGa4Summary = async (req, res) => {
             },
             syncMetadata
         };
-        // STEP: Strategic AI Intelligence for GA4
         const siteName = syncMetadata?.siteName || "your website";
 
-        // STEP: Strategic AI Intelligence for GA4
-        const device = req.query.device || 'all';
 
-        // Check if we have valid intelligence in DB
         const existingAi = await AiIntelligence.findOne({
             siteId,
             platform: 'ga4',
@@ -466,15 +467,14 @@ export const getGa4Summary = async (req, res) => {
         } else {
             result.intelligence = await generateGa4Intelligence(result, siteName);
 
-            // Save or Update in DB for persistent caching
-            if (siteId) {
+            if (siteId && !result.intelligence.isFallback) {
                 await AiIntelligence.findOneAndUpdate(
                     { siteId, platform: 'ga4', startDate, endDate, device },
                     {
                         userId,
                         content: result.intelligence,
                         lastSyncedAtOnGeneration: syncMetadata?.lastSyncedAt || new Date(),
-                        createdAt: new Date() // Refresh for TTL
+                        createdAt: new Date()
                     },
                     { upsert: true }
                 );
@@ -489,7 +489,11 @@ export const getGa4Summary = async (req, res) => {
 };
 
 export const getGscSummary = async (req, res) => {
-    const { startDate, endDate, siteId } = req.query;
+    const { startDate, endDate, siteId, device = 'all' } = req.query;
+        console.log(req.query);
+    if (!siteId) {
+        return res.status(400).json({ success: false, message: 'Site ID is required' });
+    }
     const userId = req.user._id;
 
     const cacheKey = getAnalyticsCacheKey(userId, 'gsc', req.query);
@@ -497,25 +501,26 @@ export const getGscSummary = async (req, res) => {
     if (cachedData) return res.status(200).json(cachedData);
 
     try {
-        let syncMetadata = null;
-        if (siteId) {
-            const acc = await UserAccounts.findOne({ _id: siteId, userId }).select('gscLastSyncedAt syncStatus gscHistoricalComplete');
-            if (acc) {
-                syncMetadata = {
-                    lastSyncedAt: acc.gscLastSyncedAt,
-                    syncStatus: acc.syncStatus,
-                    gscHistoricalComplete: acc.gscHistoricalComplete
-                };
-            }
+        const acc = await UserAccounts.findOne({ _id: siteId, userId }).select('siteName gscLastSyncedAt syncStatus gscHistoricalComplete');
+        if (!acc) {
+            return res.status(404).json({ success: false, message: 'Account not found' });
         }
-        const filter = await buildMatchFilter(userId, req.query);
+
+        const syncMetadata = {
+            siteName: acc.siteName,
+            lastSyncedAt: acc.gscLastSyncedAt,
+            syncStatus: acc.syncStatus,
+            gscHistoricalComplete: acc.gscHistoricalComplete
+        };
+
+        const filter = await buildMatchFilter(userId, { ...req.query, device: 'all' });
 
         const start = new Date(startDate);
         const end = new Date(endDate);
         const diff = end - start;
         const prevEnd = new Date(start.getTime() - (24 * 60 * 60 * 1000));
         const prevStart = new Date(prevEnd.getTime() - diff);
-        const prevFilter = await buildMatchFilter(userId, { ...req.query, startDate: prevStart.toISOString().split('T')[0], endDate: prevEnd.toISOString().split('T')[0] });
+        const prevFilter = await buildMatchFilter(userId, { ...req.query, device: 'all', startDate: prevStart.toISOString().split('T')[0], endDate: prevEnd.toISOString().split('T')[0] });
 
         const [overview, priorOverview, timeseries, queries, pages, pagesCount, queriesCount, topPosData] = await Promise.all([
             GscMetric.aggregate([
@@ -635,10 +640,6 @@ export const getGscSummary = async (req, res) => {
 
         const siteName = syncMetadata?.siteName || "your website";
 
-        // STEP: Strategic AI Intelligence for GSC
-        const device = req.query.device || 'all';
-
-        // Check if we have valid intelligence in DB
         const existingAi = await AiIntelligence.findOne({
             siteId,
             platform: 'gsc',
@@ -655,15 +656,14 @@ export const getGscSummary = async (req, res) => {
         } else {
             result.intelligence = await generateGscIntelligence(result, siteName);
 
-            // Save or Update in DB for persistent caching
-            if (siteId) {
+            if (siteId && !result.intelligence.isFallback) {
                 await AiIntelligence.findOneAndUpdate(
                     { siteId, platform: 'gsc', startDate, endDate, device },
                     {
                         userId,
                         content: result.intelligence,
                         lastSyncedAtOnGeneration: syncMetadata?.lastSyncedAt || new Date(),
-                        createdAt: new Date() // Refresh for TTL
+                        createdAt: new Date()
                     },
                     { upsert: true }
                 );
@@ -679,6 +679,9 @@ export const getGscSummary = async (req, res) => {
 
 export const getGoogleAdsSummary = async (req, res) => {
     const { startDate, endDate, siteId } = req.query;
+    if (!siteId) {
+        return res.status(400).json({ success: false, message: 'Site ID is required' });
+    }
     const userId = req.user._id;
 
     const cacheKey = getAnalyticsCacheKey(userId, 'gads', req.query);
@@ -686,18 +689,17 @@ export const getGoogleAdsSummary = async (req, res) => {
     if (cachedData) return res.status(200).json(cachedData);
 
     try {
-        // Fetch account metadata if siteId is provided
-        let syncMetadata = null;
-        if (siteId) {
-            const acc = await UserAccounts.findOne({ _id: siteId, userId }).select('googleAdsLastSyncedAt syncStatus googleAdsHistoricalComplete');
-            if (acc) {
-                syncMetadata = {
-                    lastSyncedAt: acc.googleAdsLastSyncedAt,
-                    syncStatus: acc.syncStatus,
-                    googleAdsHistoricalComplete: acc.googleAdsHistoricalComplete
-                };
-            }
+        const acc = await UserAccounts.findOne({ _id: siteId, userId }).select('siteName googleAdsLastSyncedAt syncStatus googleAdsHistoricalComplete');
+        if (!acc) {
+            return res.status(404).json({ success: false, message: 'Account not found' });
         }
+
+        const syncMetadata = {
+            siteName: acc.siteName,
+            lastSyncedAt: acc.googleAdsLastSyncedAt,
+            syncStatus: acc.syncStatus,
+            googleAdsHistoricalComplete: acc.googleAdsHistoricalComplete
+        };
         const start = new Date(startDate);
         const end = new Date(endDate);
         const diff = end - start;
@@ -836,6 +838,9 @@ export const getGoogleAdsSummary = async (req, res) => {
 
 export const getFacebookAdsSummary = async (req, res) => {
     const { startDate, endDate, siteId } = req.query;
+    if (!siteId) {
+        return res.status(400).json({ success: false, message: 'Site ID is required' });
+    }
     const userId = req.user._id;
 
     const cacheKey = getAnalyticsCacheKey(userId, 'fbads', req.query);
@@ -843,18 +848,17 @@ export const getFacebookAdsSummary = async (req, res) => {
     if (cachedData) return res.status(200).json(cachedData);
 
     try {
-        // Fetch account metadata if siteId is provided
-        let syncMetadata = null;
-        if (siteId) {
-            const acc = await UserAccounts.findOne({ _id: siteId, userId }).select('facebookAdsLastSyncedAt syncStatus facebookAdsHistoricalComplete');
-            if (acc) {
-                syncMetadata = {
-                    lastSyncedAt: acc.facebookAdsLastSyncedAt,
-                    syncStatus: acc.syncStatus,
-                    facebookAdsHistoricalComplete: acc.facebookAdsHistoricalComplete
-                };
-            }
+        const acc = await UserAccounts.findOne({ _id: siteId, userId }).select('siteName facebookAdsLastSyncedAt syncStatus facebookAdsHistoricalComplete');
+        if (!acc) {
+            return res.status(404).json({ success: false, message: 'Account not found' });
         }
+
+        const syncMetadata = {
+            siteName: acc.siteName,
+            lastSyncedAt: acc.facebookAdsLastSyncedAt,
+            syncStatus: acc.syncStatus,
+            facebookAdsHistoricalComplete: acc.facebookAdsHistoricalComplete
+        };
         const start = new Date(startDate);
         const end = new Date(endDate);
         const diff = end - start;

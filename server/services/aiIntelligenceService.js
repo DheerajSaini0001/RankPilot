@@ -66,8 +66,10 @@ export const generateGa4Intelligence = async (data, siteName) => {
         const userDiff = data.overview.users - data.priorOverview.users;
         const sessDiff = data.overview.sessions - data.priorOverview.sessions;
         const bounceDiff = data.overview.bounceRate - data.priorOverview.bounceRate;
+        const currentER = 100 - data.overview.bounceRate;
 
         return {
+            isFallback: true,
             activeUsers: userDiff >= 0
                 ? `Active users grew to ${data.overview.users}. Your acquisition strategy is performing well.`
                 : `Active users are at ${data.overview.users}. Consider a campaign to boost your reach.`,
@@ -137,6 +139,7 @@ export const generateGscIntelligence = async (data, siteName) => {
         const posDiff = data.overview.position - data.priorOverview.position; // Lower is better
 
         return {
+            isFallback: true,
             searchClicks: clickDiff >= 0
                 ? `Search clicks grew to ${data.overview.clicks}. Your content attracts interest.`
                 : `Clicks are at ${data.overview.clicks}. Update title tags to boost CTR.`,
@@ -228,6 +231,7 @@ export const generateDashboardIntelligence = async (data, acc) => {
             facebookAds: !!acc?.facebookAdAccountId
         };
         return {
+            isFallback: true,
             websiteSummary: `Your site performance for ${data.siteName} is looking stable with ${data.ga4.sessions} total sessions and ${data.gsc.clicks} organic clicks captured during this current analysis period.`,
             overviewGA4: conn.ga4 ? `Your traffic is holding steady at ${data.ga4.sessions} sessions with a ${data.ga4.growthSessions}% growth rate, showing that your audience engagement strategy is consistently reaching new people.` : "Connect Google Analytics 4 to unlock unique traffic insights and see how your users interact with your brand in real-time for better growth opportunities.",
             overviewGSC: conn.gsc ? `Your search visibility is active with ${data.gsc.clicks} clicks and an average position of #${data.gsc.position?.toFixed(1)}, indicating your content is ranking well for your target keywords.` : "Connect Google Search Console to monitor keyword performance and see which organic search terms are driving the most traffic to your primary content pages.",

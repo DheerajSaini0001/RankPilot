@@ -133,7 +133,7 @@ const DashboardPage = () => {
       const query = new URLSearchParams({
         startDate,
         endDate,
-        ...(device && { device }),
+        device: device || 'all',
         ...(campaign && { campaign }),
         ...(channel && { channel }),
         ...(activeSiteId && { siteId: activeSiteId })
