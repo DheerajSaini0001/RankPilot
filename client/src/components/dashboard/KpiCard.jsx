@@ -125,7 +125,7 @@ const KpiCard = ({ title, value, change, changeText, valueSuffix, isPositive, Ic
 
       {/* AI Insight Snippet */}
       {insight && !disconnected && (
-        <p className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 leading-relaxed mb-3 line-clamp-2">
+        <p className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 leading-relaxed mb-3">
           {insight}
         </p>
       )}

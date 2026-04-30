@@ -643,13 +643,13 @@ const Ga4Page = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <KpiCard
                         title="Active Users"
-                        value={overview ? formatNumber(overview.activeUsers || 0) : '0'}
+                        value={overview ? formatNumber(overview.users || 0) : '0'}
                         loading={loading}
                         Icon={UsersIcon}
-                        change={12.4}
-                        isPositive={true}
+                        change={calculateChange(overview?.users, priorOverview?.users)}
+                        isPositive={(overview?.users || 0) >= (priorOverview?.users || 0)}
                         changeText="vs last period"
-                        chartData={timeseries.map(d => d.sessions).slice(-10)}
+                        chartData={timeseries.map(d => d.users).slice(-10)}
                         insight={intelligence?.activeUsers}
                         contextPrompt={`Act as my Marketing Coach. My website has ${formatNumber(overview?.users)} active users with ${formatNumber(overview?.newUsers)} being new visitors. Analyze this acquisition and provide a 1-sentence summary + 1-sentence strategic insight.`}
                     />
@@ -658,8 +658,8 @@ const Ga4Page = () => {
                         value={overview ? formatNumber(overview.sessions || 0) : '0'}
                         loading={loading}
                         Icon={ChartBarIcon}
-                        change={7.2}
-                        isPositive={true}
+                        change={calculateChange(overview?.sessions, priorOverview?.sessions)}
+                        isPositive={(overview?.sessions || 0) >= (priorOverview?.sessions || 0)}
                         changeText="vs last period"
                         chartData={timeseries.map(d => d.sessions).slice(-10)}
                         insight={intelligence?.totalSessions}
@@ -670,8 +670,8 @@ const Ga4Page = () => {
                         value={overview ? `${(100 - (overview.bounceRate || 0)).toFixed(1)}%` : '0%'}
                         loading={loading}
                         Icon={CursorArrowRaysIcon}
-                        change={2.1}
-                        isPositive={true}
+                        change={calculateChange(100 - (overview?.bounceRate || 0), 100 - (priorOverview?.bounceRate || 0))}
+                        isPositive={(100 - (overview?.bounceRate || 0)) >= (100 - (priorOverview?.bounceRate || 0))}
                         changeText="vs last period"
                         insight={intelligence?.engagementRate}
                         contextPrompt={`Act as my Marketing Coach. My Engagement Rate is ${engagementRate}%. Analyze this content resonance and provide a 1-sentence summary + 1-sentence strategic insight.`}
@@ -681,8 +681,8 @@ const Ga4Page = () => {
                         value={overview ? formatTime(overview.avgSessionDuration) : '0m 0s'}
                         loading={loading}
                         Icon={ClockIcon}
-                        change={-0.5}
-                        isPositive={false}
+                        change={calculateChange(overview?.avgSessionDuration, priorOverview?.avgSessionDuration)}
+                        isPositive={(overview?.avgSessionDuration || 0) >= (priorOverview?.avgSessionDuration || 0)}
                         changeText="vs last period"
                         insight={intelligence?.avgSessionDuration}
                         contextPrompt={`Act as my Marketing Coach. Users spend an average of ${formatTime(overview?.avgSessionDuration)} on site. Analyze this retention and provide a 1-sentence summary + 1-sentence strategic insight.`}
