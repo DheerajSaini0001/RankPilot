@@ -411,15 +411,17 @@ const ChartRenderer = ({ type, data }) => {
 
 
   return (
-    <div className="w-full h-[280px] sm:h-[320px] bg-white dark:bg-dark-card/40 border border-neutral-200 dark:border-neutral-800/60 rounded-3xl sm:rounded-[2rem] p-5 sm:p-8 shadow-xl relative animate-in fade-in zoom-in duration-700 backdrop-blur-md">
+    <div className="flex flex-col w-full h-[320px] sm:h-[360px] bg-white dark:bg-dark-card/40 border border-neutral-200 dark:border-neutral-800/60 rounded-3xl sm:rounded-[2rem] p-5 sm:p-6 shadow-xl relative animate-in fade-in zoom-in duration-700 backdrop-blur-md">
       {actualData.title && (
-        <h4 className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-500 mb-5 sm:mb-8 text-center bg-neutral-50 dark:bg-dark-bg/50 py-2 px-3 rounded-xl truncate">
+        <h4 className="shrink-0 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-500 mb-4 text-center bg-neutral-50 dark:bg-dark-bg/50 py-2 px-3 rounded-xl truncate">
           {actualData.title}
         </h4>
       )}
-      <ResponsiveContainer width="100%" height="85%">
-        {renderChart()}
-      </ResponsiveContainer>
+      <div className="flex-1 min-h-0 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          {renderChart()}
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 };

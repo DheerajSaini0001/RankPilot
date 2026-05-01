@@ -44,13 +44,27 @@ const MarkdownComponents = {
 
         if (!inline && (match || isJson)) {
             try {
-                const cleanedJson = text
-                    .replace(/\/\/.*/g, '') 
-                    .replace(/\/\*[\s\S]*?\*\//g, '') 
-                    .replace(/\n$/g, '') 
+                let cleanedJson = text
+                    .replace(/```json\n?/g, '')
+                    .replace(/```/g, '')
+                    .replace(/[\u0000-\u001F]+/g, '') // Strip all unescaped control characters (newlines, tabs, etc.)
                     .trim();
 
-                const chartData = JSON.parse(cleanedJson);
+                let chartData;
+                try {
+                    chartData = JSON.parse(cleanedJson);
+                } catch (e) {
+                    // Auto-repair incomplete JSON from LLM stream
+                    try { chartData = JSON.parse(cleanedJson + '}'); } 
+                    catch (e2) {
+                        try { chartData = JSON.parse(cleanedJson + ']}'); } 
+                        catch (e3) {
+                            try { chartData = JSON.parse(cleanedJson + '}]}'); } 
+                            catch (e4) { throw e; }
+                        }
+                    }
+                }
+                
                 
                 const hasChartKeys = (obj) => {
                     const keys = ['labels', 'label', 'datasets', 'dataset', 'chartType', 'series', 'categories', 'xAxis', 'yAxis'];
@@ -83,11 +97,22 @@ const MarkdownComponents = {
                 );
             } catch (err) {
                 if (match || (isJson && text.length > 20)) {
+                    if (text.trim().endsWith('}') || text.trim().endsWith(']')) {
+                        return (
+                            <div className="my-6 rounded-2xl overflow-hidden border border-red-200 dark:border-red-900/30 shadow-sm bg-red-50 dark:bg-red-900/10 p-4">
+                                <div className="flex items-center gap-2 mb-3 pb-2 border-b border-red-100 dark:border-red-900/20">
+                                    <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">Malformed Chart Data</span>
+                                </div>
+                                <code className="text-[12px] font-mono text-red-400 block whitespace-pre overflow-x-auto">{text}</code>
+                                <div className="mt-3 text-[10px] text-red-500/70 font-mono">Error: {err.message}</div>
+                            </div>
+                        );
+                    }
                     return (
                         <div className="my-6 p-8 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-3xl flex flex-col items-center justify-center bg-neutral-50/50 dark:bg-neutral-800/20 backdrop-blur-sm">
                             <div className="w-2.5 h-2.5 rounded-full bg-brand-500 animate-ping mb-4" />
                             <span className="text-[11px] font-black text-neutral-400 uppercase tracking-[0.2em] leading-none">
-                                {text.endsWith('}') ? 'Rendering Visualisation...' : `Generating ${match ? match[1] : 'Advanced Analytics'}...`}
+                                {`Generating ${match ? match[1] : 'Advanced Analytics'}...`}
                             </span>
                         </div>
                     );
@@ -135,7 +160,7 @@ const MarkdownComponents = {
     thead: ({ children }) => <thead className="bg-neutral-50 dark:bg-neutral-800/80 border-b border-neutral-200 dark:border-neutral-700">{children}</thead>,
     tbody: ({ children }) => <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/50 bg-white dark:bg-dark-card">{children}</tbody>,
     tr: ({ children }) => <tr className="hover:bg-brand-50/30 dark:hover:bg-brand-900/5 transition-colors">{children}</tr>,
-    th: ({ children }) => <th className="px-6 py-5 text-[11px] font-black uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">{children}</th>,
+    th: ({ children }) => <th className="px-6 py-5 text-[11px] font-black uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400 whitespace-nowrap">{children}</th>,
     td: ({ children }) => <td className="px-6 py-5 text-[14px] text-neutral-700 dark:text-neutral-100 font-bold">{children}</td>
 };
 
@@ -256,6 +281,7 @@ const AIChatPage = () => {
     const messagesEndRef = useRef(null);
     const sourceMenuRef = useRef(null);
     const textareaRef = useRef(null);
+    const chatContainerRef = useRef(null);
 
     useEffect(() => {
         if (textareaRef.current) {
@@ -381,12 +407,18 @@ const AIChatPage = () => {
         setMessages([...newMessages, { role: 'assistant', content: '', isLoading: true }]);
         setLoading(true);
 
-        const scrollToEnd = () => {
-            setTimeout(() => {
-                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-            }, 50);
+        const scrollToEnd = (force = false) => {
+            if (!chatContainerRef.current) return;
+            const container = chatContainerRef.current;
+            const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+            
+            if (force || isNearBottom) {
+                setTimeout(() => {
+                    messagesEndRef.current?.scrollIntoView({ behavior: force ? 'smooth' : 'auto', block: 'end' });
+                }, 10);
+            }
         };
-        scrollToEnd();
+        scrollToEnd(true);
 
         try {
             const token = useAuthStore.getState().token;
@@ -439,9 +471,9 @@ const AIChatPage = () => {
                                     if (lastMsg && lastMsg.role === 'assistant') {
                                         updated[updated.length - 1] = { 
                                             ...lastMsg, 
-                                            content: data.error, 
+                                            content: accumulatedContent ? `${accumulatedContent}\n\n**⚠️ AI Interrupted:** ${data.error}` : data.error, 
                                             isLoading: false,
-                                            isError: true 
+                                            isError: !accumulatedContent // Only turn the whole box red if it failed immediately
                                         };
                                     }
                                     return updated;
@@ -490,12 +522,16 @@ const AIChatPage = () => {
 
             setMessages(prev => {
                 const updated = [...prev];
-                updated[updated.length - 1] = {
-                    role: 'assistant',
-                    content: `${friendlyMsg}\n\n---\n*Technical details: ${rawError}*`,
-                    isLoading: false,
-                    isError: true
-                };
+                const lastMsg = updated[updated.length - 1];
+                if (lastMsg && lastMsg.role === 'assistant') {
+                    const existingContent = lastMsg.content || "";
+                    updated[updated.length - 1] = {
+                        ...lastMsg,
+                        content: existingContent ? `${existingContent}\n\n**⚠️ AI Interrupted:** ${friendlyMsg}\n\n---\n*Technical details: ${rawError}*` : `${friendlyMsg}\n\n---\n*Technical details: ${rawError}*`,
+                        isLoading: false,
+                        isError: !existingContent
+                    };
+                }
                 return updated;
             });
         } finally {
@@ -648,7 +684,7 @@ const AIChatPage = () => {
 
                     {/* CHAT AREA */}
                     <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-                        <div className="flex-1 min-h-0 flex flex-col overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                        <div ref={chatContainerRef} className="flex-1 min-h-0 flex flex-col overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                             {messages.length === 0 ? (
                                 /* 5. EMPTY STATE — centered, compact */
                                 <div className="flex-1 flex flex-col items-center py-6 sm:py-12 px-4 sm:px-10 my-auto w-full">

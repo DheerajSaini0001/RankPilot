@@ -533,14 +533,26 @@ export const askAi = async (req, res) => {
     let { question, conversationId, siteId, history } = req.body;
     const userId = req.user._id;
 
-    // Prepare Sanitized History for Gemini (Prevents Token Limit Crashes)
-    // We take the last 8 messages and cap their length to ensure we don't blow the context window
-    const chatHistory = (history || [])
-        .slice(-8) 
-        .map(msg => ({
-            role: msg.role === 'user' ? 'user' : 'model',
-            parts: [{ text: String(msg.content || "").substring(0, 4000) }] 
-        }));
+    // Prepare Sanitized History for Gemini (Prevents Token Limit & Validation Crashes)
+    let chatHistory = [];
+    const rawHistory = (history || []).slice(-8);
+
+    for (const msg of rawHistory) {
+        const role = msg.role === 'user' ? 'user' : 'model';
+        const text = String(msg.content || "").substring(0, 4000);
+        
+        if (chatHistory.length > 0 && chatHistory[chatHistory.length - 1].role === role) {
+            // Combine consecutive messages of the same role to satisfy Gemini's strict alternation rule
+            chatHistory[chatHistory.length - 1].parts[0].text += "\n\n" + text;
+        } else {
+            chatHistory.push({ role, parts: [{ text }] });
+        }
+    }
+
+    // Gemini strictly requires the first message in history to be from 'user'
+    if (chatHistory.length > 0 && chatHistory[0].role === 'model') {
+        chatHistory.shift();
+    }
 
     // Load System Instruction
     let systemIns = "";
@@ -559,6 +571,7 @@ export const askAi = async (req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     let convId = conversationId;
+    let finalContent = "";
 
     try {
         // 1. Ensure Conversation exists
@@ -573,7 +586,6 @@ export const askAi = async (req, res) => {
         await Message.create({ conversationId: convId, role: 'user', content: question });
 
         const chat = await startAgenticChat(chatHistory, aiTools, systemIns + dateContext);
-        let finalContent = "";
         
         // --- PROPER STREAMING LOOP ---
         // We use a stream to send tokens to the UI as they are generated
@@ -660,20 +672,20 @@ export const askAi = async (req, res) => {
         };
 
         const friendlyMsg = getFriendlyError(err);
-        const errorMessage = friendlyMsg;
+        const errorMessage = finalContent ? `${finalContent}\n\n**⚠️ AI Interrupted:** ${friendlyMsg}` : friendlyMsg;
         
         if (convId) {
             await Message.create({
                 conversationId: convId,
                 role: 'assistant',
                 content: errorMessage,
-                isError: true,
+                isError: !finalContent, // Only flag as a complete error if nothing was generated
                 model: "system-error"
             });
         }
 
         res.write(`data: ${JSON.stringify({ 
-            error: errorMessage, 
+            error: friendlyMsg, 
             conversationId: convId 
         })}\n\n`);
         res.end();
