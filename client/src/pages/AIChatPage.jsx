@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { formatDistanceToNow, format } from 'date-fns';
 import toast from 'react-hot-toast';
 import DashboardLayout from '../components/ui/DashboardLayout';
@@ -22,6 +23,12 @@ import {
     ArrowTrendingUpIcon,
     LinkIcon,
     GlobeAltIcon,
+    DocumentDuplicateIcon,
+    HandThumbUpIcon,
+    HandThumbDownIcon,
+    CheckIcon,
+    PencilIcon,
+    ArrowUpRightIcon
 } from '@heroicons/react/24/outline';
 import {
     getConversations,
@@ -77,12 +84,12 @@ const MarkdownComponents = {
 
                 if (!match && isJson && !hasChartKeys(chartData)) {
                     return (
-                        <div className="my-6 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 shadow-sm bg-neutral-900 dark:bg-black/40 p-4">
-                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/5">
+                        <div className="my-6 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-zinc-900/50 p-4">
+                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-neutral-100 dark:border-neutral-800">
                                 <DocumentTextIcon className="w-3.5 h-3.5 text-neutral-400" />
                                 <span className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Raw Data / JSON</span>
                             </div>
-                            <code className="text-[12px] font-mono text-neutral-300 block whitespace-pre overflow-x-auto" {...props}>{children}</code>
+                            <code className="text-[12px] font-mono text-neutral-800 dark:text-neutral-300 block whitespace-pre overflow-x-auto" {...props}>{children}</code>
                         </div>
                     );
                 }
@@ -90,26 +97,30 @@ const MarkdownComponents = {
                 const finalType = match ? match[1] : (chartData.chartType || 'line');
 
                 if (chartData.layout === 'dashboard' || finalType === 'dashboard') {
-                    // Trigger canvas open on mount automatically for the first time
-                    setTimeout(() => window.dispatchEvent(new CustomEvent('open-ai-canvas', { detail: chartData })), 50);
+                    // Trigger canvas open automatically, but only once per unique dashboard payload to avoid infinite re-render loops
+                    if (!window[`canvas_opened_${text.length}`]) {
+                        window[`canvas_opened_${text.length}`] = true;
+                        setTimeout(() => window.dispatchEvent(new CustomEvent('open-ai-canvas', { detail: chartData })), 50);
+                    }
                     
                     return (
-                        <div className="my-4 p-4 border border-brand-500/20 bg-brand-50 dark:bg-brand-900/10 rounded-2xl flex flex-wrap items-center justify-between gap-4 shadow-sm overflow-hidden relative">
-                            <div className="flex items-center gap-3 flex-1 min-w-[220px]">
-                                 <div className="w-10 h-10 shrink-0 rounded-xl bg-brand-500 text-white flex items-center justify-center shadow-md shadow-brand-500/30">
+                        <div className="my-6 p-5 border border-neutral-200 dark:border-neutral-800 rounded-2xl flex flex-wrap items-center justify-between gap-4 bg-neutral-50/50 dark:bg-neutral-900/20 transition-all hover:bg-white dark:hover:bg-neutral-900 shadow-sm hover:shadow-md group/card">
+                            <div className="flex items-center gap-4 flex-1 min-w-[220px]">
+                                 <div className="w-10 h-10 shrink-0 rounded-xl bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 flex items-center justify-center transition-transform group-hover/card:scale-105">
                                       <ChartBarIcon className="w-5 h-5" />
                                  </div>
                                  <div className="min-w-0">
-                                      <p className="text-sm font-black text-neutral-900 dark:text-white truncate">AI Dashboard Ready</p>
-                                      <p className="text-[11px] font-bold text-neutral-500 truncate">Interactive canvas generated</p>
+                                      <p className="text-[13px] font-black text-neutral-900 dark:text-white uppercase tracking-wider">AI Visualization Ready</p>
+                                      <p className="text-[11px] font-bold text-neutral-400 mt-0.5 tracking-tight">Interactive analytics dashboard generated</p>
                                  </div>
                             </div>
                             <button 
                                 type="button"
                                 onClick={() => window.dispatchEvent(new CustomEvent('open-ai-canvas', { detail: chartData }))} 
-                                className="shrink-0 px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-black rounded-xl transition-all shadow-sm active:scale-95 text-center ml-auto"
+                                className="shrink-0 px-6 py-2.5 bg-neutral-900 dark:bg-white hover:bg-black dark:hover:bg-neutral-100 text-white dark:text-neutral-900 text-[11px] font-black rounded-xl transition-all shadow-lg active:scale-95 text-center flex items-center gap-2 group/btn"
                             >
-                                View Canvas
+                                <span>Open Canvas</span>
+                                <ArrowUpRightIcon className="w-3.5 h-3.5 transition-transform group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" strokeWidth={3} />
                             </button>
                         </div>
                     );
@@ -152,31 +163,14 @@ const MarkdownComponents = {
             </code>
         );
     },
-    ul: ({ children }) => <ul className="!list-none !p-0 !m-0 !pl-0 space-y-3 mb-8">{children}</ul>,
-    ol: ({ children }) => <ol className="!list-decimal !p-0 !m-0 !pl-6 mb-8 space-y-3 marker:text-brand-600 dark:marker:text-brand-400 marker:font-black">{children}</ol>,
-    li: ({ children, ordered }) => {
-        if (ordered) {
-            return (
-                <li className="list-item text-[15.5px] leading-relaxed text-neutral-700 dark:text-neutral-100 mb-2 !ml-0 font-medium break-words [word-break:break-word]">
-                    {children}
-                </li>
-            );
-        }
-        return (
-            <li className="!list-none !p-0 !m-0 relative !pl-6 text-[15.5px] leading-relaxed text-neutral-750 dark:text-neutral-100 group mb-3 font-medium break-words [word-break:break-word]">
-                <span className="absolute left-0 top-[10px] h-2 w-2 rounded-full bg-brand-500 shadow-[0_0_12px_rgba(59,130,246,0.4)] group-hover:scale-125 transition-transform" />
-                <div className="!m-0 !p-0 inline-block w-full">{children}</div>
-            </li>
-        );
-    },
-    p: ({ children }) => <p className="mb-6 leading-relaxed text-[15.5px] text-neutral-800 dark:text-neutral-100 font-medium break-words [word-break:break-word]">{children}</p>,
-    h1: ({ children }) => <h1 className="text-3xl font-black !m-0 !mb-8 tracking-tight text-neutral-900 dark:text-white border-b-4 border-brand-500/10 pb-4">{children}</h1>,
-    h2: ({ children }) => <h2 className="text-xl font-extrabold !m-0 !mb-5 mt-10 tracking-tight text-neutral-800 dark:text-white flex items-center gap-3">
-        <span className="w-1.5 h-6 bg-brand-500 rounded-full" />
-        {children}
-    </h2>,
-    h3: ({ children }) => <h3 className="text-lg font-bold !m-0 !mb-4 mt-8 text-neutral-800 dark:text-white border-l-4 border-neutral-200 dark:border-neutral-700 pl-4">{children}</h3>,
-    strong: ({ children }) => <strong className="font-bold text-neutral-900 dark:text-white bg-brand-500/10 px-1 rounded break-words [word-break:break-word]">{children}</strong>,
+    ul: ({ children }) => <ul className="space-y-2.5 mb-6 pl-6 list-disc marker:text-neutral-900 dark:marker:text-white marker:font-bold">{children}</ul>,
+    ol: ({ children }) => <ol className="space-y-2.5 mb-6 pl-6 list-decimal marker:text-neutral-900 dark:marker:text-white marker:font-bold">{children}</ol>,
+    li: ({ children }) => <li className="text-[15px] text-neutral-700 dark:text-neutral-200 break-words [word-break:break-word] pl-2">{children}</li>,
+    h1: ({ children }) => <h1 className="text-2xl font-black text-neutral-900 dark:text-white mt-12 mb-6 tracking-tight border-t border-neutral-200 dark:border-neutral-700 pt-10 first:mt-0 first:border-0 first:pt-0">{children}</h1>,
+    h2: ({ children }) => <h2 className="text-xl font-bold text-neutral-900 dark:text-white mt-10 mb-5 tracking-tight border-t border-neutral-200 dark:border-neutral-700/60 pt-8 first:mt-0 first:border-0 first:pt-0">{children}</h2>,
+    h3: ({ children }) => <h3 className="text-lg font-bold text-neutral-800 dark:text-neutral-200 mt-8 mb-4 pt-6 border-t border-neutral-200 dark:border-neutral-700/40 first:mt-0 first:border-0 first:pt-0">{children}</h3>,
+    p: ({ children }) => <p className="mb-5 leading-relaxed text-[15px] text-neutral-700 dark:text-neutral-200 break-words [word-break:break-word]">{children}</p>,
+    strong: ({ children }) => <strong className="font-extrabold text-neutral-900 dark:text-white break-words [word-break:break-word]">{children}</strong>,
     table: ({ children }) => (
         <div className="my-10 w-full overflow-x-auto border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-xl">
             <table className="w-full text-left border-collapse min-w-[600px]">
@@ -222,22 +216,67 @@ const TypingIndicator = () => {
     );
 };
 
-const ChatMessage = React.memo(({ msg, userName, userAvatar }) => {
+const ChatMessage = React.memo(({ msg, userName, userAvatar, onEdit, onRetry }) => {
     const isUser = msg.role === 'user';
+    const [isCopied, setIsCopied] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    const isLongMessage = msg.content?.length > 600 || (msg.content?.split('\n').length > 10);
+
+    const handleCopy = () => {
+        if (!msg.content) return;
+        navigator.clipboard.writeText(msg.content);
+        setIsCopied(true);
+        toast.success("Copied to clipboard!", {
+            style: {
+                background: '#333',
+                color: '#fff',
+                fontSize: '12px'
+            }
+        });
+        setTimeout(() => setIsCopied(false), 2000);
+    };
 
     if (isUser) {
         return (
-            <div className="flex justify-end">
-                <div className="flex items-end gap-2.5 flex-row-reverse max-w-[90%] sm:max-w-[85%]">
-                    <div className="w-7 h-7 rounded-full bg-neutral-800 dark:bg-neutral-600 text-white flex items-center justify-center text-[10px] font-black flex-shrink-0 overflow-hidden border border-neutral-200 dark:border-neutral-700">
-                        {userAvatar ? (
-                            <img src={userAvatar} alt={userName} className="w-full h-full object-cover" />
-                        ) : (
-                            userName?.charAt(0)?.toUpperCase() || 'U'
+            <div className="flex justify-end mb-4 w-full">
+                <div className="flex flex-col items-end max-w-[90%] sm:max-w-[75%] group">
+                    <div className={`px-5 py-3.5 bg-zinc-100 dark:bg-zinc-800 rounded-2xl text-[15px] text-zinc-800 dark:text-zinc-100 leading-relaxed break-words relative overflow-hidden transition-all duration-500 shadow-sm dark:shadow-none ${(!isExpanded && isLongMessage) ? 'max-h-[280px]' : 'max-h-[5000px]'}`}>
+                        <div className="whitespace-pre-wrap">{msg.content}</div>
+                        
+                        {!isExpanded && isLongMessage && (
+                            <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-zinc-100 dark:from-zinc-800 via-zinc-100/90 dark:via-zinc-800/90 to-transparent pointer-events-none flex items-end justify-start px-5 pb-3">
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); setIsExpanded(true); }}
+                                    className="text-[13px] font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 pointer-events-auto transition-colors"
+                                >
+                                    Show more
+                                </button>
+                            </div>
                         )}
                     </div>
-                    <div className="px-4 py-3 bg-neutral-100 dark:bg-neutral-800 border border-transparent dark:border-neutral-700/50 rounded-2xl rounded-br-sm text-sm font-medium text-neutral-900 dark:text-neutral-100 leading-relaxed max-w-full shadow-sm">
-                        {msg.content}
+                    {isExpanded && isLongMessage && (
+                        <button 
+                            onClick={() => setIsExpanded(false)}
+                            className="text-[12px] font-bold text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 mt-2 self-start pl-2 transition-colors"
+                        >
+                            Show less
+                        </button>
+                    )}
+                    {/* User Actions Bar */}
+                    <div className="flex items-center gap-2.5 mt-1.5 pr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-neutral-400 dark:text-neutral-500">
+                        <span className="text-[12px] font-medium mr-1 cursor-default hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors" title={format(new Date(msg.createdAt || Date.now()), 'PPP p')}>
+                            {format(new Date(msg.createdAt || Date.now()), 'MMM d')}
+                        </span>
+                        <button onClick={() => onRetry?.(msg.content)} className="hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors" title="Retry">
+                            <ArrowPathIcon className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => onEdit?.(msg.content)} className="hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors" title="Edit">
+                            <PencilIcon className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={handleCopy} className="hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors" title="Copy text">
+                            {isCopied ? <CheckIcon className="w-3.5 h-3.5 text-green-500" /> : <DocumentDuplicateIcon className="w-3.5 h-3.5" />}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -245,12 +284,8 @@ const ChatMessage = React.memo(({ msg, userName, userAvatar }) => {
     }
 
     return (
-        <div className="flex justify-start w-full max-w-full">
-            <div className="flex items-start gap-3 w-full max-w-[99%] sm:max-w-[96%]">
-                <div className="w-7 h-7 rounded-full bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm p-1">
-                    <img src="/favicon.png" alt="AI" className="w-full h-full object-contain" />
-                </div>
-                <div className="flex-1 min-w-0 overflow-hidden w-full">
+        <div className="flex justify-start w-full max-w-full mb-6">
+            <div className="flex-1 min-w-0 overflow-hidden w-full group pl-1">
                     {msg.isError ? (
                         <div className="px-4 py-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-800/30 rounded-xl text-sm text-red-600 dark:text-red-400">
                                 <ReactMarkdown
@@ -261,33 +296,52 @@ const ChatMessage = React.memo(({ msg, userName, userAvatar }) => {
                                 </ReactMarkdown>
                         </div>
                     ) : (
-                        <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed text-neutral-800 dark:text-neutral-100 break-words [word-break:break-word] [&_a]:break-all">
-                            {msg.content ? (
-                                <ReactMarkdown
-                                    remarkPlugins={[remarkGfm]}
-                                    components={MarkdownComponents}
-                                >
-                                    {msg.content}
-                                </ReactMarkdown>
-                            ) : msg.isLoading ? (
-                                <TypingIndicator />
-                            ) : (
-                                <div className="py-2 text-neutral-400 font-medium italic text-[14px] flex items-center gap-2">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 animate-pulse" />
-                                    No response generated by the server.
+                        <>
+                            <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed text-neutral-800 dark:text-neutral-100 break-words [word-break:break-word] [&_a]:break-all">
+                                {msg.content ? (
+                                    <ReactMarkdown
+                                        remarkPlugins={[remarkGfm]}
+                                        components={MarkdownComponents}
+                                    >
+                                        {msg.content}
+                                    </ReactMarkdown>
+                                ) : msg.isLoading ? (
+                                    <TypingIndicator />
+                                ) : (
+                                    <div className="py-2 text-neutral-400 font-medium italic text-[14px] flex items-center gap-2">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 animate-pulse" />
+                                        No response generated by the server.
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Actions Bar (Copy Only) */}
+                            {msg.content && !msg.isLoading && (
+                                <div className="flex items-center gap-2 mt-2 pt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                    <span className="text-[11px] font-medium text-neutral-400 mr-1 cursor-default" title={format(new Date(msg.createdAt || Date.now()), 'PPP p')}>
+                                        {format(new Date(msg.createdAt || Date.now()), 'MMM d')}
+                                    </span>
+                                    <button 
+                                        onClick={handleCopy}
+                                        className="p-1.5 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md transition-colors flex items-center justify-center bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700/50 shadow-sm"
+                                        title="Copy response"
+                                    >
+                                        {isCopied ? <CheckIcon className="w-3.5 h-3.5 text-green-500" /> : <DocumentDuplicateIcon className="w-3.5 h-3.5" />}
+                                    </button>
                                 </div>
                             )}
-                        </div>
+                        </>
                     )}
                 </div>
             </div>
-        </div>
     );
 });
 
 const AIChatPage = () => {
     const { connectedSources, activeSiteId } = useAccountsStore();
     const { user } = useAuthStore();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const urlConversationId = searchParams.get('conversationId');
 
     const [messages, setMessages] = useState([]);
     const [query, setQuery] = useState('');
@@ -312,6 +366,7 @@ const AIChatPage = () => {
     const sourceMenuRef = useRef(null);
     const textareaRef = useRef(null);
     const chatContainerRef = useRef(null);
+    const scrollTargetRef = useRef(null); // To store index from URL
 
     useEffect(() => {
         if (textareaRef.current) {
@@ -333,6 +388,41 @@ const AIChatPage = () => {
         loadSuggestions();
     }, [activeSiteId]);
 
+    useEffect(() => {
+        if (urlConversationId) {
+            const scrollIdx = searchParams.get('scrollToIndex');
+            if (scrollIdx) scrollTargetRef.current = scrollIdx;
+
+            loadConversationDetails(urlConversationId);
+            
+            // Clear params after loading
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete('conversationId');
+            newParams.delete('scrollToIndex');
+            setSearchParams(newParams, { replace: true });
+        }
+    }, [urlConversationId]);
+
+    // Handle scroll to target once messages are loaded
+    useEffect(() => {
+        if (scrollTargetRef.current && messages.length > 0) {
+            const index = parseInt(scrollTargetRef.current);
+            scrollTargetRef.current = null; // Reset
+            
+            setTimeout(() => {
+                const element = document.getElementById(`chat-message-${index}`);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Highlight the target message briefly
+                    element.classList.add('ring-2', 'ring-brand-500/20', 'bg-brand-500/[0.02]');
+                    setTimeout(() => {
+                        element.classList.remove('ring-2', 'ring-brand-500/20', 'bg-brand-500/[0.02]');
+                    }, 2000);
+                }
+            }, 500);
+        }
+    }, [messages.length]);
+
     const loadConversations = async () => {
         try {
             const res = await getConversations(activeSiteId);
@@ -344,6 +434,13 @@ const AIChatPage = () => {
 
     const loadConversationDetails = async (id) => {
         try {
+            // Clear all previous canvas trigger flags to allow re-triggering for new conversation
+            Object.keys(window).forEach(key => {
+                if (key.startsWith('canvas_opened_')) {
+                    delete window[key];
+                }
+            });
+
             const res = await getConversation(id);
             setMessages(res.data.messages);
             setActiveConversationId(res.data._id);
@@ -431,12 +528,13 @@ const AIChatPage = () => {
         }
     };
 
-    const handleSendMessage = async (e) => {
+    const handleSendMessage = async (e, customQuery = null) => {
         if (e) e.preventDefault();
-        if (!query.trim() || loading) return;
+        const textToUse = customQuery || query;
+        if (!textToUse.trim() || loading) return;
 
-        const currentQuery = query.trim();
-        setQuery('');
+        const currentQuery = textToUse.trim();
+        if (!customQuery) setQuery('');
 
         const newMessages = [...messages, { role: 'user', content: currentQuery }];
         setMessages([...newMessages, { role: 'assistant', content: '', isLoading: true }]);
@@ -806,7 +904,18 @@ const AIChatPage = () => {
                                 <div className="px-3 sm:px-5 md:px-8 py-5 sm:py-8">
                                     <div className={`${isCanvasOpen ? 'w-full' : 'max-w-3xl mx-auto'} w-full space-y-6 pb-4 transition-all duration-300`}>
                                         {messages.map((msg, idx) => (
-                                            <ChatMessage key={idx} msg={msg} userName={user?.name} userAvatar={user?.avatar} />
+                                            <div key={idx} id={`chat-message-${idx}`} className="transition-all duration-1000 rounded-2xl">
+                                            <ChatMessage 
+                                                msg={msg} 
+                                                userName={user?.name} 
+                                                userAvatar={user?.avatar} 
+                                                onEdit={(text) => {
+                                                    setQuery(text);
+                                                    setTimeout(() => textareaRef.current?.focus(), 50);
+                                                }}
+                                                onRetry={(text) => handleSendMessage(null, text)}
+                                            />
+                                        </div>
                                         ))}
                                         <div ref={messagesEndRef} className="h-4" />
                                     </div>

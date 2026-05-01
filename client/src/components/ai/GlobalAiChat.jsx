@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
     SparklesIcon,
     XMarkIcon,
@@ -9,8 +9,15 @@ import {
     ChatBubbleLeftRightIcon,
     MinusIcon,
     ExclamationTriangleIcon,
-    DocumentTextIcon
+    DocumentTextIcon,
+    DocumentDuplicateIcon,
+    CheckIcon,
+    PencilIcon,
+    ChartBarIcon,
+    ArrowUpRightIcon
 } from '@heroicons/react/24/outline';
+import { format } from 'date-fns';
+import toast from 'react-hot-toast';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import ChartRenderer from './ChartRenderer';
@@ -21,79 +28,7 @@ import { getSuggestedQuestions } from '../../api/aiApi';
 import { useAiChatStore } from '../../store/aiChatStore';
 
 
-/* ─── Markdown Component Overrides (Compact for Sidebar/Bubble) ─── */
-const MD = {
-    p: ({ children }) => <p className="leading-relaxed text-[13px] text-neutral-700 dark:text-neutral-200 mb-2 last:mb-0 break-words [word-break:break-word]">{children}</p>,
-    strong: ({ children }) => <strong className="font-extrabold text-neutral-900 dark:text-white break-words [word-break:break-word]">{children}</strong>,
-    ul: ({ children }) => <ul className="space-y-2 mb-3 pl-4 list-disc marker:text-brand-500 marker:font-black">{children}</ul>,
-    ol: ({ children }) => <ol className="space-y-2 mb-3 pl-4 list-decimal marker:text-brand-500 marker:font-black">{children}</ol>,
-    li: ({ children }) => <li className="text-[13px] text-neutral-700 dark:text-neutral-200 break-words [word-break:break-word] pl-1">{children}</li>,
-    h1: ({ children }) => <h1 className="text-sm font-black text-neutral-900 dark:text-white mb-2 uppercase tracking-tight">{children}</h1>,
-    h2: ({ children }) => <h2 className="text-sm font-black text-neutral-900 dark:text-white mb-2 tracking-tight">{children}</h2>,
-    h3: ({ children }) => <h3 className="text-xs font-black text-neutral-800 dark:text-neutral-50 mb-1.5">{children}</h3>,
-    a: ({ children, href }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400 font-bold underline decoration-brand-500/30 underline-offset-2 hover:decoration-brand-500 transition-all">{children}</a>,
-    code: ({ inline, className, children, ...props }) => {
-        const match = /language-json-chart-(\w+)/.exec(className || '');
-        const isJson = /language-json/.test(className || '');
-        const text = String(children).trim();
 
-        if (!inline && (match || isJson)) {
-            try {
-                const cleanedJson = text
-                    .replace(/```json\n?/g, '')
-                    .replace(/```/g, '')
-                    .replace(/[\u0000-\u001F]+/g, '')
-                    .trim();
-
-                const chartData = JSON.parse(cleanedJson);
-                
-                const hasChartKeys = (obj) => {
-                    const keys = ['labels', 'label', 'datasets', 'dataset', 'chartType', 'series', 'categories', 'xAxis', 'yAxis'];
-                    const rootKeys = Object.keys(obj || {});
-                    const nestedKeys = (obj?.data && !Array.isArray(obj.data)) ? Object.keys(obj.data) : [];
-                    const isDataArray = Array.isArray(obj?.data);
-                    return keys.some(k => rootKeys.includes(k) || nestedKeys.includes(k)) || (isDataArray && rootKeys.includes('series'));
-                };
-
-                if (!match && isJson && !hasChartKeys(chartData)) {
-                    return (
-                        <div className="my-3 rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800 shadow-sm bg-neutral-900 p-3">
-                            <div className="flex items-center gap-2 mb-2 pb-1 border-b border-white/5">
-                                <DocumentTextIcon className="w-3 h-3 text-neutral-400" />
-                                <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">Raw Data</span>
-                            </div>
-                            <code className="text-[11px] font-mono text-neutral-300 block whitespace-pre overflow-x-auto" {...props}>{children}</code>
-                        </div>
-                    );
-                }
-                
-                const finalType = match ? match[1] : (chartData.chartType || 'line');
-
-                return (
-                    <div className="my-4 w-full overflow-hidden scale-90 -mx-4 origin-left">
-                        <ChartRenderer type={finalType} data={chartData} />
-                    </div>
-                );
-            } catch (err) {
-                if (text.trim().endsWith('}') || text.trim().endsWith(']')) {
-                    return (
-                        <div className="my-3 rounded-xl overflow-hidden border border-red-200 dark:border-red-900/30 shadow-sm bg-red-50 dark:bg-red-900/10 p-3">
-                            <div className="flex items-center gap-2 mb-2 pb-1 border-b border-red-100 dark:border-red-900/20">
-                                <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">Malformed Chart Data</span>
-                            </div>
-                            <code className="text-[10px] font-mono text-red-400 block whitespace-pre overflow-x-auto">{text}</code>
-                        </div>
-                    );
-                }
-                // Fallback to normal code block on error
-            }
-        }
-
-        return inline
-            ? <code className="bg-neutral-100 dark:bg-neutral-800 px-1 py-0.5 rounded text-[11px] font-mono text-brand-600 dark:text-brand-400">{children}</code>
-            : <pre className="bg-neutral-900 text-neutral-100 p-2 rounded-lg text-[11px] overflow-x-auto my-2 border border-neutral-800 tracking-tight font-mono">{children}</pre>;
-    },
-};
 
 const TypingIndicator = () => {
     const [phrase, setPhrase] = useState("Thinking");
@@ -126,6 +61,110 @@ const TypingIndicator = () => {
     );
 };
 
+const GlobalChatMessage = ({ msg, onEdit, onRetry, MD }) => {
+    const isUser = msg.role === 'user';
+    const [isCopied, setIsCopied] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
+    const isLongMessage = msg.content?.length > 400 || (msg.content?.split('\n').length > 6);
+
+    const handleCopy = () => {
+        if (!msg.content) return;
+        navigator.clipboard.writeText(msg.content);
+        setIsCopied(true);
+        toast.success("Copied to clipboard!", {
+            style: { background: '#333', color: '#fff', fontSize: '10px' }
+        });
+        setTimeout(() => setIsCopied(false), 2000);
+    };
+
+    if (isUser) {
+        return (
+            <div className="flex justify-end mb-4 w-full group">
+                <div className="flex flex-col items-end max-w-[85%]">
+                    <div className={`px-4 py-2.5 bg-zinc-100 dark:bg-zinc-800 rounded-2xl text-[13px] text-zinc-800 dark:text-zinc-100 leading-relaxed break-words relative overflow-hidden transition-all duration-500 shadow-sm dark:shadow-none ${(!isExpanded && isLongMessage) ? 'max-h-[180px]' : 'max-h-[5000px]'}`}>
+                        <div className="whitespace-pre-wrap">{msg.content}</div>
+                        {!isExpanded && isLongMessage && (
+                            <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-zinc-100 dark:from-zinc-800 via-zinc-100/90 dark:via-zinc-800/90 to-transparent pointer-events-none flex items-end justify-start px-4 pb-2">
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); setIsExpanded(true); }}
+                                    className="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 pointer-events-auto transition-colors"
+                                >
+                                    Show more
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    {isExpanded && isLongMessage && (
+                        <button 
+                            onClick={() => setIsExpanded(false)}
+                            className="text-[10px] font-bold text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 mt-1.5 self-start pl-2 transition-colors"
+                        >
+                            Show less
+                        </button>
+                    )}
+                    <div className="flex items-center gap-3 mt-2 pr-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-neutral-400">
+                        <span className="text-[10px] font-bold uppercase tracking-wider cursor-default" title={format(new Date(msg.createdAt || Date.now()), 'PPP p')}>
+                            {format(new Date(msg.createdAt || Date.now()), 'HH:mm')}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                            <button onClick={() => onRetry?.(msg.content)} className="hover:text-neutral-900 dark:hover:text-white transition-colors p-1" title="Retry">
+                                <ArrowPathIcon className="w-3 h-3" />
+                            </button>
+                            <button onClick={() => onEdit?.(msg.content)} className="hover:text-neutral-900 dark:hover:text-white transition-colors p-1" title="Edit">
+                                <PencilIcon className="w-3 h-3" />
+                            </button>
+                            <button onClick={handleCopy} className="hover:text-neutral-900 dark:hover:text-white transition-colors p-1" title="Copy">
+                                {isCopied ? <CheckIcon className="w-3 h-3 text-green-500" /> : <DocumentDuplicateIcon className="w-3 h-3" />}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex justify-start w-full max-w-full mb-6 group">
+            <div className="flex-1 min-w-0 overflow-hidden w-full pl-1">
+                {msg.isLoading ? (
+                    <div className="bg-white dark:bg-neutral-800/80 border border-neutral-100 dark:border-neutral-700/50 px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm backdrop-blur-sm w-fit">
+                        <TypingIndicator />
+                    </div>
+                ) : msg.isError ? (
+                    <div className="flex items-center gap-3.5 p-3.5 bg-red-50/50 dark:bg-red-900/10 border border-red-100/50 dark:border-red-900/30 rounded-2xl shadow-sm">
+                         <ExclamationTriangleIcon className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
+                         <p className="text-[12px] font-bold text-red-700 dark:text-red-300 leading-snug">
+                             {msg.content}
+                         </p>
+                    </div>
+                ) : (
+                    <>
+                        <div className="prose prose-sm dark:prose-invert max-w-none text-[13px] leading-relaxed text-neutral-800 dark:text-neutral-100 break-words [word-break:break-word]">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD}>
+                                {msg.content}
+                            </ReactMarkdown>
+                        </div>
+                        {msg.content && (
+                            <div className="flex items-center gap-3 mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider cursor-default" title={format(new Date(msg.createdAt || Date.now()), 'PPP p')}>
+                                    {format(new Date(msg.createdAt || Date.now()), 'HH:mm')}
+                                </span>
+                                <button 
+                                    onClick={handleCopy}
+                                    className="p-1.5 text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-50 dark:hover:bg-neutral-800 rounded-lg transition-all border border-transparent hover:border-neutral-200 dark:hover:border-neutral-700 shadow-sm"
+                                    title="Copy response"
+                                >
+                                    {isCopied ? <CheckIcon className="w-3 h-3 text-green-500" /> : <DocumentDuplicateIcon className="w-3 h-3" />}
+                                </button>
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
+        </div>
+    );
+};
+
 /**
  * GlobalAiChat — Floating bubble chat for the entire project
  */
@@ -133,6 +172,7 @@ const GlobalAiChat = () => {
     const { user, token } = useAuthStore();
     const { activeSiteId } = useAccountsStore();
     const location = useLocation();
+    const navigate = useNavigate();
 
     if (location.pathname === '/dashboard/ai-chat') return null;
 
@@ -148,6 +188,175 @@ const GlobalAiChat = () => {
     const inputRef = useRef(null);
     const panelRef = useRef(null);
     const scrollContainerRef = useRef(null);
+    const conversationIdRef = useRef(null);
+    
+    // Sync ref for access inside MD overrides
+    useEffect(() => {
+        conversationIdRef.current = conversationId;
+    }, [conversationId]);
+
+    /* ── Markdown Component Overrides (Compact for Sidebar/Bubble) ── */
+    const MD = {
+        p: ({ children }) => <p className="leading-relaxed text-[14px] text-neutral-700 dark:text-neutral-200 mb-3 last:mb-0 break-words [word-break:break-word]">{children}</p>,
+        strong: ({ children }) => <strong className="font-extrabold text-neutral-900 dark:text-white break-words [word-break:break-word]">{children}</strong>,
+        ul: ({ children }) => <ul className="space-y-2.5 mb-4 pl-6 list-disc marker:text-neutral-900 dark:marker:text-white marker:font-bold">{children}</ul>,
+        ol: ({ children }) => <ol className="space-y-2.5 mb-4 pl-6 list-decimal marker:text-neutral-900 dark:marker:text-white marker:font-bold">{children}</ol>,
+        li: ({ children }) => <li className="text-[14px] text-neutral-700 dark:text-neutral-100 break-words [word-break:break-word] pl-2">{children}</li>,
+        h1: ({ children }) => <h1 className="text-xl font-extrabold text-neutral-900 dark:text-white mt-12 mb-5 tracking-tight border-t border-neutral-200 dark:border-neutral-700/80 pt-8 first:mt-0 first:border-0 first:pt-0">{children}</h1>,
+        h2: ({ children }) => <h2 className="text-lg font-bold text-neutral-900 dark:text-white mt-10 mb-4 tracking-tight border-t border-neutral-200 dark:border-neutral-700/60 pt-6 first:mt-0 first:border-0 first:pt-0">{children}</h2>,
+        h3: ({ children }) => <h3 className="text-base font-bold text-neutral-800 dark:text-neutral-200 mt-8 mb-3 pt-4 border-t border-neutral-200 dark:border-neutral-700/40 first:mt-0 first:border-0 first:pt-0">{children}</h3>,
+        hr: () => <div className="h-[1px] w-full bg-neutral-100 dark:bg-neutral-800/60 my-8" />,
+        a: ({ children, href }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400 font-bold underline decoration-brand-500/30 underline-offset-2 hover:decoration-brand-500 transition-all">{children}</a>,
+        code: ({ inline, className, children, ...props }) => {
+            const text = String(children).trim();
+            const match = /language-json-chart-(\w+)/.exec(className || '');
+            const looksLikeChart = text.includes('"chartType"') || text.includes('"datasets"') || text.includes('"labels"');
+            const isJson = /language-json/.test(className || '') || (text.startsWith('{')) || looksLikeChart;
+
+            if (!inline && (match || isJson || looksLikeChart)) {
+                // If it looks like a chart, we show the premium button immediately
+                // even if parsing fails (streaming). The chart page will handle full parsing.
+                if (looksLikeChart || match) {
+                    return (
+                        <div className="my-6 p-5 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200/60 dark:border-neutral-800/60 rounded-[1.25rem] flex items-center justify-between gap-4 transition-all hover:border-brand-500/30">
+                            <div className="flex items-center gap-4 flex-1 min-w-0">
+                                <div className="w-11 h-11 rounded-xl bg-brand-500/10 dark:bg-brand-500/20 flex items-center justify-center shrink-0">
+                                    <ChartBarIcon className="w-6 h-6 text-brand-600 dark:text-brand-400" />
+                                </div>
+                                <div className="min-w-0">
+                                    <h4 className="text-[14px] font-bold text-neutral-900 dark:text-white leading-tight">Visualization Ready</h4>
+                                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium truncate">Click to view</p>
+                                </div>
+                            </div>
+
+                            <button 
+                                type="button"
+                                onClick={() => {
+                                    const currentId = conversationIdRef.current || conversationId;
+                                    if (!currentId) {
+                                        toast.error("Syncing conversation... please wait for the first response.");
+                                        return;
+                                    }
+                                    setIsOpen(false);
+                                    setTimeout(() => {
+                                        const idxParam = props.messageIndex !== undefined ? `&scrollToIndex=${props.messageIndex}` : '';
+                                        navigate(`/dashboard/ai-chat?conversationId=${currentId}${idxParam}`);
+                                    }, 100);
+                                }} 
+                                className="shrink-0 px-4 py-2 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-[11px] font-bold rounded-xl transition-all hover:bg-black dark:hover:bg-neutral-100 active:scale-95 flex items-center gap-1.5"
+                            >
+                                <span>View</span>
+                                <ArrowUpRightIcon className="w-3 h-3" strokeWidth={2.5} />
+                            </button>
+                        </div>
+                    );
+                }
+
+                try {
+                    const cleanedJson = text
+                        .replace(/```json\n?/g, '')
+                        .replace(/```/g, '')
+                        .replace(/[\u0000-\u001F]+/g, '')
+                        .trim();
+
+                    let chartData = null;
+                    try {
+                        chartData = JSON.parse(cleanedJson);
+                    } catch (e) {
+                        try { chartData = JSON.parse(cleanedJson + '}'); } 
+                        catch (e2) {
+                            try { chartData = JSON.parse(cleanedJson + ']}'); } 
+                            catch (e3) {
+                                try { chartData = JSON.parse(cleanedJson + '}]}'); } 
+                                catch (e4) { throw e; }
+                            }
+                        }
+                    }
+                    
+                    const hasChartKeys = (obj) => {
+                        const keys = ['labels', 'label', 'datasets', 'dataset', 'chartType', 'series', 'categories', 'xAxis', 'yAxis', 'layout', 'metrics', 'charts'];
+                        const rootKeys = Object.keys(obj || {});
+                        const nestedKeys = (obj?.data && !Array.isArray(obj.data)) ? Object.keys(obj.data) : [];
+                        const isDataArray = Array.isArray(obj?.data);
+                        return keys.some(k => rootKeys.includes(k) || nestedKeys.includes(k)) || (isDataArray && rootKeys.includes('series'));
+                    };
+
+                    const looksLikeChart = text.includes('"chartType"') || text.includes('"datasets"') || text.includes('"labels"');
+
+                    if (!match && isJson && !hasChartKeys(chartData) && !looksLikeChart) {
+                        return (
+                            <div className="my-4 rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-zinc-900/50 p-4">
+                                <div className="flex items-center gap-2 mb-3 pb-2 border-b border-neutral-100 dark:border-neutral-800">
+                                    <DocumentTextIcon className="w-3.5 h-3.5 text-neutral-400" />
+                                    <span className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Raw Data / JSON</span>
+                                </div>
+                                <code className="text-[11px] font-mono text-neutral-800 dark:text-neutral-300 block whitespace-pre overflow-x-auto" {...props}>{children}</code>
+                            </div>
+                        );
+                    }
+                    
+                    return (
+                        <div className="my-8 relative group overflow-hidden">
+                            {/* Premium Card Background with Glow */}
+                            <div className="absolute inset-0 bg-brand-500/5 dark:bg-brand-500/10 blur-2xl rounded-[2.5rem] -z-10 group-hover:bg-brand-500/15 transition-colors duration-500" />
+                            
+                            <div className="relative flex flex-col sm:flex-row items-center justify-between gap-6 px-8 py-7 bg-white/80 dark:bg-neutral-900/40 backdrop-blur-xl border border-neutral-200/50 dark:border-neutral-800/50 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] transition-all duration-300 group-hover:translate-y-[-2px] group-hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)]">
+                                
+                                <div className="flex items-center gap-5 flex-1 min-w-0 w-full">
+                                    {/* Branded Icon with Pulse Effect */}
+                                    <div className="relative shrink-0 w-14 h-14 rounded-[1.25rem] bg-brand-500 flex items-center justify-center shadow-[0_10px_20px_rgba(59,130,246,0.3)] transition-transform duration-500 group-hover:rotate-6 group-hover:scale-110">
+                                        <ChartBarIcon className="w-7 h-7 text-white" />
+                                        <div className="absolute inset-0 rounded-[1.25rem] bg-brand-500 animate-ping opacity-20" />
+                                    </div>
+                                    
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="text-[16px] font-black text-neutral-900 dark:text-white tracking-tight leading-none mb-1.5 flex items-center gap-2">
+                                            Visual Insight Ready
+                                            <span className="hidden xs:inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black bg-brand-500/10 text-brand-600 dark:text-brand-400 uppercase tracking-widest border border-brand-500/20">
+                                                AI Analysis
+                                            </span>
+                                        </h4>
+                                        <p className="text-[13px] text-neutral-500 dark:text-neutral-400 font-medium">
+                                            Open full canvas for interactive charts.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <button 
+                                    type="button"
+                                    onClick={() => {
+                                        const currentId = conversationIdRef.current;
+                                        if (!currentId) {
+                                            toast.error("Syncing conversation... please try in a moment.");
+                                            return;
+                                        }
+                                        setIsOpen(false);
+                                        // Small delay to ensure panel closes smoothly before navigation
+                                        setTimeout(() => {
+                                            navigate(`/dashboard/ai-chat?conversationId=${currentId}`);
+                                        }, 100);
+                                    }} 
+                                    className="shrink-0 w-full sm:w-auto px-7 py-3.5 bg-neutral-900 dark:bg-white hover:bg-black dark:hover:bg-neutral-100 text-white dark:text-neutral-900 text-[12px] font-black rounded-2xl transition-all shadow-xl shadow-neutral-900/10 dark:shadow-white/10 active:scale-95 flex items-center justify-center gap-2 group/btn"
+                                >
+                                    <span>View Insight</span>
+                                    <ArrowUpRightIcon className="w-3.5 h-3.5 transition-transform group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" strokeWidth={3} />
+                                </button>
+                            </div>
+                        </div>
+                    );
+                } catch (err) {}
+            }
+
+            return inline
+                ? <code className="bg-neutral-100 dark:bg-neutral-800 px-1 py-0.5 rounded text-[11px] font-mono text-brand-600 dark:text-brand-400">{children}</code>
+                : <pre className="bg-neutral-900 text-neutral-100 p-2 rounded-lg text-[11px] overflow-x-auto my-2 border border-neutral-800 tracking-tight font-mono">{children}</pre>;
+        },
+    };
+    
+    const getMD = (idx) => ({
+        ...MD,
+        code: (props) => MD.code({ ...props, messageIndex: idx })
+    });
 
     /* ── Core send function ── */
     const sendMessage = useCallback(async (text) => {
@@ -195,8 +404,9 @@ const GlobalAiChat = () => {
                     try {
                         const data = JSON.parse(line.slice(6));
 
-                        if (data.conversationId && !conversationId) {
+                        if (data.conversationId) {
                             setConversationId(data.conversationId);
+                            conversationIdRef.current = data.conversationId;
                         }
 
                         if (data.chunk) {
@@ -306,8 +516,10 @@ const GlobalAiChat = () => {
     }, [isOpen]);
     
     useEffect(() => {
-        scrollToEnd(true);
-    }, [messages.length, scrollToEnd]);
+        if (messages.length > 0) {
+            scrollToEnd(true);
+        }
+    }, [messages.length]); // Scroll ONLY when messages are added, not on open/re-render
 
     /* ── Handle initial question from store ── */
     useEffect(() => {
@@ -334,6 +546,7 @@ const GlobalAiChat = () => {
     const handleReset = () => {
         setMessages([]);
         setConversationId(null);
+        conversationIdRef.current = null;
         setInput('');
     };
 
@@ -389,65 +602,61 @@ const GlobalAiChat = () => {
             {/* Chat Panel */}
             {isOpen && (
                 <div
-                    className="fixed bottom-24 right-6 z-[99998] w-[calc(100vw-48px)] sm:w-[400px] h-[550px] max-h-[calc(100vh-120px)] bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/60 rounded-[2rem] shadow-[0_32px_80px_-12px_rgba(0,0,0,0.4)] flex flex-col overflow-hidden transition-all duration-300"
+                    className="fixed bottom-24 right-6 z-[99998] w-[calc(100vw-48px)] sm:w-[400px] h-[550px] max-h-[calc(100vh-120px)] bg-white dark:bg-black border border-neutral-200/80 dark:border-neutral-800 rounded-[2rem] shadow-[0_32px_80px_-12px_rgba(0,0,0,0.6)] flex flex-col overflow-hidden transition-all duration-300"
                     style={{ animation: 'slideIn 0.3s cubic-bezier(0.22,1,0.36,1)' }}
                 >
                     {/* Header */}
-                    <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-neutral-800 bg-white dark:bg-neutral-900">
-                        <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-2xl bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700 flex items-center justify-center shadow-lg flex-shrink-0 animate-pulse p-1">
-                                <img src="/favicon.png" alt="RankPilot AI" className="w-full h-full object-contain" />
-                            </div>
-                            <div>
-                                <p className="text-sm font-black text-neutral-900 dark:text-white leading-tight">RankPilot AI</p>
-                                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-0.5">
-                                    Intelligent Analytics Pilot
-                                </p>
-                            </div>
+                    <div className="shrink-0 flex items-center justify-between px-6 py-5 border-b border-neutral-100 dark:border-neutral-900 bg-white dark:bg-black">
+                        <div className="flex flex-col">
+                            <h2 className="text-[15px] font-bold text-neutral-900 dark:text-white tracking-tight flex items-center gap-2">
+                                <SparklesIcon className="w-4 h-4 text-brand-500" />
+                                RankPilot Intelligence
+                            </h2>
+                            <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-[0.2em] mt-0.5">
+                                Pro Analytics Assistant
+                            </p>
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1.5">
                             <button
                                 onClick={handleReset}
                                 title="Reset Chat"
-                                className="w-8 h-8 flex items-center justify-center rounded-xl text-neutral-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all font-black"
+                                className="w-9 h-9 flex items-center justify-center rounded-2xl text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all"
                             >
                                 <ArrowPathIcon className="w-4 h-4" />
                             </button>
                             <button
                                 onClick={() => setIsOpen(false)}
-                                className="w-8 h-8 flex items-center justify-center rounded-xl text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all"
+                                className="w-9 h-9 flex items-center justify-center rounded-2xl text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all"
                             >
-                                <MinusIcon className="w-4 h-4" />
+                                <XMarkIcon className="w-5 h-5" />
                             </button>
                         </div>
                     </div>
 
                     {/* Messages Area */}
-                    <div ref={scrollContainerRef} className="flex-1 flex flex-col overflow-y-auto px-4 py-5 space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] bg-neutral-50/30 dark:bg-dark-bg/40">
+                    <div ref={scrollContainerRef} className="flex-1 flex flex-col overflow-y-auto px-6 py-6 space-y-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] bg-white dark:bg-black">
                         {messages.length === 0 && (
-                            <div className="flex flex-col items-center pt-2 pb-6 text-center min-h-min">
-                                <div className="shrink-0 w-16 h-16 rounded-3xl bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200/50 dark:border-neutral-700/50 flex items-center justify-center mb-4 rotate-3 group-hover:rotate-0 transition-transform">
-                                    <ChatBubbleLeftRightIcon className="w-8 h-8 text-neutral-300 dark:text-neutral-600" />
-                                </div>
-                                <h3 className="shrink-0 text-sm font-black text-neutral-900 dark:text-white uppercase tracking-tight">How can I help today?</h3>
-                                <p className="shrink-0 text-xs text-neutral-400 dark:text-neutral-500 mt-2 max-w-[240px] leading-relaxed font-medium">
-                                    I can analyze your marketing data, identify SEO gaps, or suggest growth strategies.
+                            <div className="flex flex-col items-center py-8 text-center min-h-full">
+                                <h3 className="text-xl font-bold text-neutral-900 dark:text-white tracking-tight mb-2">How can I assist you?</h3>
+                                <p className="text-sm text-neutral-400 dark:text-neutral-500 max-w-[280px] leading-relaxed font-medium">
+                                    I'm your AI analytics partner. Ask me anything about your site performance.
                                 </p>
-                                <div className="shrink-0 mt-6 grid grid-cols-1 gap-2.5 w-full max-w-[320px]">
+                                <div className="mt-10 grid grid-cols-1 gap-3 w-full max-w-[320px]">
                                     {suggestionsLoading ? (
-                                        [1, 2, 3].map(i => (
-                                            <div key={i} className="h-10 bg-neutral-100 dark:bg-neutral-800 rounded-2xl animate-pulse" />
+                                        [1, 2].map(i => (
+                                            <div key={i} className="h-12 bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl animate-pulse" />
                                         ))
                                     ) : (
-                                        (suggestions.length > 0 ? suggestions : [
-                                            "How is my site performing?",
-                                            "Top 5 organic keywords?",
-                                            "Where is my traffic leaving?",
+                                        (suggestions.length > 0 ? suggestions.slice(0, 4) : [
+                                            "How is my site performing overall?",
+                                            "Show my top 5 organic keywords.",
+                                            "Which pages have high traffic but low conversions?",
+                                            "Explain the drop in my GSC clicks.",
                                         ]).map((q, i) => (
                                             <button
                                                 key={i}
                                                 onClick={() => sendMessage(q)}
-                                                className="px-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/50 rounded-2xl text-[11px] font-bold text-neutral-500 dark:text-neutral-400 hover:text-brand-600 dark:hover:text-brand-400 hover:border-brand-500 transition-all text-left shadow-sm active:scale-95"
+                                                className="px-5 py-3.5 bg-neutral-50 dark:bg-neutral-800/30 border border-neutral-100 dark:border-neutral-700/30 rounded-2xl text-[12px] font-bold text-neutral-500 dark:text-neutral-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-white dark:hover:bg-neutral-800 hover:border-brand-500/30 hover:shadow-xl hover:shadow-brand-500/5 transition-all text-left active:scale-95"
                                             >
                                                 {q}
                                             </button>
@@ -458,58 +667,21 @@ const GlobalAiChat = () => {
                         )}
 
                         {messages.map((msg, idx) => (
-                            <div
-                                key={idx}
-                                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                                style={{ animation: 'fadeIn 0.2s ease-out' }}
-                            >
-                                <div className={`flex items-start gap-2.5 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                    <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center shadow-sm text-[10px] font-black mt-1 overflow-hidden ${msg.role === 'user' ? 'bg-neutral-800 text-white' : 'bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700'
-                                        }`}>
-                                        {msg.role === 'user' ? (
-                                            user?.avatar ? (
-                                                <img src={user.avatar} alt="User" className="w-full h-full object-cover" />
-                                            ) : (
-                                                user?.name?.charAt(0)?.toUpperCase() || 'U'
-                                            )
-                                        ) : (
-                                            <img src="/favicon.png" alt="AI" className="w-5 h-5 object-contain" />
-                                        )}
-                                    </div>
-                                    <div className={`max-w-[85%] ${msg.role === 'user' ? 'bg-brand-600 text-white rounded-2xl rounded-tr-sm shadow-lg shadow-brand-500/20 px-4 py-3' : 'bg-transparent'}`}>
-                                        {msg.isLoading ? (
-                                            <div className="bg-white dark:bg-neutral-800/80 border border-neutral-100 dark:border-neutral-700/50 px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm backdrop-blur-sm">
-                                                <TypingIndicator />
-                                            </div>
-                                        ) : msg.isError ? (
-                                            <div className="flex items-center gap-3.5 p-3.5 bg-red-50/50 dark:bg-red-900/10 border border-red-100/50 dark:border-red-900/30 rounded-2xl shadow-sm animate-in fade-in zoom-in duration-300">
-                                                <div className="shrink-0 w-8 h-8 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                                                    <ExclamationTriangleIcon className="w-4 h-4 text-red-600 dark:text-red-400" />
-                                                </div>
-                                                <div className="flex flex-col gap-0.5">
-                                                    <span className="text-[9px] font-black uppercase tracking-[0.15em] text-red-500/60 dark:text-red-400/40">AI Exception</span>
-                                                    <p className="text-[12px] font-bold text-red-700 dark:text-red-300 leading-snug">
-                                                        {msg.content}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="bg-white dark:bg-dark-card/60 border border-neutral-100 dark:border-neutral-700/40 px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm text-neutral-800 dark:text-neutral-100 text-[13px] leading-relaxed font-medium backdrop-blur-xl">
-                                                <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD}>
-                                                    {msg.content}
-                                                </ReactMarkdown>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
+                            <GlobalChatMessage 
+                                key={idx} 
+                                idx={idx}
+                                msg={msg} 
+                                MD={getMD(idx)}
+                                onEdit={(content) => { setInput(content); inputRef.current?.focus(); }}
+                                onRetry={(content) => sendMessage(content)}
+                            />
                         ))}
                         <div ref={messagesEndRef} />
                     </div>
 
                     {/* Input Area */}
-                    <div className="shrink-0 p-4 border-t border-neutral-100 dark:border-neutral-800 bg-white dark:bg-neutral-900">
-                        <div className="relative flex items-end gap-2 bg-neutral-100 dark:bg-neutral-800 border-none rounded-2xl px-4 py-2.5 focus-within:ring-2 focus-within:ring-brand-500/20 transition-all">
+                    <div className="shrink-0 p-4 bg-white dark:bg-black border-t border-neutral-100 dark:border-neutral-900">
+                        <div className="relative flex items-end gap-2 bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200/50 dark:border-neutral-700/50 rounded-[1.5rem] px-4 py-2.5 focus-within:ring-2 focus-within:ring-brand-500/20 focus-within:bg-white dark:focus-within:bg-neutral-800 transition-all shadow-inner">
                             <textarea
                                 ref={inputRef}
                                 rows={1}
@@ -517,23 +689,20 @@ const GlobalAiChat = () => {
                                 onChange={e => setInput(e.target.value)}
                                 onKeyDown={handleKeyDown}
                                 disabled={loading}
-                                placeholder="Type a message..."
-                                className="flex-1 bg-transparent border-none outline-none text-sm text-neutral-800 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 resize-none max-h-32 min-h-[22px] py-2 leading-normal font-medium"
+                                placeholder="Message RankPilot..."
+                                className="flex-1 bg-transparent border-none outline-none text-[14px] text-neutral-800 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 resize-none max-h-32 min-h-[24px] py-1.5 leading-relaxed font-medium"
                             />
                             <button
                                 onClick={() => sendMessage()}
                                 disabled={!input.trim() || loading}
-                                className="shrink-0 w-8 h-8 flex items-center justify-center rounded-xl bg-brand-600 text-white shadow-lg shadow-brand-500/30 disabled:opacity-50 disabled:shadow-none hover:bg-brand-700 transition-all active:scale-90"
+                                className="shrink-0 w-9 h-9 flex items-center justify-center rounded-2xl bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-xl disabled:opacity-20 hover:scale-105 active:scale-95 transition-all"
                             >
                                 {loading ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <PaperAirplaneIcon className="w-4 h-4" />}
                             </button>
                         </div>
-                        <div className="flex items-center justify-center gap-2 mt-2.5 opacity-40 select-none">
-                            <SparklesIcon className="w-2.5 h-2.5 text-brand-500" />
-                            <p className="text-[9px] text-neutral-400 font-black uppercase tracking-[0.2em]">
-                                Powered by <span className="text-brand-600 dark:text-brand-400">RankPilot Intelligence</span>
-                            </p>
-                        </div>
+                        <p className="text-[10px] text-center text-neutral-400 font-bold mt-4 uppercase tracking-[0.15em] opacity-40">
+                            RankPilot AI can make mistakes.
+                        </p>
                     </div>
                 </div>
             )}

@@ -585,6 +585,9 @@ export const askAi = async (req, res) => {
         // 2. Save User Message Immediately
         await Message.create({ conversationId: convId, role: 'user', content: question });
 
+        // Send conversationId immediately so UI can use it during streaming
+        res.write(`data: ${JSON.stringify({ conversationId: convId })}\n\n`);
+
         const chat = await startAgenticChat(chatHistory, aiTools, systemIns + dateContext);
         
         // --- PROPER STREAMING LOOP ---
