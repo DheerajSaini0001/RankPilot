@@ -23,8 +23,17 @@ import {
   ScatterChart,
   Scatter,
   ZAxis,
-  ComposedChart
+  ComposedChart,
+  FunnelChart,
+  Funnel,
+  LabelList,
+  Treemap,
+  RadialBarChart,
+  RadialBar
 } from 'recharts';
+import { ComposableMap, Geographies, Geography, Marker } from "react-simple-maps";
+
+const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
 const ChartRenderer = ({ type, data }) => {
   // Global Deep Search: Finds a key anywhere in the object tree
@@ -127,7 +136,7 @@ const ChartRenderer = ({ type, data }) => {
 
     const typeLower = type.toLowerCase();
 
-    if (typeLower === 'line') {
+    if (typeLower === 'line' || typeLower === 'spline') {
       return (
         <LineChart {...commonProps}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'} />
@@ -202,6 +211,86 @@ const ChartRenderer = ({ type, data }) => {
               dataKey={ds.label} 
               fill={ds.backgroundColor || ds.fill || ds.borderColor || colors[i % colors.length]} 
               radius={[4, 4, 0, 0]} 
+            />
+          ))}
+        </BarChart>
+      );
+    }
+
+    if (typeLower === 'stacked_bar') {
+      return (
+        <BarChart {...commonProps}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'} />
+          <XAxis 
+            dataKey="name" 
+            axisLine={false} 
+            tickLine={false} 
+            tick={{ fontSize: 10, fill: '#9ca3af' }}
+            dy={10}
+          />
+          <YAxis 
+            axisLine={false} 
+            tickLine={false} 
+            tick={{ fontSize: 10, fill: '#9ca3af' }}
+          />
+          <Tooltip 
+            contentStyle={{ 
+              borderRadius: '12px', 
+              border: 'none', 
+              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', 
+              fontSize: '12px',
+              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+            }}
+          />
+          <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '20px' }} />
+          {actualData.datasets.map((ds, i) => (
+            <Bar 
+              key={ds.label} 
+              dataKey={ds.label} 
+              fill={ds.backgroundColor || ds.fill || ds.borderColor || colors[i % colors.length]} 
+              stackId="a"
+            />
+          ))}
+        </BarChart>
+      );
+    }
+
+    if (typeLower === 'horizontal_bar') {
+      return (
+        <BarChart layout="vertical" {...commonProps}>
+          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'} />
+          <XAxis 
+            type="number"
+            axisLine={false} 
+            tickLine={false} 
+            tick={{ fontSize: 10, fill: '#9ca3af' }}
+          />
+          <YAxis 
+            type="category"
+            dataKey="name" 
+            axisLine={false} 
+            tickLine={false} 
+            tick={{ fontSize: 10, fill: '#9ca3af' }}
+            width={100}
+          />
+          <Tooltip 
+            contentStyle={{ 
+              borderRadius: '12px', 
+              border: 'none', 
+              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', 
+              fontSize: '12px',
+              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+            }}
+          />
+          <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '20px' }} />
+          {actualData.datasets.map((ds, i) => (
+            <Bar 
+              key={ds.label} 
+              dataKey={ds.label} 
+              fill={ds.backgroundColor || ds.fill || ds.borderColor || colors[i % colors.length]} 
+              radius={[0, 4, 4, 0]} 
             />
           ))}
         </BarChart>
@@ -370,6 +459,50 @@ const ChartRenderer = ({ type, data }) => {
       );
     }
 
+    if (typeLower === 'bubble') {
+      return (
+        <ScatterChart {...commonProps}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'} />
+          <XAxis 
+            type="category" 
+            dataKey="name" 
+            name="label"
+            axisLine={false} 
+            tickLine={false} 
+            tick={{ fontSize: 10, fill: '#9ca3af' }}
+          />
+          <YAxis 
+            type="number" 
+            axisLine={false} 
+            tickLine={false} 
+            tick={{ fontSize: 10, fill: '#9ca3af' }}
+          />
+          <ZAxis type="number" range={[100, 2000]} />
+          <Tooltip 
+            cursor={{ strokeDasharray: '3 3' }} 
+            contentStyle={{ 
+              borderRadius: '12px', 
+              border: 'none', 
+              fontSize: '12px',
+              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+            }} 
+          />
+          <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '20px' }} />
+          {actualData.datasets.map((ds, i) => (
+            <Scatter 
+              key={ds.label} 
+              name={ds.label} 
+              data={chartData} 
+              dataKey={ds.label} 
+              fill={colors[i % colors.length]} 
+              fillOpacity={0.6}
+            />
+          ))}
+        </ScatterChart>
+      );
+    }
+
     if (typeLower === 'composed') {
       return (
         <ComposedChart {...commonProps}>
@@ -406,9 +539,192 @@ const ChartRenderer = ({ type, data }) => {
       );
     }
 
+    if (typeLower === 'funnel') {
+      const funnelData = chartData.map(item => ({
+        name: item.name,
+        value: actualData.datasets[0] ? item[actualData.datasets[0].label] : 0,
+        fill: colors[0]
+      })).sort((a, b) => b.value - a.value);
+
+      return (
+        <FunnelChart>
+          <Tooltip 
+            contentStyle={{ 
+              borderRadius: '12px', 
+              border: 'none', 
+              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', 
+              fontSize: '12px',
+              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+            }}
+          />
+          <Funnel
+            dataKey="value"
+            data={funnelData}
+            isAnimationActive
+          >
+            <LabelList position="right" fill="#000" stroke="none" dataKey="name" fontSize={11} className="dark:fill-white" />
+            {funnelData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+            ))}
+          </Funnel>
+        </FunnelChart>
+      );
+    }
+
+    if (typeLower === 'radial') {
+      const radialData = chartData.map((item, index) => ({
+        name: item.name,
+        value: actualData.datasets[0] ? item[actualData.datasets[0].label] : 0,
+        fill: colors[index % colors.length]
+      }));
+
+      return (
+        <RadialBarChart cx="50%" cy="50%" innerRadius="10%" outerRadius="80%" barSize={10} data={radialData}>
+          <RadialBar
+            minAngle={15}
+            background
+            clockWise
+            dataKey="value"
+          />
+          <Legend iconSize={10} layout="vertical" verticalAlign="middle" wrapperStyle={{ right: 0, fontSize: '11px', fontWeight: 'bold' }} />
+          <Tooltip 
+            contentStyle={{ 
+              borderRadius: '12px', 
+              border: 'none', 
+              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', 
+              fontSize: '12px',
+              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+            }}
+          />
+        </RadialBarChart>
+      );
+    }
+
+    if (typeLower === 'treemap') {
+      const treemapData = chartData.map(item => ({
+        name: item.name,
+        size: actualData.datasets[0] ? item[actualData.datasets[0].label] : 0
+      }));
+
+      return (
+        <Treemap
+          data={treemapData}
+          dataKey="size"
+          aspectRatio={4 / 3}
+          stroke="#fff"
+          fill={colors[0]}
+        >
+          <Tooltip 
+            contentStyle={{ 
+              borderRadius: '12px', 
+              border: 'none', 
+              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', 
+              fontSize: '12px',
+              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
+              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
+            }}
+          />
+        </Treemap>
+      );
+    }
+
+    if (typeLower === 'geo_map') {
+      // Create a value lookup for colors/sizing based on country names or codes
+      // data typically has labels = ["USA", "India", "UK"] and dataset[0].data = [100, 200, 50]
+      const maxVal = Math.max(...(actualData.datasets[0]?.data || [1]));
+      const countryData = {};
+      actualData.labels.forEach((label, i) => {
+        countryData[label.toLowerCase()] = actualData.datasets[0]?.data[i] || 0;
+      });
+
+      return (
+        <div className="w-full h-full flex items-center justify-center">
+            <ComposableMap projectionConfig={{ scale: 140 }}>
+            <Geographies geography={geoUrl}>
+                {({ geographies }) =>
+                geographies.map((geo) => {
+                    const countryName = geo.properties.name.toLowerCase();
+                    const val = countryData[countryName] || 0;
+                    const opacity = val ? 0.3 + (val / maxVal) * 0.7 : 0.1;
+                    return (
+                        <Geography
+                            key={geo.rsmKey}
+                            geography={geo}
+                            fill={val ? colors[0] : document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'}
+                            style={{
+                                default: { outline: "none", opacity: val ? opacity : 1 },
+                                hover: { outline: "none", fill: colors[1] },
+                                pressed: { outline: "none", fill: colors[2] },
+                            }}
+                        />
+                    );
+                })
+                }
+            </Geographies>
+            </ComposableMap>
+        </div>
+      );
+    }
+
     return null;
   };
 
+
+  if (type.toLowerCase() === 'table') {
+    const isArrayFormat = actualData.datasets && actualData.datasets[0] && Array.isArray(actualData.datasets[0].data[0]);
+    
+    return (
+      <div className="flex flex-col w-full bg-white dark:bg-dark-card/40 border border-neutral-200 dark:border-neutral-800/60 rounded-3xl p-5 shadow-xl relative animate-in fade-in duration-700 backdrop-blur-md overflow-hidden">
+        {actualData.title && (
+          <h4 className="shrink-0 text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-500 mb-4 text-center">
+            {actualData.title}
+          </h4>
+        )}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-sm">
+            <thead className="bg-neutral-50 dark:bg-neutral-800/50">
+              <tr>
+                {isArrayFormat ? (
+                  actualData.labels.map((label, idx) => (
+                    <th key={idx} className="p-3 border-b border-neutral-200 dark:border-neutral-700 font-bold text-neutral-900 dark:text-neutral-100">{label}</th>
+                  ))
+                ) : (
+                  <>
+                    <th className="p-3 border-b border-neutral-200 dark:border-neutral-700 font-bold text-neutral-900 dark:text-neutral-100">Name</th>
+                    {actualData.datasets.map(ds => (
+                      <th key={ds.label} className="p-3 border-b border-neutral-200 dark:border-neutral-700 font-bold text-neutral-900 dark:text-neutral-100">{ds.label}</th>
+                    ))}
+                  </>
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {isArrayFormat ? (
+                actualData.datasets[0].data.map((rowArr, i) => (
+                  <tr key={i} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors border-b border-neutral-100 dark:border-neutral-800/50 last:border-0">
+                    {rowArr.map((cell, j) => (
+                      <td key={j} className="p-3 text-neutral-700 dark:text-neutral-300 font-medium">{cell}</td>
+                    ))}
+                  </tr>
+                ))
+              ) : (
+                chartData.map((row, i) => (
+                  <tr key={i} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors border-b border-neutral-100 dark:border-neutral-800/50 last:border-0">
+                    <td className="p-3 text-neutral-700 dark:text-neutral-300 font-medium">{row.name}</td>
+                    {actualData.datasets.map(ds => (
+                      <td key={ds.label} className="p-3 text-neutral-600 dark:text-neutral-400">{row[ds.label]}</td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col w-full h-[320px] sm:h-[360px] bg-white dark:bg-dark-card/40 border border-neutral-200 dark:border-neutral-800/60 rounded-3xl sm:rounded-[2rem] p-5 sm:p-6 shadow-xl relative animate-in fade-in zoom-in duration-700 backdrop-blur-md">

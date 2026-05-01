@@ -35,6 +35,7 @@ import { getApiUrl } from '../api/index';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import ChartRenderer from '../components/ai/ChartRenderer';
+import DashboardCanvas from '../components/ai/DashboardCanvas';
 
 const MarkdownComponents = {
     code({ inline, className, children, ...props }) {
@@ -67,7 +68,7 @@ const MarkdownComponents = {
                 
                 
                 const hasChartKeys = (obj) => {
-                    const keys = ['labels', 'label', 'datasets', 'dataset', 'chartType', 'series', 'categories', 'xAxis', 'yAxis'];
+                    const keys = ['labels', 'label', 'datasets', 'dataset', 'chartType', 'series', 'categories', 'xAxis', 'yAxis', 'layout', 'metrics', 'charts'];
                     const rootKeys = Object.keys(obj || {});
                     const nestedKeys = (obj?.data && !Array.isArray(obj.data)) ? Object.keys(obj.data) : [];
                     const isDataArray = Array.isArray(obj?.data);
@@ -87,6 +88,32 @@ const MarkdownComponents = {
                 }
                 
                 const finalType = match ? match[1] : (chartData.chartType || 'line');
+
+                if (chartData.layout === 'dashboard' || finalType === 'dashboard') {
+                    // Trigger canvas open on mount automatically for the first time
+                    setTimeout(() => window.dispatchEvent(new CustomEvent('open-ai-canvas', { detail: chartData })), 50);
+                    
+                    return (
+                        <div className="my-4 p-4 border border-brand-500/20 bg-brand-50 dark:bg-brand-900/10 rounded-2xl flex flex-wrap items-center justify-between gap-4 shadow-sm overflow-hidden relative">
+                            <div className="flex items-center gap-3 flex-1 min-w-[220px]">
+                                 <div className="w-10 h-10 shrink-0 rounded-xl bg-brand-500 text-white flex items-center justify-center shadow-md shadow-brand-500/30">
+                                      <ChartBarIcon className="w-5 h-5" />
+                                 </div>
+                                 <div className="min-w-0">
+                                      <p className="text-sm font-black text-neutral-900 dark:text-white truncate">AI Dashboard Ready</p>
+                                      <p className="text-[11px] font-bold text-neutral-500 truncate">Interactive canvas generated</p>
+                                 </div>
+                            </div>
+                            <button 
+                                type="button"
+                                onClick={() => window.dispatchEvent(new CustomEvent('open-ai-canvas', { detail: chartData }))} 
+                                className="shrink-0 px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-black rounded-xl transition-all shadow-sm active:scale-95 text-center ml-auto"
+                            >
+                                View Canvas
+                            </button>
+                        </div>
+                    );
+                }
 
                 return (
                     <div className="my-8 w-full overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -275,6 +302,9 @@ const AIChatPage = () => {
     const [suggestions, setSuggestions] = useState([]);
     const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
+    const [isCanvasOpen, setIsCanvasOpen] = useState(false);
+    const [canvasData, setCanvasData] = useState(null);
+
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [isInsightOpen, setIsInsightOpen] = useState(false);
     const [chatToDelete, setChatToDelete] = useState(null);
@@ -289,9 +319,14 @@ const AIChatPage = () => {
             textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 160)}px`;
         }
     }, [query]);
-
-
-
+    useEffect(() => {
+        const handleOpenCanvas = (e) => {
+            setCanvasData(e.detail);
+            setIsCanvasOpen(true);
+        };
+        window.addEventListener('open-ai-canvas', handleOpenCanvas);
+        return () => window.removeEventListener('open-ai-canvas', handleOpenCanvas);
+    }, []);
     useEffect(() => {
         loadConversations();
         loadWeeklyInsight();
@@ -682,9 +717,14 @@ const AIChatPage = () => {
                         </div>
                     )}
 
-                    {/* CHAT AREA */}
-                    <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-                        <div ref={chatContainerRef} className="flex-1 min-h-0 flex flex-col overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                    {/* CENTER COLUMN: Split Area (Left: Chat+Input, Right: Canvas) */}
+                    <div className="flex-1 flex min-w-0 bg-white dark:bg-dark-card overflow-hidden relative">
+                        
+                        {/* LEFT: Chat Container + Input */}
+                        <div className={`flex flex-col h-full transition-all duration-300 ${isCanvasOpen ? 'w-full lg:w-1/3 border-r border-neutral-100 dark:border-neutral-800 lg:flex hidden' : 'w-full'}`}>
+                            
+                            {/* Chat Scroll Area */}
+                            <div ref={chatContainerRef} className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                             {messages.length === 0 ? (
                                 /* 5. EMPTY STATE — centered, compact */
                                 <div className="flex-1 flex flex-col items-center py-6 sm:py-12 px-4 sm:px-10 my-auto w-full">
@@ -764,7 +804,7 @@ const AIChatPage = () => {
                             ) : (
                                 /* 6. MESSAGES AREA — hidden scrollbar */
                                 <div className="px-3 sm:px-5 md:px-8 py-5 sm:py-8">
-                                    <div className="max-w-3xl mx-auto w-full space-y-6 pb-4">
+                                    <div className={`${isCanvasOpen ? 'w-full' : 'max-w-3xl mx-auto'} w-full space-y-6 pb-4 transition-all duration-300`}>
                                         {messages.map((msg, idx) => (
                                             <ChatMessage key={idx} msg={msg} userName={user?.name} userAvatar={user?.avatar} />
                                         ))}
@@ -774,12 +814,10 @@ const AIChatPage = () => {
                             )}
                         </div>
 
-                        {/* 7. BOTTOM INPUT BAR — shrink-0, always at bottom */}
-                        <div className="shrink-0 border-t border-neutral-100 dark:border-neutral-800 px-3 sm:px-4 py-4 bg-white dark:bg-dark-card w-full">
-
-
+                        {/* 7. BOTTOM INPUT BAR — shrink-0, always at bottom of left column */}
+                        <div className="shrink-0 border-t border-neutral-100 dark:border-neutral-800 px-3 sm:px-4 py-4 bg-white dark:bg-dark-card w-full z-10">
                             {/* Input form */}
-                            <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto">
+                            <form onSubmit={handleSendMessage} className={`${isCanvasOpen ? 'w-full' : 'max-w-3xl mx-auto'}`}>
                                 <div className="flex items-end gap-2 bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-2xl px-2.5 sm:px-3 py-2 sm:py-2.5 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/10 transition-all shadow-sm">
                                     {/* Left action buttons */}
                                     <div className="flex items-center gap-0.5 flex-shrink-0 pb-0.5">
@@ -832,7 +870,15 @@ const AIChatPage = () => {
                                 </p>
                             </form>
                         </div>
-                    </div>
+                    </div> {/* End of LEFT Column */}
+
+                    {/* RIGHT: Canvas Container */}
+                    {isCanvasOpen && (
+                        <div className="flex-1 h-full w-full lg:w-2/3 bg-neutral-50 dark:bg-neutral-950 overflow-hidden shadow-2xl relative">
+                            <DashboardCanvas data={canvasData} onClose={() => setIsCanvasOpen(false)} />
+                        </div>
+                    )}
+                </div> {/* End of CENTER COLUMN */}
 
                     {/* 4. INSIGHT DRAWER */}
                     {isInsightOpen && (

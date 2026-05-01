@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { useLocation } from 'react-router-dom';
 import {
     SparklesIcon,
     XMarkIcon,
@@ -131,6 +132,9 @@ const TypingIndicator = () => {
 const GlobalAiChat = () => {
     const { user, token } = useAuthStore();
     const { activeSiteId } = useAccountsStore();
+    const location = useLocation();
+
+    if (location.pathname === '/dashboard/ai-chat') return null;
 
     const { isOpen, setIsOpen, initialQuestion, clearInitialQuestion } = useAiChatStore();
     const [messages, setMessages] = useState([]);
