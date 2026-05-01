@@ -39,9 +39,9 @@ const MD = {
         if (!inline && (match || isJson)) {
             try {
                 const cleanedJson = text
-                    .replace(/\/\/.*/g, '') 
-                    .replace(/\/\*[\s\S]*?\*\//g, '') 
-                    .replace(/\n$/g, '') 
+                    .replace(/```json\n?/g, '')
+                    .replace(/```/g, '')
+                    .replace(/[\u0000-\u001F]+/g, '')
                     .trim();
 
                 const chartData = JSON.parse(cleanedJson);
@@ -74,6 +74,16 @@ const MD = {
                     </div>
                 );
             } catch (err) {
+                if (text.trim().endsWith('}') || text.trim().endsWith(']')) {
+                    return (
+                        <div className="my-3 rounded-xl overflow-hidden border border-red-200 dark:border-red-900/30 shadow-sm bg-red-50 dark:bg-red-900/10 p-3">
+                            <div className="flex items-center gap-2 mb-2 pb-1 border-b border-red-100 dark:border-red-900/20">
+                                <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">Malformed Chart Data</span>
+                            </div>
+                            <code className="text-[10px] font-mono text-red-400 block whitespace-pre overflow-x-auto">{text}</code>
+                        </div>
+                    );
+                }
                 // Fallback to normal code block on error
             }
         }
@@ -133,6 +143,7 @@ const GlobalAiChat = () => {
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
     const panelRef = useRef(null);
+    const scrollContainerRef = useRef(null);
 
     /* ── Core send function ── */
     const sendMessage = useCallback(async (text) => {
@@ -198,6 +209,13 @@ const GlobalAiChat = () => {
                                 }
                                 return updated;
                             });
+                            
+                            if (scrollContainerRef.current) {
+                                const container = scrollContainerRef.current;
+                                if (container.scrollHeight - container.scrollTop - container.clientHeight < 150) {
+                                    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+                                }
+                            }
                         }
 
                         if (data.error) {
@@ -207,9 +225,9 @@ const GlobalAiChat = () => {
                                 if (last?.role === 'assistant') {
                                     updated[updated.length - 1] = {
                                         ...last,
-                                        content: data.error,
+                                        content: accumulated ? `${accumulated}\n\n**⚠️ AI Interrupted:** ${data.error}` : data.error,
                                         isLoading: false,
-                                        isError: true
+                                        isError: !accumulated
                                     };
                                 }
                                 return updated;
@@ -269,15 +287,23 @@ const GlobalAiChat = () => {
     }, [activeSiteId]);
 
     /* ── Scroll to bottom ── */
-    useEffect(() => {
-        if (isOpen) {
+    const scrollToEnd = useCallback((force = false) => {
+        if (!isOpen) return;
+        if (!scrollContainerRef.current) return;
+        
+        const container = scrollContainerRef.current;
+        const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+        
+        if (force || isNearBottom) {
             setTimeout(() => {
-                if (messages.length > 0) {
-                    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-                }
-            }, 60);
+                messagesEndRef.current?.scrollIntoView({ behavior: force ? 'smooth' : 'auto' });
+            }, 10);
         }
-    }, [messages, isOpen]);
+    }, [isOpen]);
+    
+    useEffect(() => {
+        scrollToEnd(true);
+    }, [messages.length, scrollToEnd]);
 
     /* ── Handle initial question from store ── */
     useEffect(() => {
@@ -393,7 +419,7 @@ const GlobalAiChat = () => {
                     </div>
 
                     {/* Messages Area */}
-                    <div className="flex-1 flex flex-col overflow-y-auto px-4 py-5 space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] bg-neutral-50/30 dark:bg-dark-bg/40">
+                    <div ref={scrollContainerRef} className="flex-1 flex flex-col overflow-y-auto px-4 py-5 space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] bg-neutral-50/30 dark:bg-dark-bg/40">
                         {messages.length === 0 && (
                             <div className="flex flex-col items-center pt-2 pb-6 text-center min-h-min">
                                 <div className="shrink-0 w-16 h-16 rounded-3xl bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200/50 dark:border-neutral-700/50 flex items-center justify-center mb-4 rotate-3 group-hover:rotate-0 transition-transform">

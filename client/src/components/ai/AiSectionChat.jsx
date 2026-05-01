@@ -32,9 +32,9 @@ const MD = {
         if (!inline && (match || isJson)) {
             try {
                 const cleanedJson = text
-                    .replace(/\/\/.*/g, '') 
-                    .replace(/\/\*[\s\S]*?\*\//g, '') 
-                    .replace(/\n$/g, '') 
+                    .replace(/```json\n?/g, '')
+                    .replace(/```/g, '')
+                    .replace(/[\u0000-\u001F]+/g, '')
                     .trim();
 
                 const chartData = JSON.parse(cleanedJson);
@@ -67,6 +67,16 @@ const MD = {
                     </div>
                 );
             } catch (err) {
+                if (text.trim().endsWith('}') || text.trim().endsWith(']')) {
+                    return (
+                        <div className="my-3 rounded-xl overflow-hidden border border-red-200 dark:border-red-900/30 shadow-sm bg-red-50 dark:bg-red-900/10 p-3">
+                            <div className="flex items-center gap-2 mb-2 pb-1 border-b border-red-100 dark:border-red-900/20">
+                                <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">Malformed Chart Data</span>
+                            </div>
+                            <code className="text-[10px] font-mono text-red-400 block whitespace-pre overflow-x-auto">{text}</code>
+                        </div>
+                    );
+                }
                 // Fallback
             }
         }
@@ -130,13 +140,26 @@ const AiSectionChat = ({
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
     const panelRef = useRef(null);
+    const scrollContainerRef = useRef(null);
 
     /* ── Scroll to bottom whenever messages update ── */
-    useEffect(() => {
-        if (isOpen) {
-            setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 60);
+    const scrollToEnd = useCallback((force = false) => {
+        if (!isOpen) return;
+        if (!scrollContainerRef.current) return;
+        
+        const container = scrollContainerRef.current;
+        const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+        
+        if (force || isNearBottom) {
+            setTimeout(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: force ? 'smooth' : 'auto' });
+            }, 10);
         }
-    }, [messages, isOpen]);
+    }, [isOpen]);
+
+    useEffect(() => {
+        scrollToEnd(true);
+    }, [messages.length, scrollToEnd]);
 
     /* ── Focus input when panel opens ── */
     useEffect(() => {
@@ -195,6 +218,7 @@ const AiSectionChat = ({
             { role: 'assistant', content: '', isLoading: true }
         ]);
         setLoading(true);
+        let accumulated = '';
 
         try {
             const url = getApiUrl('/ai/ask');
@@ -223,7 +247,6 @@ const AiSectionChat = ({
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
-            let accumulated = '';
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -247,6 +270,13 @@ const AiSectionChat = ({
                                 }
                                 return updated;
                             });
+                            
+                            if (scrollContainerRef.current) {
+                                const container = scrollContainerRef.current;
+                                if (container.scrollHeight - container.scrollTop - container.clientHeight < 150) {
+                                    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+                                }
+                            }
                         }
                         if (data.error) throw new Error(data.error);
                     } catch { }
@@ -263,9 +293,9 @@ const AiSectionChat = ({
                 if (last?.role === 'assistant') {
                     updated[updated.length - 1] = {
                         ...last,
-                        content: friendlyMsg,
+                        content: accumulated ? `${accumulated}\n\n**⚠️ AI Interrupted:** ${friendlyMsg}` : friendlyMsg,
                         isLoading: false,
-                        isError: true,
+                        isError: !accumulated,
                         errorType,
                         retryQuestion: failedQuestion,
                     };
@@ -367,7 +397,7 @@ const AiSectionChat = ({
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto px-4 sm:px-5 md:px-6 py-4 sm:py-5 md:py-6 space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 sm:px-5 md:px-6 py-4 sm:py-5 md:py-6 space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
 
                     {/* Empty state */}
                     {messages.length === 0 && !loading && (
