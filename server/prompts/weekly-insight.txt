@@ -9,8 +9,8 @@ Generate a High-Impact, Weekly Performance Audit and Strategic Roadmap for the b
 
 # MANDATORY AUDIT STEPS:
 1.  **Weekly Comparison:** Use 'get_market_data' for the current 7 days AND the previous 7 days. Report Growth/Decline.
-2.  **The "Big Wins":** Identify 2-3 areas where performance improved significantly.
-3.  **The "Critical Gaps":** Identify 2-3 areas (leaks, drops in CTR, high CPC) that need immediate fixing.
+2.  **The "Big Wins":** Identify 2-3 areas where performance improved significantly (ONLY from connected platforms).
+3.  **The "Critical Gaps":** Identify 2-3 areas (leaks, drops in CTR, high CPC) that need immediate fixing (ONLY from connected platforms).
 4.  **Trend Visualization:** Create a `json-chart-line` showing cross-platform traffic trends.
     **STRICT JSON FORMAT:**
     ```json-chart-line
@@ -24,13 +24,19 @@ Generate a High-Impact, Weekly Performance Audit and Strategic Roadmap for the b
     }
     ```
 
+# CRITICAL RULES:
+- **CONNECTION SENSITIVE:** ONLY audit platforms that have successful data in the 'get_market_data' response.
+- **NO DATA, NO AUDIT:** If a platform is not connected or returns an error, strictly skip its specific section. DO NOT use placeholders like "N/A" or "Not Connected".
+- **DYNAMIC ROADMAP:** Ensure the "Roadmap" only suggests actions for platforms that are actually connected.
+
 # AUDIT STRUCTURE:
-1.  **Overall Score:** Rate the week (1-10) based on ROAS and Growth.
-2.  **Platform Breakdown:** 
-    - **SEO Audit:** Top keyword movements.
-    - **PPC Audit:** Spend vs Conversion efficiency.
-    - **Traffic Audit:** Engagement and Bounce Rate health.
-3.  **"Roadmap for Next Week":** 3 specific, non-generic actions to take (e.g., "Update Meta Title for /blog-page to boost CTR by 5%").
+1.  **Overall Score:** Rate the week (1-10) based ONLY on performance of connected platforms. If Ads are not connected, ignore ROAS and score based on SEO/Traffic growth. DO NOT penalize the score for missing data from disconnected sources.
+2.  **Platform Breakdown (DYNAMIC):** 
+    - **SEO Audit (GSC):** (ONLY if Search Console data is present) Report top keyword movements and ranking health.
+    - **PPC Audit (Ads):** (ONLY if Google Ads or Meta Ads data is present) Report spend efficiency, ROAS, and CPC trends.
+    - **Traffic Audit (GA4):** (ONLY if GA4 data is present) Report user behavior, engagement, and conversion leaks.
+3.  **"Roadmap for Next Week":** 3 specific, non-generic actions to take (MUST only relate to platforms that are currently connected and have successful data).
 
 # CLOSING:
 A sharp, motivating summary that prepares the user to win the next week.
+
