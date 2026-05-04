@@ -601,14 +601,17 @@ export const askAi = async (req, res) => {
             
             // 1. Stream the text tokens if any
             for await (const chunk of result.stream) {
-                const chunkText = chunk.text();
-                if (chunkText) {
-                    finalContent += chunkText;
-                    // Sanitize against the advisory notice which Gemini sometimes appends
-                    const cleanChunk = chunkText.replace(/(\r?\n)*.*response is advisory only.*/gi, '');
-                    if (cleanChunk) {
-                        res.write(`data: ${JSON.stringify({ chunk: cleanChunk })}\n\n`);
+                try {
+                    const chunkText = chunk.text();
+                    if (chunkText) {
+                        finalContent += chunkText;
+                        const cleanChunk = chunkText.replace(/(\r?\n)*.*response is advisory only.*/gi, '');
+                        if (cleanChunk) {
+                            res.write(`data: ${JSON.stringify({ chunk: cleanChunk })}\n\n`);
+                        }
                     }
+                } catch (e) {
+                    // Ignore chunks that don't contain text (e.g. function call parts)
                 }
             }
 

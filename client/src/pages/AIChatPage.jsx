@@ -63,17 +63,17 @@ const MarkdownComponents = {
                     chartData = JSON.parse(cleanedJson);
                 } catch (e) {
                     // Auto-repair incomplete JSON from LLM stream
-                    try { chartData = JSON.parse(cleanedJson + '}'); } 
+                    try { chartData = JSON.parse(cleanedJson + '}'); }
                     catch (e2) {
-                        try { chartData = JSON.parse(cleanedJson + ']}'); } 
+                        try { chartData = JSON.parse(cleanedJson + ']}'); }
                         catch (e3) {
-                            try { chartData = JSON.parse(cleanedJson + '}]}'); } 
+                            try { chartData = JSON.parse(cleanedJson + '}]}'); }
                             catch (e4) { throw e; }
                         }
                     }
                 }
-                
-                
+
+
                 const hasChartKeys = (obj) => {
                     const keys = ['labels', 'label', 'datasets', 'dataset', 'chartType', 'series', 'categories', 'xAxis', 'yAxis', 'layout', 'metrics', 'charts'];
                     const rootKeys = Object.keys(obj || {});
@@ -93,7 +93,7 @@ const MarkdownComponents = {
                         </div>
                     );
                 }
-                
+
                 const finalType = match ? match[1] : (chartData.chartType || 'line');
 
                 if (chartData.layout === 'dashboard' || finalType === 'dashboard') {
@@ -102,21 +102,21 @@ const MarkdownComponents = {
                         window[`canvas_opened_${text.length}`] = true;
                         setTimeout(() => window.dispatchEvent(new CustomEvent('open-ai-canvas', { detail: chartData })), 50);
                     }
-                    
+
                     return (
                         <div className="my-6 p-5 border border-neutral-200 dark:border-neutral-800 rounded-2xl flex flex-wrap items-center justify-between gap-4 bg-neutral-50/50 dark:bg-neutral-900/20 transition-all hover:bg-white dark:hover:bg-neutral-900 shadow-sm hover:shadow-md group/card">
                             <div className="flex items-center gap-4 flex-1 min-w-[220px]">
-                                 <div className="w-10 h-10 shrink-0 rounded-xl bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 flex items-center justify-center transition-transform group-hover/card:scale-105">
-                                      <ChartBarIcon className="w-5 h-5" />
-                                 </div>
-                                 <div className="min-w-0">
-                                      <p className="text-[13px] font-black text-neutral-900 dark:text-white uppercase tracking-wider">AI Visualization Ready</p>
-                                      <p className="text-[11px] font-bold text-neutral-400 mt-0.5 tracking-tight">Interactive analytics dashboard generated</p>
-                                 </div>
+                                <div className="w-10 h-10 shrink-0 rounded-xl bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 flex items-center justify-center transition-transform group-hover/card:scale-105">
+                                    <ChartBarIcon className="w-5 h-5" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-[13px] font-black text-neutral-900 dark:text-white uppercase tracking-wider">AI Visualization Ready</p>
+                                    <p className="text-[11px] font-bold text-neutral-400 mt-0.5 tracking-tight">Interactive analytics dashboard generated</p>
+                                </div>
                             </div>
-                            <button 
+                            <button
                                 type="button"
-                                onClick={() => window.dispatchEvent(new CustomEvent('open-ai-canvas', { detail: chartData }))} 
+                                onClick={() => window.dispatchEvent(new CustomEvent('open-ai-canvas', { detail: chartData }))}
                                 className="shrink-0 px-6 py-2.5 bg-neutral-900 dark:bg-white hover:bg-black dark:hover:bg-neutral-100 text-white dark:text-neutral-900 text-[11px] font-black rounded-xl transition-all shadow-lg active:scale-95 text-center flex items-center gap-2 group/btn"
                             >
                                 <span>Open Canvas</span>
@@ -165,10 +165,92 @@ const MarkdownComponents = {
     },
     ul: ({ children }) => <ul className="space-y-2.5 mb-6 pl-6 list-disc marker:text-neutral-900 dark:marker:text-white marker:font-bold">{children}</ul>,
     ol: ({ children }) => <ol className="space-y-2.5 mb-6 pl-6 list-decimal marker:text-neutral-900 dark:marker:text-white marker:font-bold">{children}</ol>,
-    li: ({ children }) => <li className="text-[15px] text-neutral-700 dark:text-neutral-200 break-words [word-break:break-word] pl-2">{children}</li>,
+    li: ({ children }) => {
+        const getNestedText = (child) => {
+            if (typeof child === 'string' || typeof child === 'number') return child;
+            if (Array.isArray(child)) return child.map(getNestedText).join('');
+            if (child?.props?.children) return getNestedText(child.props.children);
+            return '';
+        };
+        const text = getNestedText(children);
+
+        // 1. Roadmap Item Detection: Emoji + Priority + (Timeframe) - Title: Description
+        // Using a more robust regex that handles different hyphens and extra colons
+        const roadmapMatch = text.match(/^(🔴|🟡|🟢)\s*(HIGH|MEDIUM|LOW)\s*\(([^)]+)\)\s*[-–—]\s*(.*?):\s*([\s\S]*)$/i);
+
+        if (roadmapMatch) {
+            const [_, icon, priority, timeframe, title, description] = roadmapMatch;
+            const borderClass = icon === '🔴' ? 'border-l-rose-500' : icon === '🟡' ? 'border-l-amber-500' : 'border-l-emerald-500';
+
+            return (
+                <div className={`my-6 p-5 pl-7 border-l-4 border border-neutral-100 dark:border-neutral-800 bg-white dark:bg-transparent rounded-xl shadow-sm transition-all hover:border-neutral-200 dark:hover:border-neutral-700 list-none`}>
+                    <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">{priority} • {timeframe}</span>
+                    </div>
+                    <h4 className="text-[16px] font-bold text-neutral-900 dark:text-white mb-2 leading-tight">
+                        {title}
+                    </h4>
+                    <p className="text-[14px] text-neutral-600 dark:text-neutral-300 leading-relaxed">
+                        {description}
+                    </p>
+                </div>
+            );
+        }
+
+        // 2. Original Priority List Item Detection
+        const priorityMatch = text.match(/^(🔴|🟡|🟢)/);
+
+        if (priorityMatch) {
+            const icon = priorityMatch[1];
+            const cleanText = text.replace(icon, '').trim();
+            const colorClass = icon === '🔴' ? 'text-rose-500' : icon === '🟡' ? 'text-amber-500' : 'text-emerald-500';
+
+            return (
+                <li className="flex items-start gap-2.5 mb-4 last:mb-0 group/item list-none">
+                    <span className={`shrink-0 mt-1 text-[14px]`}>{icon}</span>
+                    <span className="text-[15px] text-neutral-700 dark:text-neutral-200 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors">
+                        {cleanText}
+                    </span>
+                </li>
+            );
+        }
+        return <li className="text-[15px] text-neutral-700 dark:text-neutral-200 break-words [word-break:break-word] pl-2 mb-2 last:mb-0">{children}</li>;
+    },
     h1: ({ children }) => <h1 className="text-2xl font-black text-neutral-900 dark:text-white mt-12 mb-6 tracking-tight border-t border-neutral-200 dark:border-neutral-700 pt-10 first:mt-0 first:border-0 first:pt-0">{children}</h1>,
-    h2: ({ children }) => <h2 className="text-xl font-bold text-neutral-900 dark:text-white mt-10 mb-5 tracking-tight border-t border-neutral-200 dark:border-neutral-700/60 pt-8 first:mt-0 first:border-0 first:pt-0">{children}</h2>,
-    h3: ({ children }) => <h3 className="text-lg font-bold text-neutral-800 dark:text-neutral-200 mt-8 mb-4 pt-6 border-t border-neutral-200 dark:border-neutral-700/40 first:mt-0 first:border-0 first:pt-0">{children}</h3>,
+    h2: ({ children }) => {
+        const text = React.Children.toArray(children).join('');
+        const typeMatch = text.match(/^(🟢|🟡|🔴)/);
+
+        if (typeMatch) {
+            const icon = typeMatch[1];
+            const colorClass = icon === '🟢' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' :
+                icon === '🟡' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
+                    'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20';
+            return (
+                <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border ${colorClass} text-[11px] font-black uppercase tracking-[0.15em] my-6 animate-in fade-in slide-in-from-left-4 duration-500`}>
+                    <span className="animate-pulse">{icon}</span>
+                    {children}
+                </div>
+            );
+        }
+        return <h2 className="text-xl font-bold text-neutral-900 dark:text-white mt-10 mb-5 tracking-tight border-t border-neutral-200 dark:border-neutral-700/60 pt-8 first:mt-0 first:border-0 first:pt-0">{children}</h2>;
+    },
+    h3: ({ children }) => {
+        const text = React.Children.toArray(children).join('');
+        if (text.toLowerCase().includes('strategic roadmap')) {
+            return (
+                <div className="flex items-center gap-3 mb-6 mt-10 pb-4 border-b border-neutral-100 dark:border-neutral-800">
+                    <div className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-400">
+                        <SparklesIcon className="w-4 h-4" />
+                    </div>
+                    <h3 className="text-xl font-bold text-neutral-900 dark:text-white m-0 tracking-tight">
+                        {text.replace(/^[💡\s]+/, '')}
+                    </h3>
+                </div>
+            );
+        }
+        return <h3 className="text-lg font-bold text-neutral-800 dark:text-neutral-200 mt-8 mb-4 pt-6 border-t border-neutral-200 dark:border-neutral-700/40 first:mt-0 first:border-0 first:pt-0">{children}</h3>;
+    },
     p: ({ children }) => <p className="mb-5 leading-relaxed text-[15px] text-neutral-700 dark:text-neutral-200 break-words [word-break:break-word]">{children}</p>,
     strong: ({ children }) => <strong className="font-extrabold text-neutral-900 dark:text-white break-words [word-break:break-word]">{children}</strong>,
     table: ({ children }) => (
@@ -243,10 +325,10 @@ const ChatMessage = React.memo(({ msg, userName, userAvatar, onEdit, onRetry }) 
                 <div className="flex flex-col items-end max-w-[90%] sm:max-w-[75%] group">
                     <div className={`px-5 py-3.5 bg-zinc-100 dark:bg-zinc-800 rounded-2xl text-[15px] text-zinc-800 dark:text-zinc-100 leading-relaxed break-words relative overflow-hidden transition-all duration-500 shadow-sm dark:shadow-none ${(!isExpanded && isLongMessage) ? 'max-h-[280px]' : 'max-h-[5000px]'}`}>
                         <div className="whitespace-pre-wrap">{msg.content}</div>
-                        
+
                         {!isExpanded && isLongMessage && (
                             <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-zinc-100 dark:from-zinc-800 via-zinc-100/90 dark:via-zinc-800/90 to-transparent pointer-events-none flex items-end justify-start px-5 pb-3">
-                                <button 
+                                <button
                                     onClick={(e) => { e.stopPropagation(); setIsExpanded(true); }}
                                     className="text-[13px] font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 pointer-events-auto transition-colors"
                                 >
@@ -256,7 +338,7 @@ const ChatMessage = React.memo(({ msg, userName, userAvatar, onEdit, onRetry }) 
                         )}
                     </div>
                     {isExpanded && isLongMessage && (
-                        <button 
+                        <button
                             onClick={() => setIsExpanded(false)}
                             className="text-[12px] font-bold text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 mt-2 self-start pl-2 transition-colors"
                         >
@@ -286,54 +368,54 @@ const ChatMessage = React.memo(({ msg, userName, userAvatar, onEdit, onRetry }) 
     return (
         <div className="flex justify-start w-full max-w-full mb-6">
             <div className="flex-1 min-w-0 overflow-hidden w-full group pl-1">
-                    {msg.isError ? (
-                        <div className="px-4 py-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-800/30 rounded-xl text-sm text-red-600 dark:text-red-400">
+                {msg.isError ? (
+                    <div className="px-4 py-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-800/30 rounded-xl text-sm text-red-600 dark:text-red-400">
+                        <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={MarkdownComponents}
+                        >
+                            {msg.content}
+                        </ReactMarkdown>
+                    </div>
+                ) : (
+                    <>
+                        <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed text-neutral-800 dark:text-neutral-100 break-words [word-break:break-word] [&_a]:break-all">
+                            {msg.content ? (
                                 <ReactMarkdown
                                     remarkPlugins={[remarkGfm]}
-                                components={MarkdownComponents}
+                                    components={MarkdownComponents}
                                 >
                                     {msg.content}
                                 </ReactMarkdown>
-                        </div>
-                    ) : (
-                        <>
-                            <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed text-neutral-800 dark:text-neutral-100 break-words [word-break:break-word] [&_a]:break-all">
-                                {msg.content ? (
-                                    <ReactMarkdown
-                                        remarkPlugins={[remarkGfm]}
-                                        components={MarkdownComponents}
-                                    >
-                                        {msg.content}
-                                    </ReactMarkdown>
-                                ) : msg.isLoading ? (
-                                    <TypingIndicator />
-                                ) : (
-                                    <div className="py-2 text-neutral-400 font-medium italic text-[14px] flex items-center gap-2">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 animate-pulse" />
-                                        No response generated by the server.
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Actions Bar (Copy Only) */}
-                            {msg.content && !msg.isLoading && (
-                                <div className="flex items-center gap-2 mt-2 pt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                    <span className="text-[11px] font-medium text-neutral-400 mr-1 cursor-default" title={format(new Date(msg.createdAt || Date.now()), 'PPP p')}>
-                                        {format(new Date(msg.createdAt || Date.now()), 'MMM d')}
-                                    </span>
-                                    <button 
-                                        onClick={handleCopy}
-                                        className="p-1.5 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md transition-colors flex items-center justify-center bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700/50 shadow-sm"
-                                        title="Copy response"
-                                    >
-                                        {isCopied ? <CheckIcon className="w-3.5 h-3.5 text-green-500" /> : <DocumentDuplicateIcon className="w-3.5 h-3.5" />}
-                                    </button>
+                            ) : msg.isLoading ? (
+                                <TypingIndicator />
+                            ) : (
+                                <div className="py-2 text-neutral-400 font-medium italic text-[14px] flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 animate-pulse" />
+                                    No response generated by the server.
                                 </div>
                             )}
-                        </>
-                    )}
-                </div>
+                        </div>
+
+                        {/* Actions Bar (Copy Only) */}
+                        {msg.content && !msg.isLoading && (
+                            <div className="flex items-center gap-2 mt-2 pt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                <span className="text-[11px] font-medium text-neutral-400 mr-1 cursor-default" title={format(new Date(msg.createdAt || Date.now()), 'PPP p')}>
+                                    {format(new Date(msg.createdAt || Date.now()), 'MMM d')}
+                                </span>
+                                <button
+                                    onClick={handleCopy}
+                                    className="p-1.5 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md transition-colors flex items-center justify-center bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700/50 shadow-sm"
+                                    title="Copy response"
+                                >
+                                    {isCopied ? <CheckIcon className="w-3.5 h-3.5 text-green-500" /> : <DocumentDuplicateIcon className="w-3.5 h-3.5" />}
+                                </button>
+                            </div>
+                        )}
+                    </>
+                )}
             </div>
+        </div>
     );
 });
 
@@ -358,6 +440,7 @@ const AIChatPage = () => {
 
     const [isCanvasOpen, setIsCanvasOpen] = useState(false);
     const [canvasData, setCanvasData] = useState(null);
+    const [isCanvasFullscreen, setIsCanvasFullscreen] = useState(false);
 
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [isInsightOpen, setIsInsightOpen] = useState(false);
@@ -378,6 +461,7 @@ const AIChatPage = () => {
         const handleOpenCanvas = (e) => {
             setCanvasData(e.detail);
             setIsCanvasOpen(true);
+            setIsCanvasFullscreen(false);
         };
         window.addEventListener('open-ai-canvas', handleOpenCanvas);
         return () => window.removeEventListener('open-ai-canvas', handleOpenCanvas);
@@ -394,7 +478,7 @@ const AIChatPage = () => {
             if (scrollIdx) scrollTargetRef.current = scrollIdx;
 
             loadConversationDetails(urlConversationId);
-            
+
             // Clear params after loading
             const newParams = new URLSearchParams(searchParams);
             newParams.delete('conversationId');
@@ -408,7 +492,7 @@ const AIChatPage = () => {
         if (scrollTargetRef.current && messages.length > 0) {
             const index = parseInt(scrollTargetRef.current);
             scrollTargetRef.current = null; // Reset
-            
+
             setTimeout(() => {
                 const element = document.getElementById(`chat-message-${index}`);
                 if (element) {
@@ -544,7 +628,7 @@ const AIChatPage = () => {
             if (!chatContainerRef.current) return;
             const container = chatContainerRef.current;
             const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
-            
+
             if (force || isNearBottom) {
                 setTimeout(() => {
                     messagesEndRef.current?.scrollIntoView({ behavior: force ? 'smooth' : 'auto', block: 'end' });
@@ -590,7 +674,7 @@ const AIChatPage = () => {
                     if (line.startsWith('data: ')) {
                         try {
                             const data = JSON.parse(line.slice(6));
-                            
+
                             if (data.error) {
                                 // Sync conversation ID even on error to prevent duplicates
                                 if (!activeConversationId && data.conversationId) {
@@ -602,16 +686,16 @@ const AIChatPage = () => {
                                     const updated = [...prev];
                                     const lastMsg = updated[updated.length - 1];
                                     if (lastMsg && lastMsg.role === 'assistant') {
-                                        updated[updated.length - 1] = { 
-                                            ...lastMsg, 
-                                            content: accumulatedContent ? `${accumulatedContent}\n\n**⚠️ AI Interrupted:** ${data.error}` : data.error, 
+                                        updated[updated.length - 1] = {
+                                            ...lastMsg,
+                                            content: accumulatedContent ? `${accumulatedContent}\n\n**⚠️ AI Interrupted:** ${data.error}` : data.error,
                                             isLoading: false,
                                             isError: !accumulatedContent // Only turn the whole box red if it failed immediately
                                         };
                                     }
                                     return updated;
                                 });
-                                break; 
+                                break;
                             }
 
                             if (data.chunk) {
@@ -817,177 +901,182 @@ const AIChatPage = () => {
 
                     {/* CENTER COLUMN: Split Area (Left: Chat+Input, Right: Canvas) */}
                     <div className="flex-1 flex min-w-0 bg-white dark:bg-dark-card overflow-hidden relative">
-                        
+
                         {/* LEFT: Chat Container + Input */}
-                        <div className={`flex flex-col h-full transition-all duration-300 ${isCanvasOpen ? 'w-full lg:w-1/3 border-r border-neutral-100 dark:border-neutral-800 lg:flex hidden' : 'w-full'}`}>
-                            
+                        <div className={`flex flex-col h-full ${isCanvasOpen ? (isCanvasFullscreen ? 'hidden' : 'w-full lg:w-1/3 border-r border-neutral-100 dark:border-neutral-800 lg:flex hidden') : 'w-full'}`}>
+
                             {/* Chat Scroll Area */}
                             <div ref={chatContainerRef} className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                            {messages.length === 0 ? (
-                                /* 5. EMPTY STATE — centered, compact */
-                                <div className="flex-1 flex flex-col items-center py-6 sm:py-12 px-4 sm:px-10 my-auto w-full">
-                                    {/* AI Icon with glow */}
-                                    <div className="relative mb-4 shrink-0">
-                                        <div className="relative z-10 transition-transform hover:scale-105 duration-300">
-                                            <Logo className="w-16 h-16 sm:w-20 sm:h-20" iconOnly />
-                                        </div>
-                                        <div className="absolute -inset-4 rounded-full bg-brand-400/10 animate-pulse blur-2xl" />
-                                    </div>
-
-                                    {/* Greeting */}
-                                    <h1 className="text-xl sm:text-3xl font-black text-neutral-900 dark:text-white tracking-tight mb-2 text-center shrink-0">
-                                        {getTimeGreeting()}, {user?.name?.split(' ')[0] || 'Explorer'}
-                                    </h1>
-                                    <p className="text-[13px] sm:text-sm text-neutral-500 dark:text-neutral-400 font-medium mb-4 sm:mb-6 text-center max-w-xs sm:max-w-sm leading-relaxed shrink-0">
-                                        Ask anything about your marketing data. I have access to all your connected platforms.
-                                    </p>
-
-                                    {/* Suggestions — moved here from footer */}
-                                    <div className="w-full max-w-2xl mx-auto">
-                                        {/* Loading skeleton */}
-                                        {suggestionsLoading && (
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-4">
-                                                {[1, 2, 3, 4].map(i => (
-                                                    <div key={i} className="h-[72px] bg-neutral-100 dark:bg-neutral-800 rounded-2xl animate-pulse" />
-                                                ))}
+                                {messages.length === 0 ? (
+                                    /* 5. EMPTY STATE — centered, compact */
+                                    <div className="flex-1 flex flex-col items-center py-6 sm:py-12 px-4 sm:px-10 my-auto w-full">
+                                        {/* AI Icon with glow */}
+                                        <div className="relative mb-4 shrink-0">
+                                            <div className="relative z-10 transition-transform hover:scale-105 duration-300">
+                                                <Logo className="w-16 h-16 sm:w-20 sm:h-20" iconOnly />
                                             </div>
-                                        )}
+                                            <div className="absolute -inset-4 rounded-full bg-brand-400/10 animate-pulse blur-2xl" />
+                                        </div>
 
-                                        {/* Suggestion cards */}
-                                        {!suggestionsLoading && suggestions.length > 0 && (
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-4">
-                                                {suggestions.slice(0, 4).map((q, i) => (
-                                                    <button key={i} onClick={() => setQuery(q)}
-                                                        className="px-4 py-3.5 sm:px-5 sm:py-4 bg-neutral-50 dark:bg-neutral-800/50 hover:bg-brand-50 dark:hover:bg-brand-900/10 border border-neutral-200 dark:border-neutral-700/50 hover:border-brand-300 dark:hover:border-brand-600 rounded-2xl text-[11px] sm:text-xs font-semibold text-neutral-600 dark:text-neutral-300 hover:text-brand-600 dark:hover:text-brand-400 transition-all text-left leading-relaxed active:scale-[0.98] shadow-sm">
-                                                        {q}
+                                        {/* Greeting */}
+                                        <h1 className="text-xl sm:text-3xl font-black text-neutral-900 dark:text-white tracking-tight mb-2 text-center shrink-0">
+                                            {getTimeGreeting()}, {user?.name?.split(' ')[0] || 'Explorer'}
+                                        </h1>
+                                        <p className="text-[13px] sm:text-sm text-neutral-500 dark:text-neutral-400 font-medium mb-4 sm:mb-6 text-center max-w-xs sm:max-w-sm leading-relaxed shrink-0">
+                                            Ask anything about your marketing data. I have access to all your connected platforms.
+                                        </p>
+
+                                        {/* Suggestions — moved here from footer */}
+                                        <div className="w-full max-w-2xl mx-auto">
+                                            {/* Loading skeleton */}
+                                            {suggestionsLoading && (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-4">
+                                                    {[1, 2, 3, 4].map(i => (
+                                                        <div key={i} className="h-[72px] bg-neutral-100 dark:bg-neutral-800 rounded-2xl animate-pulse" />
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Suggestion cards */}
+                                            {!suggestionsLoading && suggestions.length > 0 && (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-4">
+                                                    {suggestions.slice(0, 4).map((q, i) => (
+                                                        <button key={i} onClick={() => setQuery(q)}
+                                                            className="px-4 py-3.5 sm:px-5 sm:py-4 bg-neutral-50 dark:bg-neutral-800/50 hover:bg-brand-50 dark:hover:bg-brand-900/10 border border-neutral-200 dark:border-neutral-700/50 hover:border-brand-300 dark:hover:border-brand-600 rounded-2xl text-[11px] sm:text-xs font-semibold text-neutral-600 dark:text-neutral-300 hover:text-brand-600 dark:hover:text-brand-400 transition-all text-left leading-relaxed active:scale-[0.98] shadow-sm">
+                                                            {q}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Quick action pills */}
+                                            <div className="flex flex-wrap justify-center gap-2 mb-8">
+                                                {[
+                                                    {
+                                                        label: 'Search Console',
+                                                        prompt: 'Analyze my Google Search Console performance and identify top-ranking keywords.',
+                                                        logo: <img src="https://www.gstatic.com/images/branding/product/2x/search_console_64dp.png" alt="GSC" className="w-3.5 h-3.5 object-contain" />
+                                                    },
+                                                    {
+                                                        label: 'GA4 Analytics',
+                                                        prompt: 'Deep dive into my GA4 data to understand user behavior and conversions.',
+                                                        logo: <img src="https://www.vectorlogo.zone/logos/google_analytics/google_analytics-icon.svg" alt="GA4" className="w-3.5 h-3.5 object-contain" />
+                                                    },
+                                                    {
+                                                        label: 'Google Ads',
+                                                        prompt: 'Evaluate my Google Ads campaign efficiency including CTR, CPC, and ROAS.',
+                                                        logo: <img src="https://www.vectorlogo.zone/logos/google_ads/google_ads-icon.svg" alt="Google Ads" className="w-3.5 h-3.5 object-contain" />
+                                                    },
+                                                    {
+                                                        label: 'Facebook Ads',
+                                                        prompt: 'Review my Meta Ads reach and engagement metrics.',
+                                                        logo: <img src="https://www.vectorlogo.zone/logos/facebook/facebook-icon.svg" alt="Meta Ads" className="w-3.5 h-3.5 object-contain" />
+                                                    },
+                                                ].map((item, i) => (
+                                                    <button key={i} onClick={() => setQuery(item.prompt)}
+                                                        className="flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/50 rounded-xl text-[10px] sm:text-[11px] font-bold text-neutral-500 dark:text-neutral-400 hover:border-brand-400 dark:hover:border-brand-500 hover:text-brand-600 dark:hover:text-brand-300 transition-all active:scale-95 group shadow-sm">
+                                                        {item.logo}
+                                                        {item.label}
                                                     </button>
                                                 ))}
                                             </div>
-                                        )}
+                                        </div>
 
-                                        {/* Quick action pills */}
-                                        <div className="flex flex-wrap justify-center gap-2 mb-8">
-                                            {[
-                                                { 
-                                                    label: 'Search Console', 
-                                                    prompt: 'Analyze my Google Search Console performance and identify top-ranking keywords.',
-                                                    logo: <img src="https://www.gstatic.com/images/branding/product/2x/search_console_64dp.png" alt="GSC" className="w-3.5 h-3.5 object-contain" />
-                                                },
-                                                { 
-                                                    label: 'GA4 Analytics', 
-                                                    prompt: 'Deep dive into my GA4 data to understand user behavior and conversions.',
-                                                    logo: <img src="https://www.vectorlogo.zone/logos/google_analytics/google_analytics-icon.svg" alt="GA4" className="w-3.5 h-3.5 object-contain" />
-                                                },
-                                                { 
-                                                    label: 'Google Ads', 
-                                                    prompt: 'Evaluate my Google Ads campaign efficiency including CTR, CPC, and ROAS.',
-                                                    logo: <img src="https://www.vectorlogo.zone/logos/google_ads/google_ads-icon.svg" alt="Google Ads" className="w-3.5 h-3.5 object-contain" />
-                                                },
-                                                { 
-                                                    label: 'Facebook Ads', 
-                                                    prompt: 'Review my Meta Ads reach and engagement metrics.',
-                                                    logo: <img src="https://www.vectorlogo.zone/logos/facebook/facebook-icon.svg" alt="Meta Ads" className="w-3.5 h-3.5 object-contain" />
-                                                },
-                                            ].map((item, i) => (
-                                                <button key={i} onClick={() => setQuery(item.prompt)}
-                                                    className="flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/50 rounded-xl text-[10px] sm:text-[11px] font-bold text-neutral-500 dark:text-neutral-400 hover:border-brand-400 dark:hover:border-brand-500 hover:text-brand-600 dark:hover:text-brand-300 transition-all active:scale-95 group shadow-sm">
-                                                    {item.logo}
-                                                    {item.label}
-                                                </button>
+                                    </div>
+                                ) : (
+                                    /* 6. MESSAGES AREA — hidden scrollbar */
+                                    <div className="px-3 sm:px-5 md:px-8 py-5 sm:py-8">
+                                        <div className={`${isCanvasOpen ? 'w-full' : 'max-w-3xl mx-auto'} w-full space-y-6 pb-4 transition-all duration-300`}>
+                                            {messages.map((msg, idx) => (
+                                                <div key={idx} id={`chat-message-${idx}`} className="transition-all duration-1000 rounded-2xl">
+                                                    <ChatMessage
+                                                        msg={msg}
+                                                        userName={user?.name}
+                                                        userAvatar={user?.avatar}
+                                                        onEdit={(text) => {
+                                                            setQuery(text);
+                                                            setTimeout(() => textareaRef.current?.focus(), 50);
+                                                        }}
+                                                        onRetry={(text) => handleSendMessage(null, text)}
+                                                    />
+                                                </div>
                                             ))}
+                                            <div ref={messagesEndRef} className="h-4" />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* 7. BOTTOM INPUT BAR — shrink-0, always at bottom of left column */}
+                            <div className="shrink-0 border-t border-neutral-100 dark:border-neutral-800 px-3 sm:px-4 py-4 bg-white dark:bg-dark-card w-full z-10">
+                                {/* Input form */}
+                                <form onSubmit={handleSendMessage} className={`${isCanvasOpen ? 'w-full' : 'max-w-3xl mx-auto'}`}>
+                                    <div className="flex items-end gap-2 bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-2xl px-2.5 sm:px-3 py-2 sm:py-2.5 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/10 transition-all shadow-sm">
+                                        {/* Left action buttons */}
+                                        <div className="flex items-center gap-0.5 flex-shrink-0 pb-0.5">
+                                            <button type="button" onClick={handleNewChat} title="New Chat"
+                                                className="hidden lg:flex w-8 h-8 items-center justify-center rounded-xl text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all">
+                                                <PlusIcon className="w-4 h-4" />
+                                            </button>
+                                            <button type="button" title="Weekly Insight"
+                                                onClick={() => { setIsInsightOpen(!isInsightOpen); if (!isInsightOpen) { setIsHistoryOpen(false); if (!weeklyInsight) loadWeeklyInsight(); } }}
+                                                className={`hidden lg:flex w-8 h-8 items-center justify-center rounded-xl transition-all ${isInsightOpen ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20'}`}>
+                                                <InboxStackIcon className={`w-4 h-4 ${insightLoading ? 'animate-pulse' : ''}`} />
+                                            </button>
+                                            <button type="button" title="Chat History"
+                                                onClick={() => { setIsHistoryOpen(!isHistoryOpen); if (!isHistoryOpen) setIsInsightOpen(false); }}
+                                                className={`hidden lg:flex w-8 h-8 items-center justify-center rounded-xl transition-all ${isHistoryOpen ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20'}`}>
+                                                <ChatBubbleLeftRightIcon className="w-4 h-4" />
+                                            </button>
+                                        </div>
+
+                                        {/* Divider */}
+                                        <div className="hidden lg:block w-px h-5 bg-neutral-200 dark:bg-neutral-700 flex-shrink-0 mb-2" />
+
+                                        {/* Text input */}
+                                        <textarea
+                                            ref={textareaRef}
+                                            value={query}
+                                            onChange={e => setQuery(e.target.value)}
+                                            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
+                                            placeholder="Message RankPilot AI..."
+                                            disabled={loading}
+                                            rows={1}
+                                            className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500 py-2 min-h-[20px] min-w-0 resize-none max-h-40 leading-normal [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                                        />
+
+                                        {/* Right: Send */}
+                                        <div className="flex items-end gap-1.5 flex-shrink-0 pb-0.5">
+                                            {/* Send button */}
+                                            <button type="submit" disabled={!query.trim() || loading}
+                                                className="w-9 h-9 flex items-center justify-center rounded-xl bg-brand-600 hover:bg-brand-700 text-white disabled:bg-neutral-200 dark:disabled:bg-neutral-700 disabled:text-neutral-400 transition-all shadow-md shadow-brand-500/20 active:scale-95">
+                                                {loading
+                                                    ? <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                                                    : <PaperAirplaneIcon className="w-4 h-4" />
+                                                }
+                                            </button>
                                         </div>
                                     </div>
 
-                                </div>
-                            ) : (
-                                /* 6. MESSAGES AREA — hidden scrollbar */
-                                <div className="px-3 sm:px-5 md:px-8 py-5 sm:py-8">
-                                    <div className={`${isCanvasOpen ? 'w-full' : 'max-w-3xl mx-auto'} w-full space-y-6 pb-4 transition-all duration-300`}>
-                                        {messages.map((msg, idx) => (
-                                            <div key={idx} id={`chat-message-${idx}`} className="transition-all duration-1000 rounded-2xl">
-                                            <ChatMessage 
-                                                msg={msg} 
-                                                userName={user?.name} 
-                                                userAvatar={user?.avatar} 
-                                                onEdit={(text) => {
-                                                    setQuery(text);
-                                                    setTimeout(() => textareaRef.current?.focus(), 50);
-                                                }}
-                                                onRetry={(text) => handleSendMessage(null, text)}
-                                            />
-                                        </div>
-                                        ))}
-                                        <div ref={messagesEndRef} className="h-4" />
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                                    <p className="text-center text-[10px] text-neutral-400 dark:text-neutral-500 mt-2 font-medium">
+                                        RankPilot AI can make mistakes. Always verify critical metrics before making decisions.
+                                    </p>
+                                </form>
+                            </div>
+                        </div> {/* End of LEFT Column */}
 
-                        {/* 7. BOTTOM INPUT BAR — shrink-0, always at bottom of left column */}
-                        <div className="shrink-0 border-t border-neutral-100 dark:border-neutral-800 px-3 sm:px-4 py-4 bg-white dark:bg-dark-card w-full z-10">
-                            {/* Input form */}
-                            <form onSubmit={handleSendMessage} className={`${isCanvasOpen ? 'w-full' : 'max-w-3xl mx-auto'}`}>
-                                <div className="flex items-end gap-2 bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-2xl px-2.5 sm:px-3 py-2 sm:py-2.5 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/10 transition-all shadow-sm">
-                                    {/* Left action buttons */}
-                                    <div className="flex items-center gap-0.5 flex-shrink-0 pb-0.5">
-                                        <button type="button" onClick={handleNewChat} title="New Chat"
-                                            className="hidden lg:flex w-8 h-8 items-center justify-center rounded-xl text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all">
-                                            <PlusIcon className="w-4 h-4" />
-                                        </button>
-                                        <button type="button" title="Weekly Insight"
-                                            onClick={() => { setIsInsightOpen(!isInsightOpen); if (!isInsightOpen) { setIsHistoryOpen(false); if (!weeklyInsight) loadWeeklyInsight(); } }}
-                                            className={`hidden lg:flex w-8 h-8 items-center justify-center rounded-xl transition-all ${isInsightOpen ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20'}`}>
-                                            <InboxStackIcon className={`w-4 h-4 ${insightLoading ? 'animate-pulse' : ''}`} />
-                                        </button>
-                                        <button type="button" title="Chat History"
-                                            onClick={() => { setIsHistoryOpen(!isHistoryOpen); if (!isHistoryOpen) setIsInsightOpen(false); }}
-                                            className={`hidden lg:flex w-8 h-8 items-center justify-center rounded-xl transition-all ${isHistoryOpen ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'text-neutral-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20'}`}>
-                                            <ChatBubbleLeftRightIcon className="w-4 h-4" />
-                                        </button>
-                                    </div>
-
-                                    {/* Divider */}
-                                    <div className="hidden lg:block w-px h-5 bg-neutral-200 dark:bg-neutral-700 flex-shrink-0 mb-2" />
-
-                                    {/* Text input */}
-                                    <textarea
-                                        ref={textareaRef}
-                                        value={query}
-                                        onChange={e => setQuery(e.target.value)}
-                                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
-                                        placeholder="Message RankPilot AI..."
-                                        disabled={loading}
-                                        rows={1}
-                                        className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500 py-2 min-h-[20px] min-w-0 resize-none max-h-40 leading-normal [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-                                    />
-
-                                    {/* Right: Send */}
-                                    <div className="flex items-end gap-1.5 flex-shrink-0 pb-0.5">
-                                        {/* Send button */}
-                                        <button type="submit" disabled={!query.trim() || loading}
-                                            className="w-9 h-9 flex items-center justify-center rounded-xl bg-brand-600 hover:bg-brand-700 text-white disabled:bg-neutral-200 dark:disabled:bg-neutral-700 disabled:text-neutral-400 transition-all shadow-md shadow-brand-500/20 active:scale-95">
-                                            {loading
-                                                ? <ArrowPathIcon className="w-4 h-4 animate-spin" />
-                                                : <PaperAirplaneIcon className="w-4 h-4" />
-                                            }
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <p className="text-center text-[10px] text-neutral-400 dark:text-neutral-500 mt-2 font-medium">
-                                    RankPilot AI can make mistakes. Always verify critical metrics before making decisions.
-                                </p>
-                            </form>
-                        </div>
-                    </div> {/* End of LEFT Column */}
-
-                    {/* RIGHT: Canvas Container */}
-                    {isCanvasOpen && (
-                        <div className="flex-1 h-full w-full lg:w-2/3 bg-neutral-50 dark:bg-neutral-950 overflow-hidden shadow-2xl relative">
-                            <DashboardCanvas data={canvasData} onClose={() => setIsCanvasOpen(false)} />
-                        </div>
-                    )}
-                </div> {/* End of CENTER COLUMN */}
+                        {/* RIGHT: Canvas Container */}
+                        {isCanvasOpen && (
+                            <div className={`flex-1 h-full ${isCanvasFullscreen ? 'lg:w-full' : 'lg:w-2/3'} bg-neutral-50 dark:bg-neutral-950 overflow-hidden shadow-2xl relative`}>
+                                <DashboardCanvas 
+                                    data={canvasData} 
+                                    onClose={() => setIsCanvasOpen(false)} 
+                                    isFullscreen={isCanvasFullscreen}
+                                    onToggleFullscreen={() => setIsCanvasFullscreen(!isCanvasFullscreen)}
+                                />
+                            </div>
+                        )}
+                    </div> {/* End of CENTER COLUMN */}
 
                     {/* 4. INSIGHT DRAWER */}
                     {isInsightOpen && (
@@ -1042,7 +1131,7 @@ const AIChatPage = () => {
                                         <div className="bg-white dark:bg-dark-card/60 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-8 sm:p-12 shadow-2xl relative overflow-hidden group">
                                             <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 blur-[120px] pointer-events-none group-hover:bg-brand-500/10 transition-all duration-1000" />
                                             <div className="prose prose-md dark:prose-invert max-w-none prose-headings:tracking-tighter prose-p:text-neutral-700 dark:prose-p:text-neutral-100">
-                                                <ReactMarkdown 
+                                                <ReactMarkdown
                                                     remarkPlugins={[remarkGfm]}
                                                     components={MarkdownComponents}
                                                 >

@@ -20,9 +20,49 @@ const MD = {
     strong: ({ children }) => <strong className="font-extrabold text-neutral-900 dark:text-white break-words [word-break:break-word]">{children}</strong>,
     ul: ({ children }) => <ul className="space-y-2 mb-3 pl-4 list-disc marker:text-brand-500 marker:font-black">{children}</ul>,
     ol: ({ children }) => <ol className="space-y-2 mb-3 pl-4 list-decimal marker:text-brand-500 marker:font-black">{children}</ol>,
-    li: ({ children }) => <li className="text-[13px] text-neutral-700 dark:text-neutral-100 break-words [word-break:break-word] pl-1">{children}</li>,
+    li: ({ children }) => {
+        const text = React.Children.toArray(children).join('');
+        const priorityMatch = text.match(/^(🔴|🟡|🟢)/);
+        
+        if (priorityMatch) {
+            const icon = priorityMatch[1];
+            const cleanText = text.replace(icon, '').trim();
+            const colorClass = icon === '🔴' ? 'bg-rose-500 text-white shadow-rose-500/20' : 
+                               icon === '🟡' ? 'bg-amber-500 text-white shadow-amber-500/20' : 
+                               'bg-emerald-500 text-white shadow-emerald-500/20';
+            
+            return (
+                <li className="flex items-start gap-2.5 mb-2.5 last:mb-0 group/item">
+                    <span className={`shrink-0 mt-0.5 px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-tighter ${colorClass} shadow-md`}>
+                        {icon === '🔴' ? 'High' : icon === '🟡' ? 'Mid' : 'Low'}
+                    </span>
+                    <span className="text-[13px] text-neutral-700 dark:text-neutral-100 font-bold group-hover/item:text-neutral-900 dark:group-hover/item:text-white transition-colors">
+                        {cleanText}
+                    </span>
+                </li>
+            );
+        }
+        return <li className="text-[13px] text-neutral-700 dark:text-neutral-100 break-words [word-break:break-word] pl-1">{children}</li>;
+    },
     h1: ({ children }) => <h1 className="text-sm font-black text-neutral-900 dark:text-white mb-2 uppercase tracking-tight">{children}</h1>,
-    h2: ({ children }) => <h2 className="text-sm font-black text-neutral-900 dark:text-white mb-2 tracking-tight">{children}</h2>,
+    h2: ({ children }) => {
+        const text = React.Children.toArray(children).join('');
+        const typeMatch = text.match(/^(🟢|🟡|🔴)/);
+
+        if (typeMatch) {
+            const icon = typeMatch[1];
+            const colorClass = icon === '🟢' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' :
+                               icon === '🟡' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
+                               'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20';
+            return (
+                <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border ${colorClass} text-[9px] font-black uppercase tracking-widest my-3 animate-in fade-in slide-in-from-left-2 duration-500`}>
+                    <span className="animate-pulse">{icon}</span>
+                    {children}
+                </div>
+            );
+        }
+        return <h2 className="text-sm font-black text-neutral-900 dark:text-white mb-2 tracking-tight">{children}</h2>;
+    },
     h3: ({ children }) => <h3 className="text-xs font-black text-neutral-800 dark:text-neutral-50 mb-1.5">{children}</h3>,
     code: ({ inline, className, children, ...props }) => {
         const match = /language-json-chart-(\w+)/.exec(className || '');

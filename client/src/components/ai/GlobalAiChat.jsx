@@ -85,7 +85,7 @@ const GlobalChatMessage = ({ msg, onEdit, onRetry, MD }) => {
                         <div className="whitespace-pre-wrap">{msg.content}</div>
                         {!isExpanded && isLongMessage && (
                             <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-zinc-100 dark:from-zinc-800 via-zinc-100/90 dark:via-zinc-800/90 to-transparent pointer-events-none flex items-end justify-start px-4 pb-2">
-                                <button 
+                                <button
                                     onClick={(e) => { e.stopPropagation(); setIsExpanded(true); }}
                                     className="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 pointer-events-auto transition-colors"
                                 >
@@ -95,7 +95,7 @@ const GlobalChatMessage = ({ msg, onEdit, onRetry, MD }) => {
                         )}
                     </div>
                     {isExpanded && isLongMessage && (
-                        <button 
+                        <button
                             onClick={() => setIsExpanded(false)}
                             className="text-[10px] font-bold text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 mt-1.5 self-start pl-2 transition-colors"
                         >
@@ -132,10 +132,10 @@ const GlobalChatMessage = ({ msg, onEdit, onRetry, MD }) => {
                     </div>
                 ) : msg.isError ? (
                     <div className="flex items-center gap-3.5 p-3.5 bg-red-50/50 dark:bg-red-900/10 border border-red-100/50 dark:border-red-900/30 rounded-2xl shadow-sm">
-                         <ExclamationTriangleIcon className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
-                         <p className="text-[12px] font-bold text-red-700 dark:text-red-300 leading-snug">
-                             {msg.content}
-                         </p>
+                        <ExclamationTriangleIcon className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
+                        <p className="text-[12px] font-bold text-red-700 dark:text-red-300 leading-snug">
+                            {msg.content}
+                        </p>
                     </div>
                 ) : (
                     <>
@@ -149,7 +149,7 @@ const GlobalChatMessage = ({ msg, onEdit, onRetry, MD }) => {
                                 <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider cursor-default" title={format(new Date(msg.createdAt || Date.now()), 'PPP p')}>
                                     {format(new Date(msg.createdAt || Date.now()), 'HH:mm')}
                                 </span>
-                                <button 
+                                <button
                                     onClick={handleCopy}
                                     className="p-1.5 text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-50 dark:hover:bg-neutral-800 rounded-lg transition-all border border-transparent hover:border-neutral-200 dark:hover:border-neutral-700 shadow-sm"
                                     title="Copy response"
@@ -189,7 +189,7 @@ const GlobalAiChat = () => {
     const panelRef = useRef(null);
     const scrollContainerRef = useRef(null);
     const conversationIdRef = useRef(null);
-    
+
     // Sync ref for access inside MD overrides
     useEffect(() => {
         conversationIdRef.current = conversationId;
@@ -201,10 +201,88 @@ const GlobalAiChat = () => {
         strong: ({ children }) => <strong className="font-extrabold text-neutral-900 dark:text-white break-words [word-break:break-word]">{children}</strong>,
         ul: ({ children }) => <ul className="space-y-2.5 mb-4 pl-6 list-disc marker:text-neutral-900 dark:marker:text-white marker:font-bold">{children}</ul>,
         ol: ({ children }) => <ol className="space-y-2.5 mb-4 pl-6 list-decimal marker:text-neutral-900 dark:marker:text-white marker:font-bold">{children}</ol>,
-        li: ({ children }) => <li className="text-[14px] text-neutral-700 dark:text-neutral-100 break-words [word-break:break-word] pl-2">{children}</li>,
+        li: ({ children }) => {
+            const getNestedText = (child) => {
+                if (typeof child === 'string' || typeof child === 'number') return child;
+                if (Array.isArray(child)) return child.map(getNestedText).join('');
+                if (child?.props?.children) return getNestedText(child.props.children);
+                return '';
+            };
+            const text = getNestedText(children);
+
+            // 1. Roadmap Item Detection: Emoji + Priority + (Timeframe) - Title: Description
+            const roadmapMatch = text.match(/^(🔴|🟡|🟢)\s*(HIGH|MEDIUM|LOW)\s*\(([^)]+)\)\s*[-–—]\s*(.*?):\s*([\s\S]*)$/i);
+
+            if (roadmapMatch) {
+                const [_, icon, priority, timeframe, title, description] = roadmapMatch;
+                const borderClass = icon === '🔴' ? 'border-l-rose-500' : icon === '🟡' ? 'border-l-amber-500' : 'border-l-emerald-500';
+
+                return (
+                    <div className={`my-4 p-4 pl-5 border-l-4 border border-neutral-100 dark:border-neutral-800 bg-white dark:bg-transparent rounded-xl shadow-sm list-none`}>
+                        <div className="flex items-center gap-2 mb-1.5">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">{priority} • {timeframe}</span>
+                        </div>
+                        <h4 className="text-[14px] font-bold text-neutral-900 dark:text-white mb-1.5 leading-tight">
+                            {title}
+                        </h4>
+                        <p className="text-[12px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                            {description}
+                        </p>
+                    </div>
+                );
+            }
+
+            // 2. Simple Priority Detection
+            const priorityMatch = text.match(/^(🔴|🟡|🟢)/);
+
+            if (priorityMatch) {
+                const icon = priorityMatch[1];
+                const cleanText = text.replace(icon, '').trim();
+
+                return (
+                    <li className="flex items-start gap-2.5 mb-3 last:mb-0 group/item list-none">
+                        <span className={`shrink-0 mt-0.5 text-[13px]`}>{icon}</span>
+                        <span className="text-[14px] text-neutral-700 dark:text-neutral-200 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors">
+                            {cleanText}
+                        </span>
+                    </li>
+                );
+            }
+            return <li className="text-[14px] text-neutral-700 dark:text-neutral-100 break-words [word-break:break-word] pl-2 mb-2 last:mb-0">{children}</li>;
+        },
         h1: ({ children }) => <h1 className="text-xl font-extrabold text-neutral-900 dark:text-white mt-12 mb-5 tracking-tight border-t border-neutral-200 dark:border-neutral-700/80 pt-8 first:mt-0 first:border-0 first:pt-0">{children}</h1>,
-        h2: ({ children }) => <h2 className="text-lg font-bold text-neutral-900 dark:text-white mt-10 mb-4 tracking-tight border-t border-neutral-200 dark:border-neutral-700/60 pt-6 first:mt-0 first:border-0 first:pt-0">{children}</h2>,
-        h3: ({ children }) => <h3 className="text-base font-bold text-neutral-800 dark:text-neutral-200 mt-8 mb-3 pt-4 border-t border-neutral-200 dark:border-neutral-700/40 first:mt-0 first:border-0 first:pt-0">{children}</h3>,
+        h2: ({ children }) => {
+            const text = React.Children.toArray(children).join('');
+            const typeMatch = text.match(/^(🟢|🟡|🔴)/);
+
+            if (typeMatch) {
+                const icon = typeMatch[1];
+                const colorClass = icon === '🟢' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' :
+                    icon === '🟡' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
+                        'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20';
+                return (
+                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-2xl border ${colorClass} text-[10px] font-black uppercase tracking-widest my-5 animate-in fade-in slide-in-from-left-2 duration-500`}>
+                        <span className="animate-pulse">{icon}</span>
+                        {children}
+                    </div>
+                );
+            }
+            return <h2 className="text-lg font-bold text-neutral-900 dark:text-white mt-10 mb-4 tracking-tight border-t border-neutral-200 dark:border-neutral-700/60 pt-6 first:mt-0 first:border-0 first:pt-0">{children}</h2>;
+        },
+        h3: ({ children }) => {
+            const text = React.Children.toArray(children).join('');
+            if (text.toLowerCase().includes('strategic roadmap')) {
+                return (
+                    <div className="flex items-center gap-2 mb-5 mt-8 pb-3 border-b border-neutral-100 dark:border-neutral-900">
+                        <SparklesIcon className="w-4 h-4 text-neutral-400" />
+                        <h3 className="text-base font-bold text-neutral-900 dark:text-white m-0">
+                            {text.replace(/^[💡\s]+/, '')}
+                        </h3>
+                    </div>
+                );
+            }
+            return <h3 className="text-base font-bold text-neutral-800 dark:text-neutral-200 mt-8 mb-3 pt-4 border-t border-neutral-200 dark:border-neutral-700/40 first:mt-0 first:border-0 first:pt-0">{children}</h3>;
+        },
         hr: () => <div className="h-[1px] w-full bg-neutral-100 dark:bg-neutral-800/60 my-8" />,
         a: ({ children, href }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400 font-bold underline decoration-brand-500/30 underline-offset-2 hover:decoration-brand-500 transition-all">{children}</a>,
         code: ({ inline, className, children, ...props }) => {
@@ -229,7 +307,7 @@ const GlobalAiChat = () => {
                                 </div>
                             </div>
 
-                            <button 
+                            <button
                                 type="button"
                                 onClick={() => {
                                     const currentId = conversationIdRef.current || conversationId;
@@ -242,7 +320,7 @@ const GlobalAiChat = () => {
                                         const idxParam = props.messageIndex !== undefined ? `&scrollToIndex=${props.messageIndex}` : '';
                                         navigate(`/dashboard/ai-chat?conversationId=${currentId}${idxParam}`);
                                     }, 100);
-                                }} 
+                                }}
                                 className="shrink-0 px-4 py-2 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-[11px] font-bold rounded-xl transition-all hover:bg-black dark:hover:bg-neutral-100 active:scale-95 flex items-center gap-1.5"
                             >
                                 <span>View</span>
@@ -263,16 +341,16 @@ const GlobalAiChat = () => {
                     try {
                         chartData = JSON.parse(cleanedJson);
                     } catch (e) {
-                        try { chartData = JSON.parse(cleanedJson + '}'); } 
+                        try { chartData = JSON.parse(cleanedJson + '}'); }
                         catch (e2) {
-                            try { chartData = JSON.parse(cleanedJson + ']}'); } 
+                            try { chartData = JSON.parse(cleanedJson + ']}'); }
                             catch (e3) {
-                                try { chartData = JSON.parse(cleanedJson + '}]}'); } 
+                                try { chartData = JSON.parse(cleanedJson + '}]}'); }
                                 catch (e4) { throw e; }
                             }
                         }
                     }
-                    
+
                     const hasChartKeys = (obj) => {
                         const keys = ['labels', 'label', 'datasets', 'dataset', 'chartType', 'series', 'categories', 'xAxis', 'yAxis', 'layout', 'metrics', 'charts'];
                         const rootKeys = Object.keys(obj || {});
@@ -294,21 +372,21 @@ const GlobalAiChat = () => {
                             </div>
                         );
                     }
-                    
+
                     return (
                         <div className="my-8 relative group overflow-hidden">
                             {/* Premium Card Background with Glow */}
                             <div className="absolute inset-0 bg-brand-500/5 dark:bg-brand-500/10 blur-2xl rounded-[2.5rem] -z-10 group-hover:bg-brand-500/15 transition-colors duration-500" />
-                            
+
                             <div className="relative flex flex-col sm:flex-row items-center justify-between gap-6 px-8 py-7 bg-white/80 dark:bg-neutral-900/40 backdrop-blur-xl border border-neutral-200/50 dark:border-neutral-800/50 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] transition-all duration-300 group-hover:translate-y-[-2px] group-hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)]">
-                                
+
                                 <div className="flex items-center gap-5 flex-1 min-w-0 w-full">
                                     {/* Branded Icon with Pulse Effect */}
                                     <div className="relative shrink-0 w-14 h-14 rounded-[1.25rem] bg-brand-500 flex items-center justify-center shadow-[0_10px_20px_rgba(59,130,246,0.3)] transition-transform duration-500 group-hover:rotate-6 group-hover:scale-110">
                                         <ChartBarIcon className="w-7 h-7 text-white" />
                                         <div className="absolute inset-0 rounded-[1.25rem] bg-brand-500 animate-ping opacity-20" />
                                     </div>
-                                    
+
                                     <div className="flex-1 min-w-0">
                                         <h4 className="text-[16px] font-black text-neutral-900 dark:text-white tracking-tight leading-none mb-1.5 flex items-center gap-2">
                                             Visual Insight Ready
@@ -322,7 +400,7 @@ const GlobalAiChat = () => {
                                     </div>
                                 </div>
 
-                                <button 
+                                <button
                                     type="button"
                                     onClick={() => {
                                         const currentId = conversationIdRef.current;
@@ -335,7 +413,7 @@ const GlobalAiChat = () => {
                                         setTimeout(() => {
                                             navigate(`/dashboard/ai-chat?conversationId=${currentId}`);
                                         }, 100);
-                                    }} 
+                                    }}
                                     className="shrink-0 w-full sm:w-auto px-7 py-3.5 bg-neutral-900 dark:bg-white hover:bg-black dark:hover:bg-neutral-100 text-white dark:text-neutral-900 text-[12px] font-black rounded-2xl transition-all shadow-xl shadow-neutral-900/10 dark:shadow-white/10 active:scale-95 flex items-center justify-center gap-2 group/btn"
                                 >
                                     <span>View Insight</span>
@@ -344,7 +422,7 @@ const GlobalAiChat = () => {
                             </div>
                         </div>
                     );
-                } catch (err) {}
+                } catch (err) { }
             }
 
             return inline
@@ -352,7 +430,7 @@ const GlobalAiChat = () => {
                 : <pre className="bg-neutral-900 text-neutral-100 p-2 rounded-lg text-[11px] overflow-x-auto my-2 border border-neutral-800 tracking-tight font-mono">{children}</pre>;
         },
     };
-    
+
     const getMD = (idx) => ({
         ...MD,
         code: (props) => MD.code({ ...props, messageIndex: idx })
@@ -423,7 +501,7 @@ const GlobalAiChat = () => {
                                 }
                                 return updated;
                             });
-                            
+
                             if (scrollContainerRef.current) {
                                 const container = scrollContainerRef.current;
                                 if (container.scrollHeight - container.scrollTop - container.clientHeight < 150) {
@@ -504,17 +582,17 @@ const GlobalAiChat = () => {
     const scrollToEnd = useCallback((force = false) => {
         if (!isOpen) return;
         if (!scrollContainerRef.current) return;
-        
+
         const container = scrollContainerRef.current;
         const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
-        
+
         if (force || isNearBottom) {
             setTimeout(() => {
                 messagesEndRef.current?.scrollIntoView({ behavior: force ? 'smooth' : 'auto' });
             }, 10);
         }
     }, [isOpen]);
-    
+
     useEffect(() => {
         if (messages.length > 0) {
             scrollToEnd(true);
@@ -569,11 +647,10 @@ const GlobalAiChat = () => {
 
                 <button
                     onClick={() => setIsOpen(!isOpen)}
-                    className={`relative flex items-center gap-2.5 px-6 py-4 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 shadow-xl overflow-hidden ${
-                        isOpen 
-                        ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900' 
-                        : 'bg-brand-600 text-white shadow-brand-500/40'
-                    }`}
+                    className={`relative flex items-center gap-2.5 px-6 py-4 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 shadow-xl overflow-hidden ${isOpen
+                            ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900'
+                            : 'bg-brand-600 text-white shadow-brand-500/40'
+                        }`}
                 >
                     {/* Shine/Shimmer Effect */}
                     {!isOpen && (
@@ -667,10 +744,10 @@ const GlobalAiChat = () => {
                         )}
 
                         {messages.map((msg, idx) => (
-                            <GlobalChatMessage 
-                                key={idx} 
+                            <GlobalChatMessage
+                                key={idx}
                                 idx={idx}
-                                msg={msg} 
+                                msg={msg}
                                 MD={getMD(idx)}
                                 onEdit={(content) => { setInput(content); inputRef.current?.focus(); }}
                                 onRetry={(content) => sendMessage(content)}

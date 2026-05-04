@@ -1,42 +1,17 @@
 import React from 'react';
 import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  PieChart,
-  Pie,
-  Cell,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
-  ScatterChart,
-  Scatter,
-  ZAxis,
-  ComposedChart,
-  FunnelChart,
-  Funnel,
-  LabelList,
-  Treemap,
-  RadialBarChart,
-  RadialBar
+  LineChart, Line, BarChart, Bar, AreaChart, Area, PieChart, Pie, Cell,
+  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
+  ScatterChart, Scatter, ZAxis, ComposedChart, FunnelChart, Funnel, LabelList,
+  Treemap, RadialBarChart, RadialBar, CartesianGrid, XAxis, YAxis, Tooltip,
+  Legend, ResponsiveContainer
 } from 'recharts';
-import { ComposableMap, Geographies, Geography, Marker } from "react-simple-maps";
+import { ComposableMap, Geographies, Geography } from 'react-simple-maps';
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
 const ChartRenderer = ({ type, data }) => {
-  // Global Deep Search: Finds a key anywhere in the object tree
+  // STEP 1 — Data normalization
   const deepFind = (obj, targetKeys) => {
     if (!obj || typeof obj !== 'object') return null;
     for (const key of targetKeys) { if (obj[key] !== undefined) return obj[key]; }
@@ -45,210 +20,225 @@ const ChartRenderer = ({ type, data }) => {
     return null;
   };
 
-  // Support "Axis-based" structures (xAxis: { dataKey: '...' })
-  const xAxisKey = data?.xAxis?.dataKey || data?.x_axis_key || (data?.data && data.data[0]?.date ? 'date' : (data?.data && data.data[0]?.name ? 'name' : 'name'));
-
-  let labels = null;
-  let datasets = null;
-
-  // PRIORITY 1: Top-level Strict Format (labels & datasets)
-  if (!labels && data?.labels) labels = data.labels;
-  if (!datasets && data?.datasets) datasets = data.datasets;
-
-  // PRIORITY 2: Recharts style (array of objects in data.data)
-  if (!labels && Array.isArray(data?.data)) {
-    labels = data.data.map(item => item[xAxisKey] || item.name || item.date || item.label);
+  const getNormalizedData = () => {
+    if (!data) return { labels: [], datasets: [] };
     
-    if (data.series) {
-        datasets = data.series.map(s => {
-            const label = s.label || s.name || s.category || s;
-            const key = s.key || s.dataKey || s.category || label;
-            return {
-                label: label,
-                data: data.data.map(item => item[key] ?? 0),
-                stroke: s.color || s.stroke || s.borderColor
-            };
-        });
-    } else if (data.data.length > 0) {
-        const first = data.data[0];
-        const numericKeys = Object.keys(first).filter(k => k !== xAxisKey && typeof first[k] === 'number');
-        if (numericKeys.length > 0) {
-            datasets = numericKeys.map(key => ({
-                label: key.charAt(0).toUpperCase() + key.slice(1),
-                data: data.data.map(item => item[key] ?? 0)
-            }));
-        }
+    // Case 1: Standard Format (labels + datasets)
+    if (data.labels && data.datasets) {
+      return {
+        labels: data.labels || [],
+        datasets: data.datasets || [],
+        title: data.title || data.data?.title
+      };
     }
-  }
 
-  // PRIORITY 3: Fallbacks & Deep Search
-  if (!labels && data?.options?.xaxis?.categories) labels = data.options.xaxis.categories;
-  if (!labels) labels = deepFind(data, ['labels', 'label', 'x_axis', 'categories', 'names']);
-  if (!datasets) datasets = deepFind(data, ['datasets', 'dataset', 'values', 'data']);
+    // Case 2: Simple Data Format [ { name: '...', value: 100 }, ... ]
+    const rawData = data.data || data.chartData || data.rows || [];
+    const xAxisKey = data?.xAxis?.dataKey || data?.x_axis_key || 'name';
 
-  // Handle case where datasets is just an array of numbers
-  if (Array.isArray(datasets) && datasets.length > 0 && typeof datasets[0] === 'number') {
-    datasets = [{
-      label: data.title || "Performance",
-      data: datasets
-    }];
-  }
+    if (Array.isArray(rawData) && rawData.length > 0) {
+      // If it's a simple array of objects
+      if (typeof rawData[0] === 'object') {
+        const labels = rawData.map(d => d[xAxisKey] || d.name || d.label || d.category || d.date || 'Item');
+        
+        // Find all numeric keys that aren't the X-axis key
+        const first = rawData[0];
+        const numericKeys = Object.keys(first).filter(k => k !== xAxisKey && typeof first[k] === 'number');
+        
+        const datasets = numericKeys.length > 0 
+          ? numericKeys.map(key => ({
+              label: key.charAt(0).toUpperCase() + key.slice(1),
+              data: rawData.map(d => d[key] ?? 0)
+            }))
+          : [{ label: 'Value', data: rawData.map(d => d.value || d.size || d.count || 0) }];
 
-  if (!labels || !datasets || !Array.isArray(labels) || !Array.isArray(datasets)) {
+        return { labels, datasets, title: data.title || data.data?.title };
+      }
+      
+      // If it's a simple array of numbers
+      if (typeof rawData[0] === 'number') {
+        return {
+          labels: rawData.map((_, i) => `Item ${i+1}`),
+          datasets: [{ label: 'Value', data: rawData }],
+          title: data.title
+        };
+      }
+    }
+
+    // Fallback: Deep find
+    const labels = deepFind(data, ['labels', 'label', 'x_axis', 'categories', 'names']) || [];
+    const datasets = deepFind(data, ['datasets', 'dataset', 'values', 'data']) || [];
+
+    return { 
+      labels: Array.isArray(labels) ? labels : [], 
+      datasets: Array.isArray(datasets) ? (typeof datasets[0] === 'number' ? [{ label: 'Value', data: datasets }] : datasets) : [],
+      title: data.title
+    };
+  };
+
+  const actualData = getNormalizedData();
+
+  if (!actualData.labels.length || !actualData.datasets.length) {
     return (
       <div className="my-4 p-5 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-2xl text-[11px] text-red-500 font-mono leading-relaxed shadow-sm">
         <div className="font-black mb-1 opacity-60 uppercase tracking-widest flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
             Visualisation System Error
         </div>
-        <div className="opacity-70">Structure mismatch. Received: {Object.keys(data || {}).join(', ')}</div>
+        <div className="opacity-70">Structure mismatch or empty data. Received keys: {Object.keys(data || {}).join(', ')}</div>
       </div>
     );
   }
 
-  const actualData = { labels, datasets, title: data?.title || data?.data?.title };
-
-  // Reformat data for Recharts (array of objects)
-  const chartData = actualData.labels.map((label, index) => {
+  // STEP 2 — Chart data reshaping
+  const chartData = actualData.labels.map((label, i) => {
     const entry = { name: label };
-    actualData.datasets.forEach(dataset => {
-      // Handle both { data: [...] } and direct array
-      const dataArray = Array.isArray(dataset) ? dataset : (dataset.data || dataset.values || []);
-      const dsLabel = dataset.label || dataset.name || "Value";
-      entry[dsLabel] = dataArray[index] !== undefined ? dataArray[index] : 0;
+    actualData.datasets.forEach(ds => {
+      const dataArray = Array.isArray(ds) ? ds : (ds.data || ds.values || []);
+      const dsLabel = ds.label || ds.name || "Value";
+      entry[dsLabel] = dataArray[i] !== undefined ? dataArray[i] : 0;
     });
     return entry;
   });
 
-  const colors = [
-    '#6366f1', // brand-500
-    '#06b6d4', // accent-500
-    '#f59e0b', // warning/ads
-    '#10b981', // success
-    '#ef4444'  // error
-  ];
+  const colors = ['#4F46E5', '#0EA5E9', '#8B5CF6', '#F43F5E', '#10B981'];
 
-  const renderChart = () => {
-    const commonProps = {
-      data: chartData,
-      margin: { top: 10, right: 30, left: 0, bottom: 0 }
-    };
+  // STEP 3 — Shared visual setup
+  const GradientDefs = () => (
+    <defs>
+      {actualData.datasets.map((ds, i) => (
+        <React.Fragment key={`grad-${i}`}>
+          <linearGradient id={`color-${i}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor={colors[i % colors.length]} stopOpacity={0.4} />
+            <stop offset="95%" stopColor={colors[i % colors.length]} stopOpacity={0} />
+          </linearGradient>
+          <linearGradient id={`line-${i}`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor={colors[i % colors.length]} stopOpacity={1} />
+            <stop offset="100%" stopColor={colors[(i + 1) % colors.length]} stopOpacity={1} />
+          </linearGradient>
+        </React.Fragment>
+      ))}
+      <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+        <feDropShadow dx="0" dy="4" stdDeviation="4" floodOpacity="0.15" />
+      </filter>
+    </defs>
+  );
 
-    const typeLower = type.toLowerCase();
+  const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+  const tooltipContentStyle = {
+    borderRadius: '16px',
+    border: '1px solid rgba(255,255,255,0.2)',
+    boxShadow: '0 20px 40px -8px rgba(0,0,0,0.15)',
+    fontSize: '13px',
+    fontWeight: 'bold',
+    background: isDark ? 'rgba(23,23,23,0.9)' : 'rgba(255,255,255,0.9)',
+    color: isDark ? '#F9FAFB' : '#111827',
+    backdropFilter: 'blur(12px)'
+  };
 
-    if (typeLower === 'line' || typeLower === 'spline') {
+  const sharedProps = {
+    data: chartData,
+    margin: { top: 10, right: 30, left: 0, bottom: 0 }
+  };
+
+  const sharedXAxis = <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9ca3af', fontWeight: 600 }} dy={15} />;
+  const sharedYAxis = <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9ca3af', fontWeight: 600 }} dx={-10} />;
+  const sharedGrid = <CartesianGrid strokeDasharray="4 4" vertical={false} stroke={isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'} />;
+  const sharedLegend = <Legend wrapperStyle={{ fontSize: '12px', fontWeight: '800', paddingTop: '25px' }} iconType="circle" />;
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
       return (
-        <LineChart {...commonProps}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'} />
-          <XAxis 
-            dataKey="name" 
-            axisLine={false} 
-            tickLine={false} 
-            tick={{ fontSize: 10, fill: '#9ca3af' }}
-            dy={10}
-          />
-          <YAxis 
-            axisLine={false} 
-            tickLine={false} 
-            tick={{ fontSize: 10, fill: '#9ca3af' }}
-          />
-           <Tooltip 
-             contentStyle={{ 
-               borderRadius: '12px', 
-               border: 'none', 
-               boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', 
-               fontSize: '12px',
-               background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
-               color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
-             }}
-           />
-          <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '20px' }} />
+        <div className="bg-white/90 dark:bg-neutral-900/90 backdrop-blur-xl border border-white dark:border-neutral-800 p-4 rounded-2xl shadow-2xl animate-in fade-in zoom-in duration-200">
+          <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-2">{label}</p>
+          <div className="space-y-1.5">
+            {payload.map((entry, index) => (
+              <div key={index} className="flex items-center justify-between gap-8">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color || entry.stroke }} />
+                  <span className="text-xs font-bold text-neutral-600 dark:text-neutral-300">{entry.name}</span>
+                </div>
+                <span className="text-xs font-black text-neutral-900 dark:text-white">{entry.value.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // STEP 4 — Chart types
+  const renderChart = () => {
+    const typeLower = type?.toLowerCase() || 'line';
+    
+    let finalType = typeLower;
+    if (typeLower === 'line' && actualData.datasets && actualData.datasets.length === 1) {
+        finalType = 'area';
+    }
+    if (typeLower === 'area') {
+        finalType = 'area';
+    }
+
+    if (finalType === 'line') {
+      return (
+        <LineChart {...sharedProps}>
+          <GradientDefs />
+          {sharedGrid}
+          {sharedXAxis}
+          {sharedYAxis}
+          <Tooltip content={<CustomTooltip />} cursor={{ stroke: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', strokeWidth: 2, strokeDasharray: '4 4' }} />
+          {sharedLegend}
           {actualData.datasets.map((ds, i) => (
             <Line 
-              key={ds.label} 
+              key={ds.label || i} 
               type="monotone" 
               dataKey={ds.label} 
-              stroke={ds.borderColor || ds.stroke || ds.backgroundColor || colors[i % colors.length]} 
-              strokeWidth={3}
-              dot={{ r: 4, strokeWidth: 2 }}
-              activeDot={{ r: 6 }}
+              stroke={`url(#line-${i})`} 
+              strokeWidth={4}
+              dot={{ r: 4, strokeWidth: 3, fill: isDark ? '#171717' : '#ffffff', stroke: colors[i % colors.length] }}
+              activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff', fill: colors[i % colors.length] }}
+              filter="url(#shadow)"
             />
           ))}
         </LineChart>
       );
     }
 
-    if (typeLower === 'bar') {
+    if (finalType === 'bar') {
       return (
-        <BarChart {...commonProps}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'} />
-          <XAxis 
-            dataKey="name" 
-            axisLine={false} 
-            tickLine={false} 
-            tick={{ fontSize: 10, fill: '#9ca3af' }}
-            dy={10}
-          />
-          <YAxis 
-            axisLine={false} 
-            tickLine={false} 
-            tick={{ fontSize: 10, fill: '#9ca3af' }}
-          />
-          <Tooltip 
-            contentStyle={{ 
-              borderRadius: '12px', 
-              border: 'none', 
-              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', 
-              fontSize: '12px',
-              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
-              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
-            }}
-          />
-          <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '20px' }} />
+        <BarChart {...sharedProps}>
+          <GradientDefs />
+          {sharedGrid}
+          {sharedXAxis}
+          {sharedYAxis}
+          <Tooltip content={<CustomTooltip />} cursor={{ fill: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }} />
+          {sharedLegend}
           {actualData.datasets.map((ds, i) => (
             <Bar 
-              key={ds.label} 
+              key={ds.label || i} 
               dataKey={ds.label} 
-              fill={ds.backgroundColor || ds.fill || ds.borderColor || colors[i % colors.length]} 
-              radius={[4, 4, 0, 0]} 
+              fill={`url(#color-${i})`} 
+              radius={[6, 6, 0, 0]} 
             />
           ))}
         </BarChart>
       );
     }
 
-    if (typeLower === 'stacked_bar') {
+    if (finalType === 'stacked_bar') {
       return (
-        <BarChart {...commonProps}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'} />
-          <XAxis 
-            dataKey="name" 
-            axisLine={false} 
-            tickLine={false} 
-            tick={{ fontSize: 10, fill: '#9ca3af' }}
-            dy={10}
-          />
-          <YAxis 
-            axisLine={false} 
-            tickLine={false} 
-            tick={{ fontSize: 10, fill: '#9ca3af' }}
-          />
-          <Tooltip 
-            contentStyle={{ 
-              borderRadius: '12px', 
-              border: 'none', 
-              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', 
-              fontSize: '12px',
-              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
-              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
-            }}
-          />
-          <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '20px' }} />
+        <BarChart {...sharedProps}>
+          {sharedGrid}
+          {sharedXAxis}
+          {sharedYAxis}
+          <Tooltip content={<CustomTooltip />} cursor={{ fill: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }} />
+          {sharedLegend}
           {actualData.datasets.map((ds, i) => (
             <Bar 
-              key={ds.label} 
+              key={ds.label || i} 
               dataKey={ds.label} 
-              fill={ds.backgroundColor || ds.fill || ds.borderColor || colors[i % colors.length]} 
+              fill={colors[i % colors.length]} 
               stackId="a"
             />
           ))}
@@ -256,40 +246,19 @@ const ChartRenderer = ({ type, data }) => {
       );
     }
 
-    if (typeLower === 'horizontal_bar') {
+    if (finalType === 'horizontal_bar') {
       return (
-        <BarChart layout="vertical" {...commonProps}>
-          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'} />
-          <XAxis 
-            type="number"
-            axisLine={false} 
-            tickLine={false} 
-            tick={{ fontSize: 10, fill: '#9ca3af' }}
-          />
-          <YAxis 
-            type="category"
-            dataKey="name" 
-            axisLine={false} 
-            tickLine={false} 
-            tick={{ fontSize: 10, fill: '#9ca3af' }}
-            width={100}
-          />
-          <Tooltip 
-            contentStyle={{ 
-              borderRadius: '12px', 
-              border: 'none', 
-              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', 
-              fontSize: '12px',
-              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
-              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
-            }}
-          />
-          <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '20px' }} />
+        <BarChart layout="vertical" {...sharedProps}>
+          <CartesianGrid strokeDasharray="4 4" horizontal={false} stroke={isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'} />
+          <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9ca3af', fontWeight: 600 }} />
+          <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9ca3af', fontWeight: 600 }} width={100} />
+          <Tooltip content={<CustomTooltip />} cursor={{ fill: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }} />
+          {sharedLegend}
           {actualData.datasets.map((ds, i) => (
             <Bar 
-              key={ds.label} 
+              key={ds.label || i} 
               dataKey={ds.label} 
-              fill={ds.backgroundColor || ds.fill || ds.borderColor || colors[i % colors.length]} 
+              fill={colors[i % colors.length]} 
               radius={[0, 4, 4, 0]} 
             />
           ))}
@@ -297,61 +266,35 @@ const ChartRenderer = ({ type, data }) => {
       );
     }
 
-    if (typeLower === 'area') {
+    if (finalType === 'area') {
       return (
-        <AreaChart {...commonProps}>
-          <defs>
-            {actualData.datasets.map((ds, i) => (
-              <linearGradient key={`grad-${i}`} id={`color-${i}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={colors[i % colors.length]} stopOpacity={0.3} />
-                <stop offset="95%" stopColor={colors[i % colors.length]} stopOpacity={0} />
-              </linearGradient>
-            ))}
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'} />
-          <XAxis 
-            dataKey="name" 
-            axisLine={false} 
-            tickLine={false} 
-            tick={{ fontSize: 10, fill: '#9ca3af' }}
-            dy={10}
-          />
-          <YAxis 
-            axisLine={false} 
-            tickLine={false} 
-            tick={{ fontSize: 10, fill: '#9ca3af' }}
-          />
-          <Tooltip 
-            contentStyle={{ 
-              borderRadius: '12px', 
-              border: 'none', 
-              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', 
-              fontSize: '12px',
-              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
-              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
-            }}
-          />
-          <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '20px' }} />
+        <AreaChart {...sharedProps}>
+          <GradientDefs />
+          {sharedGrid}
+          {sharedXAxis}
+          {sharedYAxis}
+          <Tooltip content={<CustomTooltip />} cursor={{ stroke: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', strokeWidth: 2, strokeDasharray: '4 4' }} />
+          {sharedLegend}
           {actualData.datasets.map((ds, i) => (
             <Area 
-              key={ds.label} 
+              key={ds.label || i} 
               type="monotone" 
               dataKey={ds.label} 
-              stroke={ds.borderColor || ds.stroke || colors[i % colors.length]} 
+              stroke={`url(#line-${i})`} 
               fillOpacity={1} 
               fill={`url(#color-${i})`} 
-              strokeWidth={3}
+              strokeWidth={4}
+              activeDot={{ r: 7, strokeWidth: 3, stroke: isDark ? '#171717' : '#ffffff', fill: colors[i % colors.length] }}
             />
           ))}
         </AreaChart>
       );
     }
 
-    if (typeLower === 'pie' || typeLower === 'donut') {
-      // For Pie/Donut, we usually use the first dataset
+    if (finalType === 'pie' || finalType === 'donut') {
       const pieData = actualData.labels.map((label, index) => ({
         name: label,
-        value: actualData.datasets[0].data[index] || 0
+        value: actualData.datasets[0] ? actualData.datasets[0].data[index] : 0
       }));
 
       return (
@@ -360,279 +303,186 @@ const ChartRenderer = ({ type, data }) => {
             data={pieData}
             cx="50%"
             cy="50%"
-            innerRadius={typeLower === 'donut' ? 60 : 0}
-            outerRadius={80}
+            innerRadius={finalType === 'donut' ? '60%' : 0}
+            outerRadius="80%"
             paddingAngle={5}
             dataKey="value"
-            animationBegin={0}
             animationDuration={1500}
           >
             {pieData.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
             ))}
           </Pie>
-          <Tooltip 
-            contentStyle={{ 
-              borderRadius: '12px', 
-              border: 'none', 
-              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', 
-              fontSize: '12px',
-              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
-              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
-            }}
-          />
-          <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '20px' }} />
+          <Tooltip content={<CustomTooltip />} />
+          {sharedLegend}
         </PieChart>
       );
     }
 
-    if (typeLower === 'radar') {
+    if (finalType === 'radar') {
       return (
         <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
-          <PolarGrid stroke={document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'} />
-          <PolarAngleAxis dataKey="name" tick={{ fontSize: 10, fill: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280' }} />
-          <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={{ fontSize: 10, fill: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280' }} />
+          <PolarGrid stroke={isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} />
+          <PolarAngleAxis dataKey="name" tick={{ fontSize: 10, fill: isDark ? '#9ca3af' : '#6b7280', fontWeight: 600 }} />
+          <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={{ fontSize: 9, fill: isDark ? '#9ca3af' : '#6b7280', fontWeight: 500 }} />
           {actualData.datasets.map((ds, i) => (
             <Radar
-              key={ds.label}
+              key={ds.label || i}
               name={ds.label}
               dataKey={ds.label}
               stroke={colors[i % colors.length]}
               fill={colors[i % colors.length]}
-              fillOpacity={0.6}
+              fillOpacity={0.5}
+              strokeWidth={3}
             />
           ))}
-          <Tooltip 
-            contentStyle={{ 
-              borderRadius: '12px', 
-              border: 'none', 
-              fontSize: '12px',
-              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
-              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
-            }} 
-          />
-          <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '20px' }} />
+          <Tooltip content={<CustomTooltip />} />
+          {sharedLegend}
         </RadarChart>
       );
     }
 
-    if (typeLower === 'scatter') {
+    if (finalType === 'scatter' || finalType === 'bubble') {
+      const isBubble = finalType === 'bubble';
       return (
-        <ScatterChart {...commonProps}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'} />
-          <XAxis 
-            type="category" 
-            dataKey="name" 
-            name="label"
-            axisLine={false} 
-            tickLine={false} 
-            tick={{ fontSize: 10, fill: '#9ca3af' }}
-          />
-          <YAxis 
-            type="number" 
-            axisLine={false} 
-            tickLine={false} 
-            tick={{ fontSize: 10, fill: '#9ca3af' }}
-          />
-          <ZAxis type="number" range={[60, 400]} />
-          <Tooltip 
-            cursor={{ strokeDasharray: '3 3' }} 
-            contentStyle={{ 
-              borderRadius: '12px', 
-              border: 'none', 
-              fontSize: '12px',
-              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
-              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
-            }} 
-          />
-          <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '20px' }} />
+        <ScatterChart {...sharedProps}>
+          {sharedGrid}
+          <XAxis type="category" dataKey="name" name="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9ca3af', fontWeight: 600 }} />
+          <YAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9ca3af', fontWeight: 600 }} />
+          <ZAxis type="number" range={isBubble ? [100, 2000] : [60, 400]} />
+          <Tooltip cursor={{ strokeDasharray: '3 3' }} content={<CustomTooltip />} />
+          {sharedLegend}
           {actualData.datasets.map((ds, i) => (
             <Scatter 
-              key={ds.label} 
+              key={ds.label || i} 
               name={ds.label} 
               data={chartData} 
               dataKey={ds.label} 
               fill={colors[i % colors.length]} 
+              fillOpacity={isBubble ? 0.6 : 1}
+              strokeWidth={2}
+              stroke={isDark ? '#171717' : '#fff'}
             />
           ))}
         </ScatterChart>
       );
     }
 
-    if (typeLower === 'bubble') {
+    if (finalType === 'composed') {
       return (
-        <ScatterChart {...commonProps}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'} />
-          <XAxis 
-            type="category" 
-            dataKey="name" 
-            name="label"
-            axisLine={false} 
-            tickLine={false} 
-            tick={{ fontSize: 10, fill: '#9ca3af' }}
-          />
-          <YAxis 
-            type="number" 
-            axisLine={false} 
-            tickLine={false} 
-            tick={{ fontSize: 10, fill: '#9ca3af' }}
-          />
-          <ZAxis type="number" range={[100, 2000]} />
-          <Tooltip 
-            cursor={{ strokeDasharray: '3 3' }} 
-            contentStyle={{ 
-              borderRadius: '12px', 
-              border: 'none', 
-              fontSize: '12px',
-              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
-              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
-            }} 
-          />
-          <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '20px' }} />
-          {actualData.datasets.map((ds, i) => (
-            <Scatter 
-              key={ds.label} 
-              name={ds.label} 
-              data={chartData} 
-              dataKey={ds.label} 
-              fill={colors[i % colors.length]} 
-              fillOpacity={0.6}
-            />
-          ))}
-        </ScatterChart>
-      );
-    }
-
-    if (typeLower === 'composed') {
-      return (
-        <ComposedChart {...commonProps}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'} />
-          <XAxis 
-            dataKey="name" 
-            axisLine={false} 
-            tickLine={false} 
-            tick={{ fontSize: 10, fill: '#9ca3af' }}
-            dy={10}
-          />
-          <YAxis 
-            axisLine={false} 
-            tickLine={false} 
-            tick={{ fontSize: 10, fill: '#9ca3af' }}
-          />
-          <Tooltip 
-            contentStyle={{ 
-              borderRadius: '12px', 
-              border: 'none', 
-              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', 
-              fontSize: '12px',
-              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
-              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
-            }}
-          />
-          <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '20px' }} />
+        <ComposedChart {...sharedProps}>
+          <GradientDefs />
+          {sharedGrid}
+          {sharedXAxis}
+          {sharedYAxis}
+          <Tooltip content={<CustomTooltip />} cursor={{ fill: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }} />
+          {sharedLegend}
           {actualData.datasets.map((ds, i) => {
-            if (i === 0) return <Bar key={ds.label} dataKey={ds.label} barSize={20} fill={colors[0]} radius={[4, 4, 0, 0]} />;
-            if (i === 1) return <Line key={ds.label} type="monotone" dataKey={ds.label} stroke={colors[1]} strokeWidth={3} />;
-            return <Area key={ds.label} type="monotone" dataKey={ds.label} fill={colors[i % colors.length]} stroke={colors[i % colors.length]} fillOpacity={0.2} />;
+            if (i === 0) return <Bar key={ds.label} dataKey={ds.label} barSize={30} fill={`url(#bar-${i})`} radius={[6, 6, 0, 0]} />;
+            if (i === 1) return <Line key={ds.label} type="monotone" dataKey={ds.label} stroke={colors[1]} strokeWidth={4} dot={{ r: 4 }} />;
+            return <Area key={ds.label} type="monotone" dataKey={ds.label} fill={colors[i % colors.length]} stroke={colors[i % colors.length]} fillOpacity={0.1} />;
           })}
         </ComposedChart>
       );
     }
 
-    if (typeLower === 'funnel') {
+    if (finalType === 'funnel') {
       const funnelData = chartData.map(item => ({
         name: item.name,
         value: actualData.datasets[0] ? item[actualData.datasets[0].label] : 0,
-        fill: colors[0]
       })).sort((a, b) => b.value - a.value);
 
       return (
         <FunnelChart>
-          <Tooltip 
-            contentStyle={{ 
-              borderRadius: '12px', 
-              border: 'none', 
-              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', 
-              fontSize: '12px',
-              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
-              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
-            }}
-          />
-          <Funnel
-            dataKey="value"
-            data={funnelData}
-            isAnimationActive
-          >
-            <LabelList position="right" fill="#000" stroke="none" dataKey="name" fontSize={11} className="dark:fill-white" />
+          <Tooltip content={<CustomTooltip />} />
+          <Funnel dataKey="value" data={funnelData} isAnimationActive>
+            <LabelList position="right" fill={isDark ? "#9ca3af" : "#6b7280"} stroke="none" dataKey="name" fontSize={10} fontWeight={600} />
             {funnelData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} fillOpacity={0.8} />
             ))}
           </Funnel>
         </FunnelChart>
       );
     }
 
-    if (typeLower === 'radial') {
+    if (finalType === 'radial') {
       const radialData = chartData.map((item, index) => ({
         name: item.name,
-        value: actualData.datasets[0] ? item[actualData.datasets[0].label] : 0,
+        value: actualData.datasets[0] ? Number(item[actualData.datasets[0].label]) : 0,
         fill: colors[index % colors.length]
       }));
 
       return (
-        <RadialBarChart cx="50%" cy="50%" innerRadius="10%" outerRadius="80%" barSize={10} data={radialData}>
-          <RadialBar
-            minAngle={15}
-            background
-            clockWise
-            dataKey="value"
+        <RadialBarChart 
+            cx="50%" 
+            cy="50%" 
+            innerRadius="20%" 
+            outerRadius="90%" 
+            barSize={12} 
+            data={radialData}
+            startAngle={180}
+            endAngle={-180}
+        >
+          <RadialBar 
+            minAngle={15} 
+            background={{ fill: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', radius: 10 }} 
+            clockWise 
+            dataKey="value" 
+            cornerRadius={10}
           />
-          <Legend iconSize={10} layout="vertical" verticalAlign="middle" wrapperStyle={{ right: 0, fontSize: '11px', fontWeight: 'bold' }} />
-          <Tooltip 
-            contentStyle={{ 
-              borderRadius: '12px', 
-              border: 'none', 
-              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', 
-              fontSize: '12px',
-              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
-              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
-            }}
-          />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend iconSize={8} layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: '10px', fontWeight: '800' }} />
         </RadialBarChart>
       );
     }
 
-    if (typeLower === 'treemap') {
+    if (finalType === 'treemap') {
       const treemapData = chartData.map(item => ({
         name: item.name,
-        size: actualData.datasets[0] ? item[actualData.datasets[0].label] : 0
+        size: actualData.datasets[0] ? Number(item[actualData.datasets[0].label]) : 0
       }));
 
+      const CustomizedTreemapContent = (props) => {
+        const { root, depth, x, y, width, height, index, name } = props;
+        return (
+          <g>
+            <rect
+              x={x}
+              y={y}
+              width={width}
+              height={height}
+              style={{
+                fill: colors[index % colors.length],
+                stroke: isDark ? '#171717' : '#fff',
+                strokeWidth: 2 / (depth + 1),
+                strokeOpacity: 1,
+              }}
+              rx={4}
+              ry={4}
+            />
+            {width > 30 && height > 30 && (
+              <text x={x + 10} y={y + 20} fill="#fff" fontSize={10} fontWeight={800} fillOpacity={0.9}>
+                {name}
+              </text>
+            )}
+          </g>
+        );
+      };
+
       return (
-        <Treemap
-          data={treemapData}
-          dataKey="size"
-          aspectRatio={4 / 3}
-          stroke="#fff"
-          fill={colors[0]}
+        <Treemap 
+            data={treemapData} 
+            dataKey="size" 
+            aspectRatio={4 / 3} 
+            stroke="none" 
+            content={<CustomizedTreemapContent />}
         >
-          <Tooltip 
-            contentStyle={{ 
-              borderRadius: '12px', 
-              border: 'none', 
-              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', 
-              fontSize: '12px',
-              background: document.documentElement.classList.contains('dark') ? '#111827' : '#FFFFFF',
-              color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : '#111827'
-            }}
-          />
+          <Tooltip content={<CustomTooltip />} />
         </Treemap>
       );
     }
 
-    if (typeLower === 'geo_map') {
-      // Create a value lookup for colors/sizing based on country names or codes
-      // data typically has labels = ["USA", "India", "UK"] and dataset[0].data = [100, 200, 50]
+    if (finalType === 'geo_map') {
       const maxVal = Math.max(...(actualData.datasets[0]?.data || [1]));
       const countryData = {};
       actualData.labels.forEach((label, i) => {
@@ -652,7 +502,7 @@ const ChartRenderer = ({ type, data }) => {
                         <Geography
                             key={geo.rsmKey}
                             geography={geo}
-                            fill={val ? colors[0] : document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'}
+                            fill={val ? colors[0] : isDark ? '#374151' : '#e5e7eb'}
                             style={{
                                 default: { outline: "none", opacity: val ? opacity : 1 },
                                 hover: { outline: "none", fill: colors[1] },
@@ -671,14 +521,14 @@ const ChartRenderer = ({ type, data }) => {
     return null;
   };
 
-
-  if (type.toLowerCase() === 'table') {
+  // STEP 5 — Wrapper rendering
+  if ((type || '').toLowerCase() === 'table') {
     const isArrayFormat = actualData.datasets && actualData.datasets[0] && Array.isArray(actualData.datasets[0].data[0]);
     
     return (
-      <div className="flex flex-col w-full bg-white dark:bg-dark-card/40 border border-neutral-200 dark:border-neutral-800/60 rounded-3xl p-5 shadow-xl relative animate-in fade-in duration-700 backdrop-blur-md overflow-hidden">
+      <div className="flex flex-col w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-5 shadow-sm overflow-hidden">
         {actualData.title && (
-          <h4 className="shrink-0 text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-500 mb-4 text-center">
+          <h4 className="shrink-0 text-[10px] font-black uppercase tracking-[0.25em] bg-gradient-to-r from-neutral-500 to-neutral-400 dark:from-neutral-400 dark:to-neutral-500 bg-clip-text text-transparent mb-4 text-center">
             {actualData.title}
           </h4>
         )}
@@ -727,13 +577,13 @@ const ChartRenderer = ({ type, data }) => {
   }
 
   return (
-    <div className="flex flex-col w-full h-[320px] sm:h-[360px] bg-white dark:bg-dark-card/40 border border-neutral-200 dark:border-neutral-800/60 rounded-3xl sm:rounded-[2rem] p-5 sm:p-6 shadow-xl relative animate-in fade-in zoom-in duration-700 backdrop-blur-md">
+    <div className="flex flex-col w-full h-[260px] sm:h-[300px] bg-white/40 dark:bg-neutral-900/40 border border-white/50 dark:border-neutral-800/50 rounded-[1.25rem] p-3 sm:p-4 shadow-sm relative animate-in fade-in zoom-in duration-700 backdrop-blur-xl">
       {actualData.title && (
-        <h4 className="shrink-0 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-500 mb-4 text-center bg-neutral-50 dark:bg-dark-bg/50 py-2 px-3 rounded-xl truncate">
+        <h4 className="shrink-0 text-[10px] font-black uppercase tracking-widest bg-gradient-to-r from-neutral-500 to-neutral-400 dark:from-neutral-400 dark:to-neutral-500 bg-clip-text text-transparent mb-6 text-center">
           {actualData.title}
         </h4>
       )}
-      <div className="flex-1 min-h-0 w-full">
+      <div className="flex-1 min-h-0 w-full relative z-10">
         <ResponsiveContainer width="100%" height="100%">
           {renderChart()}
         </ResponsiveContainer>
@@ -743,4 +593,3 @@ const ChartRenderer = ({ type, data }) => {
 };
 
 export default React.memo(ChartRenderer);
-

@@ -47,13 +47,13 @@ export const initCronJobs = () => {
         await syncAllGoogleAds();
     }, { timezone: "Asia/Kolkata" });
     
-    // GA4 Sync every 3 AM
-    cron.schedule('0 3 * * *', async () => {
+    // GA4 Sync every 6 hours (4AM, 10AM, 4PM, 10PM) to keep data fresher
+    cron.schedule('0 4,10,16,22 * * *', async () => {
         await syncAllGa4();
     }, { timezone: "Asia/Kolkata" });
     
-    // GSC Sync every 4:30 AM
-    cron.schedule('30 4 * * *', async () => {
+    // GSC Sync twice a day (4:30 AM, 4:30 PM) - GSC has 48h delay, so twice a day is enough
+    cron.schedule('30 4,16 * * *', async () => {
         await syncAllGsc();
     }, { timezone: "Asia/Kolkata" });
     
