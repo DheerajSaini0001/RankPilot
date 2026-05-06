@@ -78,7 +78,7 @@ const KpiCard = ({ title, value, change, changeText, valueSuffix, isPositive, Ic
                 e.stopPropagation();
                 openWithQuestion(contextPrompt);
               }}
-              className="w-7 h-7 bg-brand-50 dark:bg-brand-500/10 rounded-full flex items-center justify-center cursor-pointer hover:bg-brand-100 dark:hover:bg-brand-500/20 transition-all border border-brand-100/50 dark:border-brand-500/20 text-brand-600 dark:text-brand-400 group/ai"
+              className="w-7 h-7 bg-brand-50 dark:bg-brand-500/10 rounded-full flex items-center justify-center cursor-pointer hover:bg-brand-100 dark:hover:bg-brand-500/20 transition-all border border-brand-100/50 dark:border-brand-500/20 text-brand-600 dark:text-brand-400 group/ai hide-in-pdf"
             >
               <SparklesIcon className="w-3.5 h-3.5 group-hover/ai:rotate-12 transition-transform" />
             </div>
@@ -115,7 +115,7 @@ const KpiCard = ({ title, value, change, changeText, valueSuffix, isPositive, Ic
               fill={`url(#${gradientId})`}
               dot={false}
               strokeLinecap="round"
-              isAnimationActive={!disconnected}
+              isAnimationActive={!disconnected && localStorage.getItem('is-pdf-export') !== 'true'}
               animationDuration={900}
               animationEasing="ease-out"
             />

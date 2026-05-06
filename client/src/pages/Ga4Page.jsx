@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import DashboardLayout from '../components/ui/DashboardLayout';
 import KpiCard from '../components/dashboard/KpiCard';
 import DataTable from '../components/dashboard/DataTable';
@@ -30,7 +31,7 @@ import {
     ClockIcon,
     CursorArrowRaysIcon,
 } from '@heroicons/react/24/outline';
-import { exportToPdf } from '../utils/reportExport';
+import { exportToServerPdf } from '../utils/reportExport';
 import {
     ResponsiveContainer,
     AreaChart, Area,
@@ -92,7 +93,7 @@ const Ga4Page = () => {
     const navigate = useNavigate();
     const openWithQuestion = useAiChatStore(s => s.openWithQuestion);
     const [loading, setLoading] = useState(false);
-
+    const [isExportingPdf, setIsExportingPdf] = useState(false);
 
 
     const preset = useDateRangeStore(s => s.preset);
@@ -206,6 +207,17 @@ const Ga4Page = () => {
             await loadData();
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handlePdfExport = async () => {
+        setIsExportingPdf(true);
+        try {
+            await exportToServerPdf('/dashboard/ga4', `RankPilot-GA4-${activeSiteId}`);
+        } catch (err) {
+            toast.error('Failed to generate PDF. The server might be busy.');
+        } finally {
+            setIsExportingPdf(false);
         }
     };
 
@@ -426,11 +438,11 @@ const Ga4Page = () => {
                                     Understand your visitors in real-time and get AI-powered insights to grow your site.
                                 </p>
                                 <div className="mt-2.5 flex items-center flex-wrap gap-3">
-                                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/5 rounded-full border border-emerald-500/10 shrink-0">
+                                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/5 rounded-full border border-emerald-500/10 shrink-0 hide-in-pdf">
                                         <div className="w-1 h-1 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]"></div>
                                         <span className="text-[8px] font-black text-emerald-600 dark:text-emerald-500 uppercase tracking-widest">Active</span>
                                     </div>
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-3 hide-in-pdf">
                                         <div className="flex items-center gap-1.5 text-[9px] text-neutral-400 font-bold uppercase tracking-widest">
                                             Synced: <span className="text-neutral-700 dark:text-neutral-300 tabular-nums font-black">{syncMetadata?.ga4LastSyncedAt ? formatDistanceToNow(new Date(syncMetadata.ga4LastSyncedAt), { addSuffix: true }) : 'Never'}</span>
                                             <button onClick={handleManualRefresh} className="hover:text-brand-500 transition-all active:rotate-180 ml-1">
@@ -608,18 +620,23 @@ const Ga4Page = () => {
                                 AI SUMMARY
                             </button>
                             <button
-                                onClick={() => exportToPdf('ga4-report', `RankPilot-GA4-${activeSiteId}`)}
-                                className="h-8 px-3 bg-white dark:bg-neutral-800/20 border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-lg text-[9px] font-black tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-50 transition-all"
+                                onClick={handlePdfExport}
+                                disabled={isExportingPdf}
+                                className={`h-8 px-3 bg-white dark:bg-neutral-800/20 border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-lg text-[9px] font-black tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-50 transition-all ${isExportingPdf ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                                <ArrowDownTrayIcon className="w-3.5 h-3.5" />
-                                PDF REPORT
+                                {isExportingPdf ? (
+                                    <div className="w-3.5 h-3.5 border-2 border-neutral-400 border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                    <ArrowDownTrayIcon className="w-3.5 h-3.5" />
+                                )}
+                                {isExportingPdf ? 'GENERATING' : 'PDF REPORT'}
                             </button>
                         </div>
                     </div>
                 </div>
 
                 {/* Refined Search Bar */}
-                <div className="flex justify-start">
+                <div className="flex justify-start hide-in-pdf">
                     <div className="group bg-white/70 dark:bg-dark-card/70 backdrop-blur-lg border border-neutral-200/60 dark:border-neutral-700/50 rounded-full px-4 py-2 shadow-sm flex items-center gap-3 w-full max-w-md transition-all hover:shadow-md hover:border-brand-500/30">
                         <FunnelIcon className="w-4 h-4 text-neutral-400 group-focus-within:text-brand-500 transition-colors" />
                         <input
