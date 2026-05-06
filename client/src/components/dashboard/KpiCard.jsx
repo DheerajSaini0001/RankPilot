@@ -40,7 +40,7 @@ const KpiCard = ({ title, value, change, changeText, valueSuffix, isPositive, Ic
   return (
     <div
       onClick={onClick}
-      className={`group relative bg-white dark:bg-dark-card rounded-2xl border border-neutral-200/80 dark:border-neutral-700/60 p-5 overflow-hidden flex flex-col justify-between min-h-[190px] shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ${(disconnected || onClick) ? 'cursor-pointer' : 'cursor-default'} ${disconnected ? 'hover:border-brand-500/50' : ''}`}
+      className={`group relative bg-white dark:bg-dark-card rounded-2xl border border-neutral-200/80 dark:border-neutral-700/60 p-5 overflow-hidden flex flex-col justify-between min-h-[190px] shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ${(disconnected || onClick) ? 'cursor-pointer' : 'cursor-default'} ${disconnected ? 'hover:border-brand-500/50 hide-in-pdf' : ''}`}
     >
 
       {/* Subtle background glow on hover */}

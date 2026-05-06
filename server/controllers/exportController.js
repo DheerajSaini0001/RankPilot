@@ -8,7 +8,7 @@ export const exportPdf = async (req, res) => {
             return res.status(400).json({ error: 'urlPath is required' });
         }
 
-        const clientUrl = reqClientUrl || process.env.CLIENT_URL || 'http://localhost:5173';
+        const clientUrl = reqClientUrl;
         const fullUrl = `${clientUrl}${urlPath}`;
 
         const browser = await puppeteer.launch({
@@ -36,11 +36,20 @@ export const exportPdf = async (req, res) => {
         try {
             await page.waitForFunction(() => {
                 const pulses = document.querySelectorAll('.animate-pulse');
-                const trueLoaders = Array.from(pulses).filter(el => !el.closest('.fixed') && !el.closest('button'));
+                const trueLoaders = Array.from(pulses).filter(el => {
+                    // Ignore elements that are fixed, inside buttons, or inside hidden-for-pdf containers
+                    if (el.closest('.fixed') || el.closest('button') || el.closest('.hide-in-pdf')) return false;
+                    
+                    // Also ignore elements that are hidden via style
+                    const style = window.getComputedStyle(el);
+                    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+                    
+                    return true;
+                });
                 return trueLoaders.length === 0;
-            }, { timeout: 25000 });
+            }, { timeout: 15000 });
         } catch (e) {
-            console.warn('Timeout waiting for skeletons. Proceeding with export.');
+            console.warn('Timeout waiting for visible skeletons. Proceeding with export.');
         }
 
         await new Promise(resolve => setTimeout(resolve, 1000));

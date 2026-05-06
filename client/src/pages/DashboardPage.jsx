@@ -33,7 +33,7 @@ import api from '../api';
 import { getActiveAccounts } from '../api/accountApi';
 import { useAuthStore } from '../store/authStore';
 import DataTable from '../components/dashboard/DataTable';
-import { exportToPdf } from '../utils/reportExport';
+import { exportToServerPdf } from '../utils/reportExport';
 
 const formatNumber = (num) => Number(num || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
 const formatCurrency = (num) => `$${Number(num || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -114,6 +114,7 @@ const DashboardPage = () => {
   const [isDeviceMenuOpen, setIsDeviceMenuOpen] = useState(false);
   const [isCustomDateMode, setIsCustomDateMode] = useState(false);
   const [tempDateRange, setTempDateRange] = useState({ start: startDate, end: endDate });
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   const downloadCSV = () => {
     if (!topPages.length) return;
@@ -125,6 +126,17 @@ const DashboardPage = () => {
     a.setAttribute('href', url);
     a.setAttribute('download', `rankpilot-top-pages-${new Date().toISOString().split('T')[0]}.csv`);
     a.click();
+  };
+
+  const handlePdfExport = async () => {
+    setIsExportingPdf(true);
+    try {
+      await exportToServerPdf(window.location.pathname, `RankPilot-Dashboard-${activeSite?.siteName || 'Report'}`);
+    } catch (error) {
+      console.error('PDF Export failed:', error);
+    } finally {
+      setIsExportingPdf(false);
+    }
   };
 
   const loadDashboardData = useCallback(async () => {
@@ -489,13 +501,13 @@ const DashboardPage = () => {
 
                       <div className="flex flex-wrap items-center gap-3 pt-2">
                         <div className="flex items-center gap-3">
-                          <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${syncMetadata?.syncStatus === 'syncing' ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-100/50 dark:border-blue-500/20' : 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100/50 dark:border-emerald-500/20'}`}>
+                          <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border hide-in-pdf ${syncMetadata?.syncStatus === 'syncing' ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-100/50 dark:border-blue-500/20' : 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100/50 dark:border-emerald-500/20'}`}>
                             <div className={`w-1 h-1 rounded-full ${syncMetadata?.syncStatus === 'syncing' ? 'bg-blue-500 animate-spin' : 'bg-emerald-500 animate-pulse'}`}></div>
                             <span className={`text-[8px] font-black uppercase tracking-widest ${syncMetadata?.syncStatus === 'syncing' ? 'text-blue-600 dark:text-blue-500' : 'text-emerald-600 dark:text-emerald-500'}`}>
                               {syncMetadata?.syncStatus === 'syncing' ? 'Syncing...' : 'Active'}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2 border-l border-neutral-200 dark:border-neutral-800 pl-3">
+                          <div className="flex items-center gap-2 border-l border-neutral-200 dark:border-neutral-800 pl-3 hide-in-pdf">
                             <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Synced:</span>
                             <span className="text-[9px] font-black text-neutral-600 dark:text-neutral-300 uppercase">
                               {(() => {
@@ -520,7 +532,7 @@ const DashboardPage = () => {
                           </div>
                         </div>
 
-                        <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-800 mx-1 hidden sm:block"></div>
+                        <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-800 mx-1 hidden sm:block hide-in-pdf"></div>
 
                         <div className="relative">
                           <button
@@ -601,7 +613,7 @@ const DashboardPage = () => {
                           )}
                         </div>
 
-                        <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-800 mx-1 hidden sm:block"></div>
+                        <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-800 mx-1 hidden sm:block hide-in-pdf"></div>
 
                         <div className="relative">
                           <button
@@ -667,7 +679,7 @@ const DashboardPage = () => {
                         ))}
                       </div>
 
-                      <div className="flex flex-col gap-2 min-w-[180px] self-stretch justify-center pl-4 border-l border-neutral-100 dark:border-neutral-800 ml-2">
+                      <div className="flex flex-col gap-2 min-w-[180px] self-stretch justify-center pl-4 border-l border-neutral-100 dark:border-neutral-800 ml-2 hide-in-pdf">
                         <button
                           onClick={() => openWithQuestion(`Analyze complete brand dashboard for ${startDate} to ${endDate}. 
                             - Total Web Traffic (GA4 Sessions): ${formatNumber(overviewData.ga4?.sessions || 0)}
@@ -681,11 +693,16 @@ const DashboardPage = () => {
                           AI SUMMARY
                         </button>
                         <button
-                          onClick={() => exportToPdf('dashboard-report', `RankPilot-Dashboard-${activeSite?.siteName || 'Report'}`)}
-                          className="h-10 px-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-2xl text-[10px] font-black tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all shadow-sm active:scale-95"
+                          onClick={handlePdfExport}
+                          disabled={isExportingPdf}
+                          className={`h-10 px-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-2xl text-[10px] font-black tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all shadow-sm active:scale-95 ${isExportingPdf ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                          <ArrowDownTrayIcon className="w-3.5 h-3.5" />
-                          PDF REPORT
+                          {isExportingPdf ? (
+                            <div className="w-3.5 h-3.5 border-2 border-neutral-400 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <ArrowDownTrayIcon className="w-3.5 h-3.5" />
+                          )}
+                          {isExportingPdf ? 'GENERATING' : 'PDF REPORT'}
                         </button>
                       </div>
                     </div>
@@ -703,7 +720,7 @@ const DashboardPage = () => {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 shadow-sm transition-all shadow-orange-500/5">
+                <div className={`bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 shadow-sm transition-all shadow-orange-500/5 ${!activeGa4PropertyId ? 'hide-in-pdf' : ''}`}>
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-lg bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center shrink-0"><Ga4Logo className="w-4 h-4" /></div>
@@ -721,7 +738,7 @@ const DashboardPage = () => {
                         </button>
                       )}
                       {activeGa4PropertyId && (
-                        <button onClick={() => navigate('/dashboard/ga4')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">View Full <ArrowRightIcon className="w-3 h-3" /></button>
+                        <button onClick={() => navigate('/dashboard/ga4')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1 hide-in-pdf">View Full <ArrowRightIcon className="w-3 h-3" /></button>
                       )}
                     </div>
                   </div>
@@ -768,7 +785,7 @@ const DashboardPage = () => {
                   )}
                 </div>
 
-                <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 shadow-sm transition-all shadow-green-500/5">
+                <div className={`bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 shadow-sm transition-all shadow-green-500/5 ${!activeGscSite ? 'hide-in-pdf' : ''}`}>
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center shrink-0"><GscLogo className="w-4 h-4" /></div>
@@ -786,7 +803,7 @@ const DashboardPage = () => {
                         </button>
                       )}
                       {activeGscSite && (
-                        <button onClick={() => navigate('/dashboard/gsc')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">View Full <ArrowRightIcon className="w-3 h-3" /></button>
+                        <button onClick={() => navigate('/dashboard/gsc')} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1 hide-in-pdf">View Full <ArrowRightIcon className="w-3 h-3" /></button>
                       )}
                     </div>
                   </div>
@@ -832,7 +849,7 @@ const DashboardPage = () => {
                   )}
                 </div>
 
-                <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 shadow-sm transition-all shadow-amber-500/5">
+                <div className={`bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 shadow-sm transition-all shadow-amber-500/5 ${!activeGoogleAdsCustomerId ? 'hide-in-pdf' : ''}`}>
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center shrink-0"><GoogleAdsLogo className="w-4 h-4" /></div>
@@ -895,7 +912,7 @@ const DashboardPage = () => {
                   )}
                 </div>
 
-                <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 shadow-sm transition-all shadow-blue-500/5">
+                <div className={`bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 shadow-sm transition-all shadow-blue-500/5 ${!activeFacebookAdAccountId ? 'hide-in-pdf' : ''}`}>
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center shrink-0"><FacebookAdsLogo className="w-4 h-4" /></div>
@@ -959,7 +976,7 @@ const DashboardPage = () => {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 mb-6 shadow-sm overflow-hidden">
+              <div className={`bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 mb-6 shadow-sm overflow-hidden ${(!overviewData.connectionStatus?.googleAds && !overviewData.connectionStatus?.facebookAds) ? 'hide-in-pdf' : ''}`}>
               <div className="flex justify-between items-start gap-4 mb-6">
 
                 {/* LEFT: Title + Subtitle */}
@@ -1085,7 +1102,7 @@ const DashboardPage = () => {
               </div>
 
 
-              <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 mb-6 shadow-sm">
+              <div className={`bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 mb-6 shadow-sm ${timeseriesData.length === 0 ? 'hide-in-pdf' : ''}`}>
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-5">
                   <div className="flex flex-col">
                     <h3 className="text-base font-semibold text-neutral-900 dark:text-white">
@@ -1178,7 +1195,7 @@ const DashboardPage = () => {
 
 
 
-              <div className="bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden mb-6">
+              <div className={`bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden mb-6 ${topPages.length === 0 ? 'hide-in-pdf' : ''}`}>
                 <div className="px-6 py-4 border-b border-neutral-100 dark:border-neutral-800 flex justify-between items-center">
                   <div className="space-y-0.5">
                     <h3 className="text-base font-black text-neutral-900 dark:text-white uppercase tracking-tight">Top Pages Performance</h3>
@@ -1195,7 +1212,7 @@ const DashboardPage = () => {
                         ASK AI
                       </button>
                     )}
-                    <button onClick={downloadCSV} className="text-[9px] font-black px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-lg uppercase tracking-wider">Export CSV</button>
+                    <button onClick={downloadCSV} className="text-[9px] font-black px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-lg uppercase tracking-wider hide-in-pdf">Export CSV</button>
                   </div>
                 </div>
                 <div className="p-2">

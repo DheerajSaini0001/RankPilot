@@ -19,7 +19,7 @@ import {
   UserCircleIcon,
   ArrowPathIcon
 } from '@heroicons/react/24/outline';
-import { exportToPdf } from '../utils/reportExport';
+import { exportToServerPdf } from '../utils/reportExport';
 import {
   ResponsiveContainer,
   AreaChart, Area,
@@ -51,6 +51,7 @@ const GoogleAdsPage = () => {
   const hasAccount = !!activeGoogleAdsCustomerId;
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   const [overview, setOverview] = useState(null);
   const [priorOverview, setPriorOverview] = useState(null);
@@ -139,6 +140,17 @@ const GoogleAdsPage = () => {
       await loadData();
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePdfExport = async () => {
+    setIsExportingPdf(true);
+    try {
+      await exportToServerPdf(window.location.pathname, `RankPilot-GoogleAds-${activeGoogleAdsCustomerId?.replace('customers/', '') || 'Report'}`);
+    } catch (error) {
+      console.error('PDF Export failed:', error);
+    } finally {
+      setIsExportingPdf(false);
     }
   };
 
@@ -315,7 +327,7 @@ const GoogleAdsPage = () => {
                 <div className="px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 rounded-lg text-[10px] font-bold border border-neutral-200 dark:border-neutral-700/50 flex items-center gap-2">
                   <span>Account: {userSites.find(s => s._id === activeSiteId).googleAdsAccountName} ({activeGoogleAdsCustomerId?.replace('customers/', '')})</span>
                   {userSites?.find(s => s._id === activeSiteId)?.googleAdsTokenId?.email && (
-                    <div className="flex items-center gap-1 pl-2 border-l border-neutral-300 dark:border-neutral-600 font-medium opacity-80">
+                    <div className="flex items-center gap-1 pl-2 border-l border-neutral-300 dark:border-neutral-600 font-medium opacity-80 hide-in-pdf">
                       <UserCircleIcon className="w-3 h-3" />
                       {userSites.find(s => s._id === activeSiteId).googleAdsTokenId.email}
                     </div>
@@ -323,7 +335,7 @@ const GoogleAdsPage = () => {
                 </div>
               )}
               <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400 ml-1">Campaign and Search Ad metrics</p>
-              <div className="flex items-center gap-2 mt-2 ml-1 text-[11px] text-neutral-400 font-bold">
+              <div className="flex items-center gap-2 mt-2 ml-1 text-[11px] text-neutral-400 font-bold hide-in-pdf">
                 <span className="uppercase text-[10px] tracking-tight opacity-60">Synced:</span>
                 <span className="text-neutral-700 dark:text-neutral-300 font-black tabular-nums">{syncMetadata?.googleAdsLastSyncedAt ? formatDistanceToNow(new Date(syncMetadata.googleAdsLastSyncedAt), { addSuffix: true }) : 'Never'}</span>
                 <button onClick={handleManualRefresh} className="p-1 hover:text-brand-500 transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg active:rotate-180 duration-500">
@@ -351,11 +363,16 @@ const GoogleAdsPage = () => {
               3. One advice to lower the CPC.`}
             />
             <button
-              onClick={() => exportToPdf('google-ads-report', `RankPilot-GoogleAds-${activeGoogleAdsCustomerId}`)}
-              className="px-4 py-2.5 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 rounded-2xl text-[11px] font-black flex items-center justify-center gap-2 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all shadow-sm active:scale-95 w-full uppercase"
+              onClick={handlePdfExport}
+              disabled={isExportingPdf}
+              className={`px-4 py-2.5 bg-white dark:bg-dark-card border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 rounded-2xl text-[11px] font-black flex items-center justify-center gap-2 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all shadow-sm active:scale-95 w-full uppercase ${isExportingPdf ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              <ArrowDownTrayIcon className="w-4 h-4" />
-              Download PDF Report
+              {isExportingPdf ? (
+                <div className="w-4 h-4 border-2 border-neutral-400 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <ArrowDownTrayIcon className="w-4 h-4" />
+              )}
+              {isExportingPdf ? 'GENERATING' : 'Download PDF Report'}
             </button>
           </div>
         </div>
