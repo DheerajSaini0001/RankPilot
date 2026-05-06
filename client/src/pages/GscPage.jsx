@@ -30,7 +30,7 @@ import { formatDistanceToNow } from 'date-fns';
         TrophyIcon,
         DocumentTextIcon
     } from '@heroicons/react/24/outline';
-    import { exportToPdf } from '../utils/reportExport';
+    import { exportToServerPdf } from '../utils/reportExport';
     import { 
         ResponsiveContainer, 
         AreaChart, Area, 
@@ -110,6 +110,7 @@ import { formatDistanceToNow } from 'date-fns';
         const [isDateMenuOpen, setIsDateMenuOpen] = useState(false);
         const [isCustomDateMode, setIsCustomDateMode] = useState(false);
         const [tempDateRange, setTempDateRange] = useState({ start: startDate, end: endDate });
+        const [isExportingPdf, setIsExportingPdf] = useState(false);
 
         const presetLabels = {
             'today': 'Today',
@@ -119,6 +120,17 @@ import { formatDistanceToNow } from 'date-fns';
             '90d': 'Last 90 Days',
             '1y': 'Last Year',
             'custom': 'Custom Range'
+        };
+
+        const handlePdfExport = async () => {
+            setIsExportingPdf(true);
+            try {
+                await exportToServerPdf(window.location.pathname, `RankPilot-GSC-${activeGscSite?.siteName || 'Report'}`);
+            } catch (error) {
+                console.error('PDF Export failed:', error);
+            } finally {
+                setIsExportingPdf(false);
+            }
         };
 
         const loadData = useCallback(async () => {
@@ -419,18 +431,18 @@ import { formatDistanceToNow } from 'date-fns';
                                         Monitor your search performance and optimize keywords with AI-powered SEO intelligence.
                                     </p>
                                     <div className="mt-2.5 flex items-center gap-3">
-                                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/5 rounded-full border border-emerald-500/10 w-fit">
+                                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/5 rounded-full border border-emerald-500/10 w-fit hide-in-pdf">
                                             <div className="w-1 h-1 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]"></div>
                                             <span className="text-[8px] font-black text-emerald-600 dark:text-emerald-500 uppercase tracking-widest whitespace-nowrap">Active</span>
                                         </div>
                                         <div className="flex flex-wrap items-center gap-3">
-                                            <div className="flex items-center gap-1.5 text-[9px] text-neutral-400 font-bold uppercase tracking-widest whitespace-nowrap">
+                                            <div className="flex items-center gap-1.5 text-[9px] text-neutral-400 font-bold uppercase tracking-widest whitespace-nowrap hide-in-pdf">
                                                 Synced: <span className="text-neutral-700 dark:text-neutral-300 tabular-nums font-black">{syncMetadata?.gscLastSyncedAt ? formatDistanceToNow(new Date(syncMetadata.gscLastSyncedAt), { addSuffix: true }) : 'Never'}</span>
                                                 <button onClick={handleManualRefresh} className="hover:text-brand-500 transition-all active:rotate-180 ml-1">
                                                     <ArrowPathIcon className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
                                                 </button>
                                             </div>
-                                            <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-800 hidden sm:block"></div>
+                                            <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-800 hidden sm:block hide-in-pdf"></div>
                                             <div className="relative">
                                                 <button
                                                     onClick={() => setIsDateMenuOpen(!isDateMenuOpen)}
@@ -544,18 +556,23 @@ import { formatDistanceToNow } from 'date-fns';
                                     AI SUMMARY
                                 </button>
                                 <button
-                                    onClick={() => exportToPdf('gsc-report', `RankPilot-GSC-${activeSiteId}`)}
-                                    className="h-9 md:h-8 px-3 bg-white dark:bg-neutral-800/20 border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-lg text-[9px] font-black tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-50 transition-all w-full sm:w-auto"
+                                    onClick={handlePdfExport}
+                                    disabled={isExportingPdf}
+                                    className={`h-9 md:h-8 px-3 bg-white dark:bg-neutral-800/20 border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-lg text-[9px] font-black tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-50 transition-all w-full sm:w-auto ${isExportingPdf ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
-                                    <ArrowDownTrayIcon className="w-3.5 h-3.5" />
-                                    PDF REPORT
+                                    {isExportingPdf ? (
+                                        <div className="w-3.5 h-3.5 border-2 border-neutral-400 border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                        <ArrowDownTrayIcon className="w-3.5 h-3.5" />
+                                    )}
+                                    {isExportingPdf ? 'GENERATING' : 'PDF REPORT'}
                                 </button>
                             </div>
                         </div>
                     </div>
 
                     {/* Refined Search Bar */}
-                    <div className="flex justify-start px-1 md:px-0">
+                    <div className="flex justify-start px-1 md:px-0 hide-in-pdf">
                         <div className="group bg-white/70 dark:bg-dark-card/70 backdrop-blur-lg border border-neutral-200/60 dark:border-neutral-700/50 rounded-full px-4 py-2 shadow-sm flex items-center gap-3 w-full md:max-w-md transition-all hover:shadow-md hover:border-brand-500/30">
                             <FunnelIcon className="w-4 h-4 text-neutral-400 group-focus-within:text-brand-500 transition-colors" />
                             <input
