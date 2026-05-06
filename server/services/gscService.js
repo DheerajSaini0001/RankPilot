@@ -43,7 +43,7 @@ export const runQuery = async (userId, siteUrl, reportType, startDate, endDate, 
 
         startRow += rowLimit;
 
-        if (startRow >= 100000) {
+        if (startRow >= 1000000) {
             break;
         }
     }

@@ -243,57 +243,69 @@ export const syncGa4 = async (acc, startDate, endDate) => {
     if (!acc || !acc.ga4PropertyId) return;
     const userId = acc.userId;
 
-    const report = await runGa4Report(userId, acc.ga4PropertyId, 'ultra_detail_sync', startDate, endDate,
-        ['date', 'sessionDefaultChannelGroup', 'sessionSourceMedium', 'deviceCategory', 'country', 'pagePath', 'landingPagePlusQueryString', 'pageTitle'],
-        ['activeUsers', 'newUsers', 'sessions', 'engagedSessions', 'screenPageViews', 'averageSessionDuration', 'engagementRate', 'totalRevenue', 'transactions', 'conversions'],
-        acc.ga4TokenId
-    );
+    const start = new Date(startDate);
+    const end = new Date(endDate);
 
-    if (report.rows) {
-        const operations = report.rows.map(row => {
-            const dateStr = row.dimensionValues[0].value;
-            const formattedDate = new Date(`${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6, 8)}`);
-            return {
-                updateOne: {
-                    filter: {
-                        'metadata.userId': userId,
-                        'metadata.siteId': acc._id,
-                        'metadata.platformAccountId': acc.ga4PropertyId,
-                        date: formattedDate,
-                        'metadata.dimensions.channel': row.dimensionValues[1].value,
-                        'metadata.dimensions.source': row.dimensionValues[2].value,
-                        'metadata.dimensions.device': row.dimensionValues[3].value,
-                        'metadata.dimensions.country': row.dimensionValues[4].value,
-                        'metadata.dimensions.pagePath': row.dimensionValues[5].value,
-                        'metadata.dimensions.landingPage': row.dimensionValues[6].value,
-                        'metadata.dimensions.pageTitle': row.dimensionValues[7].value
-                    },
-                    update: {
-                        $set: {
-                            metrics: {
-                                users: parseFloat(row.metricValues[0].value || 0),
-                                newUsers: parseFloat(row.metricValues[1].value || 0),
-                                sessions: parseFloat(row.metricValues[2].value || 0),
-                                engagedSessions: parseFloat(row.metricValues[3].value || 0),
-                                pageViews: parseFloat(row.metricValues[4].value || 0),
-                                avgSessionDuration: parseFloat(row.metricValues[5].value || 0),
-                                engagementRate: parseFloat(row.metricValues[6].value || 0) * 100,
-                                bounceRate: (1 - parseFloat(row.metricValues[6].value || 0)) * 100, // Derived from engagementRate
-                                revenue: parseFloat(row.metricValues[7].value || 0),
-                                transactions: parseFloat(row.metricValues[8].value || 0),
-                                conversions: parseFloat(row.metricValues[9].value || 0)
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const currentDayStr = d.toISOString().split('T')[0];
+        const formattedDateForGa4 = currentDayStr.replace(/-/g, ''); // GA4 expects YYYYMMDD in some cases, but runReport handles YYYY-MM-DD too. We'll use YYYY-MM-DD.
+
+        try {
+            const report = await runGa4Report(userId, acc.ga4PropertyId, 'ultra_detail_sync', currentDayStr, currentDayStr,
+                ['date', 'sessionDefaultChannelGroup', 'sessionSourceMedium', 'deviceCategory', 'country', 'pagePath', 'landingPagePlusQueryString', 'pageTitle'],
+                ['activeUsers', 'newUsers', 'sessions', 'engagedSessions', 'screenPageViews', 'averageSessionDuration', 'engagementRate', 'totalRevenue', 'transactions', 'conversions'],
+                acc.ga4TokenId
+            );
+
+            if (report.rows && report.rows.length > 0) {
+                const operations = report.rows.map(row => {
+                    const dateStr = row.dimensionValues[0].value;
+                    const formattedDate = new Date(`${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6, 8)}`);
+                    return {
+                        updateOne: {
+                            filter: {
+                                'metadata.userId': userId,
+                                'metadata.siteId': acc._id,
+                                'metadata.platformAccountId': acc.ga4PropertyId,
+                                date: formattedDate,
+                                'metadata.dimensions.channel': row.dimensionValues[1].value,
+                                'metadata.dimensions.source': row.dimensionValues[2].value,
+                                'metadata.dimensions.device': row.dimensionValues[3].value,
+                                'metadata.dimensions.country': row.dimensionValues[4].value,
+                                'metadata.dimensions.pagePath': row.dimensionValues[5].value,
+                                'metadata.dimensions.landingPage': row.dimensionValues[6].value,
+                                'metadata.dimensions.pageTitle': row.dimensionValues[7].value
                             },
-                            syncedAt: new Date()
+                            update: {
+                                $set: {
+                                    metrics: {
+                                        users: parseFloat(row.metricValues[0].value || 0),
+                                        newUsers: parseFloat(row.metricValues[1].value || 0),
+                                        sessions: parseFloat(row.metricValues[2].value || 0),
+                                        engagedSessions: parseFloat(row.metricValues[3].value || 0),
+                                        pageViews: parseFloat(row.metricValues[4].value || 0),
+                                        avgSessionDuration: parseFloat(row.metricValues[5].value || 0),
+                                        engagementRate: parseFloat(row.metricValues[6].value || 0) * 100,
+                                        bounceRate: (1 - parseFloat(row.metricValues[6].value || 0)) * 100, 
+                                        revenue: parseFloat(row.metricValues[7].value || 0),
+                                        transactions: parseFloat(row.metricValues[8].value || 0),
+                                        conversions: parseFloat(row.metricValues[9].value || 0)
+                                    },
+                                    syncedAt: new Date()
+                                }
+                            },
+                            upsert: true
                         }
-                    },
-                    upsert: true
-                }
-            };
-        });
+                    };
+                });
 
-        for (let i = 0; i < operations.length; i += 1000) {
-            const chunk = operations.slice(i, i + 1000);
-            await Ga4Metric.bulkWrite(chunk);
+                for (let i = 0; i < operations.length; i += 1000) {
+                    const chunk = operations.slice(i, i + 1000);
+                    await Ga4Metric.bulkWrite(chunk);
+                }
+            }
+        } catch (err) {
+            console.error(`[Sync] ❌ Error syncing GA4 for ${currentDayStr}: ${err.message}`);
         }
     }
 };
@@ -302,43 +314,53 @@ export const syncGsc = async (acc, startDate, endDate) => {
     if (!acc || !acc.gscSiteUrl) return;
     const userId = acc.userId;
 
-    const res = await runGscQuery(userId, acc.gscSiteUrl, 'ultra_detail_sync', startDate, endDate, ['date', 'page', 'query'], acc.gscTokenId);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
 
-    if (res.rows) {
-        const operations = res.rows
-            .filter(row => row.clicks > 0 || row.impressions >= 5)
-            .map(row => {
-                const rowDate = new Date(row.keys[0]);
-                return {
-                updateOne: {
-                    filter: {
-                        'metadata.userId': userId,
-                        'metadata.siteId': acc._id,
-                        'metadata.platformAccountId': acc.gscSiteUrl,
-                        date: rowDate,
-                        'metadata.dimensions.page': row.keys[1],
-                        'metadata.dimensions.query': row.keys[2]
-                    },
-                    update: {
-                        $set: {
-                            metrics: {
-                                clicks: parseFloat(row.clicks || 0),
-                                impressions: parseFloat(row.impressions || 0),
-                                ctr: parseFloat(row.ctr || 0) * 100,
-                                position: parseFloat(row.position || 0)
-                            },
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const currentDayStr = d.toISOString().split('T')[0];
+        
+        try {
+            const res = await runGscQuery(userId, acc.gscSiteUrl, 'ultra_detail_sync', currentDayStr, currentDayStr, ['date', 'page', 'query'], acc.gscTokenId);
 
-                            syncedAt: new Date()
-                        }
-                    },
-                    upsert: true
+            if (res.rows && res.rows.length > 0) {
+                const operations = res.rows
+                    .filter(row => row.clicks > 0 || row.impressions >= 1) // Reduced threshold to catch more long-tail data
+                    .map(row => {
+                        const rowDate = new Date(row.keys[0]);
+                        return {
+                            updateOne: {
+                                filter: {
+                                    'metadata.userId': userId,
+                                    'metadata.siteId': acc._id,
+                                    'metadata.platformAccountId': acc.gscSiteUrl,
+                                    date: rowDate,
+                                    'metadata.dimensions.page': row.keys[1],
+                                    'metadata.dimensions.query': row.keys[2]
+                                },
+                                update: {
+                                    $set: {
+                                        metrics: {
+                                            clicks: parseFloat(row.clicks || 0),
+                                            impressions: parseFloat(row.impressions || 0),
+                                            ctr: parseFloat(row.ctr || 0) * 100,
+                                            position: parseFloat(row.position || 0)
+                                        },
+                                        syncedAt: new Date()
+                                    }
+                                },
+                                upsert: true
+                            }
+                        };
+                    });
+
+                for (let i = 0; i < operations.length; i += 1000) {
+                    const chunk = operations.slice(i, i + 1000);
+                    await GscMetric.bulkWrite(chunk);
                 }
-            };
-        });
-
-        for (let i = 0; i < operations.length; i += 1000) {
-            const chunk = operations.slice(i, i + 1000);
-            await GscMetric.bulkWrite(chunk);
+            }
+        } catch (err) {
+            console.error(`[Sync] ❌ Error syncing GSC for ${currentDayStr}: ${err.message}`);
         }
     }
 };

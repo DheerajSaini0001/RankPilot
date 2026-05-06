@@ -45,7 +45,7 @@ export const runReport = async (userId, propertyId, reportType, startDate, endDa
         const rows = res.data.rows || [];
         allRows = allRows.concat(rows);
 
-        if (rows.length < limit || allRows.length >= 100000) {
+        if (rows.length < limit || allRows.length >= 500000) {
             break;
         }
 
